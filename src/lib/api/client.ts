@@ -1,0 +1,2175 @@
+const API_BASE_URL =
+    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+    "http://192.168.68.209:8000/api/v1";
+
+export interface ApiResponse<T = unknown> {
+    success: boolean;
+    data?: T;
+    message?: string;
+    error?: string;
+    status?: number;
+}
+
+export interface LoginRequest {
+    username: string;
+    password: string;
+}
+
+export interface LoginResponse {
+    user: {
+        id: string;
+        username: string;
+        email: string;
+        fullName: string;
+        role: string;
+        isActive: number;
+        lastLoginAt: string;
+    };
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+}
+
+export interface HisTokenResponse {
+    tokenCode: string;
+    renewCode?: string;
+    userLoginName: string;
+    userName: string;
+    userEmail: string;
+    userMobile: string;
+    userGCode: string;
+    applicationCode: string;
+    loginTime: string;
+    expireTime: string;
+    minutesUntilExpire?: number;
+    roles?: Array<{
+        roleCode?: string;
+        roleName?: string;
+        RoleCode?: string;
+        RoleName?: string;
+    }>;
+}
+
+export interface HisDirectLoginResponse {
+    message: string;
+    hisToken: {
+        tokenCode: string;
+        userLoginName: string;
+        userName: string;
+        userEmail: string;
+        userMobile: string;
+        userGCode: string;
+        applicationCode: string;
+        loginTime: string;
+        expireTime: string;
+        minutesUntilExpire: number;
+        roles: Array<{
+            roleCode?: string;
+            roleName?: string;
+            RoleCode?: string;
+            RoleName?: string;
+        }>;
+    };
+    accessToken: string;
+    tokenType: string;
+    expiresIn: number;
+}
+
+export interface HisTokenValidationResponse {
+    message: string;
+    user: {
+        loginName: string;
+        userName: string;
+        email: string;
+        mobile: string;
+        gCode: string;
+        applicationCode: string;
+        roles: Array<{
+            roleCode: string;
+            roleName: string;
+        }>;
+    };
+    token: {
+        tokenCode: string;
+        loginTime: string;
+        expireTime: string;
+        minutesUntilExpire: number;
+        isExpired: boolean;
+        isExpiringSoon: boolean;
+    };
+}
+
+export interface HisUserInfo {
+    loginName: string;
+    userName: string;
+    email: string;
+    mobile: string;
+    gCode: string;
+    applicationCode: string;
+    roles: Array<{
+        roleCode: string;
+        roleName: string;
+    }>;
+    loginTime: string;
+    expireTime: string;
+    minutesUntilExpire: number;
+}
+
+export interface HisTokenStatus {
+    isValid: boolean;
+    isExpired: boolean;
+    isExpiringSoon: boolean;
+    minutesUntilExpire: number;
+    userLoginName: string;
+    userName: string;
+    loginTime: string;
+    expireTime: string;
+}
+
+export interface HisApiCallRequest {
+    endpoint: string;
+    method?: string;
+    data?: Record<string, unknown>;
+    username?: string;
+}
+
+export interface Category {
+    id: string;
+    name: string;
+    description?: string;
+    code: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CategoryRequest {
+    name: string;
+    description?: string;
+    code: string;
+    isActive?: boolean;
+}
+
+export interface Province {
+    id: string;
+    provinceCode: string;
+    provinceName: string;
+    shortName: string | null;
+    isActive: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ProvinceRequest {
+    provinceCode: string;
+    provinceName: string;
+    shortName?: string;
+    isActive?: boolean;
+}
+
+export interface ProvinceFilters {
+    search?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface Ward {
+    id: string;
+    wardCode: string;
+    wardName: string;
+    shortName: string | null;
+    provinceId: string;
+    isActive: number;
+    createdAt: string;
+    updatedAt: string;
+    sortOrder?: number;
+    province?: Province;
+}
+
+export interface WardRequest {
+    wardCode: string;
+    wardName: string;
+    shortName?: string;
+    provinceId: string;
+    sortOrder?: number;
+    isActive?: boolean;
+}
+
+export interface WardFilters {
+    search?: string;
+    provinceId?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface User {
+    id: string;
+    username: string;
+    email: string;
+    fullName: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
+    address?: string;
+    role: string;
+    isActiveFlag: number;
+    lastLoginAt?: string;
+    hisUsername?: string;
+    hisPassword?: string;
+    provinceId?: string;
+    wardId?: string;
+    departmentId?: string;
+    createdAt: string;
+    updatedAt: string;
+    province?: Province;
+    ward?: Ward;
+    department?: Department;
+}
+
+export interface UserRequest {
+    username: string;
+    email: string;
+    fullName: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
+    address?: string;
+    role: string;
+    isActive?: boolean;
+    hisUsername?: string;
+    hisPassword?: string;
+    provinceId?: string;
+    wardId?: string;
+    departmentId?: string;
+}
+
+export interface UserFilters {
+    search?: string;
+    role?: string;
+    isActive?: boolean;
+    provinceId?: string;
+    wardId?: string;
+    departmentId?: string;
+    limit?: number;
+    offset?: number;
+}
+
+export interface DepartmentType {
+    id: string;
+    typeCode: string;
+    typeName: string;
+    description?: string;
+    isActiveFlag: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface DepartmentTypeRequest {
+    typeCode: string;
+    typeName: string;
+    description?: string;
+    isActive?: boolean;
+}
+
+export interface DepartmentTypeFilters {
+    search?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface Department {
+    id: string;
+    departmentCode: string;
+    departmentName: string;
+    branchId: string;
+    headOfDepartment?: string;
+    headNurse?: string;
+    parentDepartmentId?: string;
+    shortName?: string;
+    departmentTypeId?: string;
+    isActiveFlag: number;
+    createdAt: string;
+    updatedAt: string;
+    branch?: Branch;
+    departmentType?: DepartmentType;
+    parentDepartment?: Department;
+    subDepartments?: Department[];
+}
+
+export interface DepartmentRequest {
+    departmentCode: string;
+    departmentName: string;
+    branchId: string;
+    headOfDepartment?: string;
+    headNurse?: string;
+    parentDepartmentId?: string;
+    shortName?: string;
+    departmentTypeId?: string;
+}
+
+export interface DepartmentFilters {
+    search?: string;
+    branchId?: string;
+    departmentTypeId?: string;
+    parentDepartmentId?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface ServiceGroup {
+    id: string;
+    serviceGroupCode: string;
+    serviceGroupName: string;
+    shortName?: string;
+    mapping?: string;
+    isActiveFlag: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ServiceGroupRequest {
+    serviceGroupCode: string;
+    serviceGroupName: string;
+    shortName?: string;
+    mapping?: string;
+    isActive?: boolean;
+}
+
+export interface ServiceGroupFilters {
+    search?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface UnitOfMeasure {
+    id: string;
+    unitOfMeasureCode: string;
+    unitOfMeasureName: string;
+    description?: string;
+    mapping?: string;
+    isActiveFlag: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface UnitOfMeasureRequest {
+    unitOfMeasureCode: string;
+    unitOfMeasureName: string;
+    description?: string;
+    mapping?: string;
+    isActive?: boolean;
+}
+
+export interface UnitOfMeasureFilters {
+    search?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface Service {
+    id: string;
+    serviceCode: string;
+    serviceName: string;
+    shortName?: string;
+    serviceGroupId?: string;
+    unitOfMeasureId?: string;
+    mapping?: string;
+    numOrder?: number;
+    currentPrice?: number;
+    parentServiceId?: string;
+    isActiveFlag: number;
+    createdAt: string;
+    updatedAt: string;
+    serviceGroup?: ServiceGroup;
+    unitOfMeasure?: UnitOfMeasure;
+    parentService?: Service;
+    subServices?: Service[];
+}
+
+export interface ServiceRequest {
+    serviceCode: string;
+    serviceName: string;
+    shortName?: string;
+    serviceGroupId?: string;
+    unitOfMeasureId?: string;
+    mapping?: string;
+    numOrder?: number;
+    currentPrice?: number;
+    parentServiceId?: string;
+    isActive?: boolean;
+}
+
+export interface ServiceFilters {
+    search?: string;
+    serviceGroupId?: string;
+    unitOfMeasureId?: string;
+    parentServiceId?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface Room {
+    id: string;
+    roomCode: string;
+    roomName: string;
+    roomAddress?: string;
+    departmentId: string;
+    roomGroupId?: string;
+    description?: string;
+    isActiveFlag: number;
+    createdAt: string;
+    updatedAt: string;
+    department?: Department;
+}
+
+export interface RoomGroup {
+    id: string;
+    roomGroupCode: string;
+    roomGroupName: string;
+    displayName?: string;
+    sortOrder?: number;
+    isActive: boolean;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface RoomGroupFilters {
+    search?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface RoomRequest {
+    roomCode: string;
+    roomName: string;
+    roomAddress?: string;
+    departmentId: string;
+    roomGroupId?: string;
+    description?: string;
+    isActive?: boolean;
+}
+
+export interface RoomFilters {
+    search?: string;
+    departmentId?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface SampleType {
+    id: string;
+    typeCode: string;
+    typeName: string;
+    shortName?: string;
+    codeGenerationRule?: string;
+    description?: string;
+    isActiveFlag: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface SampleTypeRequest {
+    typeCode: string;
+    typeName: string;
+    shortName?: string;
+    codeGenerationRule?: string;
+    description?: string;
+    isActive?: boolean;
+}
+
+export interface SampleTypeFilters {
+    search?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+export interface SampleReceptionRequest {
+    sampleTypeCode: string;
+}
+
+export interface SampleReceptionResponse {
+    id?: string;
+    receptionCode?: string;
+
+    [key: string]: unknown;
+}
+
+export interface Branch {
+    id: string;
+    branchCode: string;
+    branchName: string;
+    shortName?: string;
+    provinceId: string;
+    wardId: string;
+    address: string;
+    phoneNumber?: string;
+    hospitalLevel?: string;
+    representative?: string;
+    bhytCode?: string;
+    isActive: number;
+    createdAt: string;
+    updatedAt: string;
+    province?: Province;
+    ward?: Ward;
+}
+
+export interface BranchRequest {
+    branchCode: string;
+    branchName: string;
+    shortName?: string;
+    provinceId: string;
+    wardId: string;
+    address: string;
+    phoneNumber?: string;
+    hospitalLevel?: string;
+    representative?: string;
+    bhytCode?: string;
+}
+
+export interface BranchFilters {
+    search?: string;
+    provinceId?: string;
+    wardId?: string;
+    hospitalLevel?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+}
+
+// Service Request related interfaces
+export interface RoomInfo {
+    id: number;
+    code: string;
+    name: string;
+    lisRoomId?: string | null;
+}
+
+export interface DepartmentInfo {
+    id: number;
+    code: string;
+    name: string;
+    lisDepartmentId?: string | null;
+}
+
+export interface PatientInfo {
+    id: number;
+    code: string;
+    name: string;
+    dob: number; // yyyyMMddHHmmss format
+    mobile?: string | null;
+    phone?: string | null;
+    cmndNumber?: string | null;
+    cmndDate?: number | null; // yyyyMMddHHmmss format
+    cmndPlace?: string | null;
+    provinceCode?: string | null;
+    provinceName?: string | null;
+    lisProvinceId?: string | null;
+    communeCode?: string | null;
+    communeName?: string | null;
+    lisWardId?: string | null;
+    address?: string | null;
+    genderId: number;
+    genderName: string;
+    careerName?: string | null;
+    lisPatientId?: string | null;
+}
+
+export interface ServiceTest {
+    id: string;
+    testCode: string;
+    testName: string;
+    shortName?: string;
+    description?: string | null;
+    unitOfMeasureId?: string | null;
+    unitOfMeasureCode?: string | null;
+    unitOfMeasureName?: string | null;
+    rangeText?: string | null;
+    rangeLow?: number | null;
+    rangeHigh?: number | null;
+    mapping?: string | null;
+    testOrder?: number | null;
+    price?: number;
+    isActive?: number;
+    isActiveFlag?: number;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+    version?: number;
+}
+
+export interface LisService {
+    id: string;
+    serviceCode: string;
+    serviceName: string;
+    shortName?: string;
+    currentPrice?: number;
+    serviceGroupId?: string;
+    serviceGroupName?: string;
+    unitOfMeasureId?: string;
+    unitOfMeasureName?: string;
+    serviceTests?: ServiceTest[];
+}
+
+export interface ServiceRequestService {
+    hisSereServId: number;
+    serviceId: number;
+    serviceCode: string;
+    serviceName: string;
+    price: number;
+    lisServiceId?: string | null;
+    unitOfMeasureId?: string | null;
+    unitOfMeasureCode?: string | null;
+    unitOfMeasureName?: string | null;
+    rangeText?: string | null;
+    rangeLow?: number | null;
+    rangeHigh?: number | null;
+    mapping?: string | null;
+    testOrder?: number | null;
+    lisService?: LisService;
+    serviceTests?: ServiceTest[];
+}
+
+export interface ServiceRequestDetail {
+    id: number;
+    serviceReqCode: string;
+    serviceReqSttId?: number;
+    serviceReqSttCode: string;
+    serviceReqTypeId?: number;
+    serviceReqTypeCode: string;
+    instructionTime: number; // yyyyMMddHHmmss format
+    instructionDate: number; // yyyyMMdd000000 format
+    icdCode?: string | null;
+    icdName?: string | null;
+    icdSubCode?: string | null;
+    icdText?: string | null;
+    treatmentId?: number;
+    treatmentCode?: string | null;
+    note?: string | null;
+    requestRoom?: RoomInfo;
+    requestDepartment?: DepartmentInfo;
+    executeRoom?: RoomInfo;
+    executeDepartment?: DepartmentInfo;
+    patient: PatientInfo;
+    services: ServiceRequestService[];
+}
+
+export interface UserRoom {
+    id: string;
+    userId: string;
+    username?: string;
+    userFullName?: string;
+    roomId: string;
+    roomCode: string;
+    roomName: string;
+    roomAddress?: string;
+    roomDescription?: string;
+    departmentId: string;
+    departmentName?: string;
+    departmentCode?: string;
+    roomGroupId?: string;
+    roomGroupName?: string;
+    branchId?: string;
+    branchName?: string;
+    isActive: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface StoreServiceRequestBody {
+    serviceReqCode: string;
+    currentRoomId: string;
+    currentDepartmentId: string;
+    receptionCode: string;
+    sampleCollectionTime: string; // ISO string
+    collectedByUserId: string;
+    saveRawJson: boolean;
+}
+
+// API trả về data trực tiếp, không có wrapper serviceRequest
+export type ServiceRequestResponse = ServiceRequestDetail;
+
+class ApiClient {
+    private baseURL: string;
+    private token: string | null = null;
+    private refreshTokenValue: string | null = null;
+    private tokenExpiresAt: number | null = null;
+    private isRefreshing: boolean = false;
+    private refreshSubscribers: Array<(token: string) => void> = [];
+
+    constructor(baseURL: string = API_BASE_URL) {
+        this.baseURL = baseURL;
+        // Get token from auth store if available
+        if (typeof window !== "undefined") {
+            this.loadTokenFromStorage();
+        }
+    }
+
+    private loadTokenFromStorage() {
+        try {
+            // Try to get token from auth store first
+            const authData = localStorage.getItem("auth-storage");
+            if (authData) {
+                const parsed = JSON.parse(authData);
+                this.token = parsed.state?.token || null;
+                this.refreshTokenValue = parsed.state?.refreshToken || null;
+            }
+
+            // Fallback to direct localStorage
+            if (!this.token) {
+                this.token = localStorage.getItem("auth-token");
+            }
+            if (!this.refreshTokenValue) {
+                this.refreshTokenValue = localStorage.getItem("auth-refresh-token");
+            }
+
+            // Load token expiration time if available
+            const expiresAt = localStorage.getItem("auth-token-expires-at");
+            if (expiresAt) {
+                this.tokenExpiresAt = parseInt(expiresAt, 10);
+            }
+        } catch (error) {
+            console.warn("Failed to parse auth storage:", error);
+            // Fallback to direct localStorage
+            this.token = localStorage.getItem("auth-token");
+            this.refreshTokenValue = localStorage.getItem("auth-refresh-token");
+            const expiresAt = localStorage.getItem("auth-token-expires-at");
+            if (expiresAt) {
+                this.tokenExpiresAt = parseInt(expiresAt, 10);
+            }
+        }
+    }
+
+    setToken(token: string | null, expiresIn?: number) {
+        this.token = token;
+
+        // Set expiration time if provided
+        if (expiresIn && token) {
+            // expiresIn is in seconds, convert to milliseconds and add to current time
+            this.tokenExpiresAt = Date.now() + (expiresIn * 1000);
+            if (typeof window !== "undefined") {
+                localStorage.setItem("auth-token-expires-at", this.tokenExpiresAt.toString());
+            }
+        } else if (!token) {
+            // Clear expiration time when token is cleared
+            this.tokenExpiresAt = null;
+            if (typeof window !== "undefined") {
+                localStorage.removeItem("auth-token-expires-at");
+            }
+        }
+    }
+
+    setRefreshToken(refreshToken: string | null) {
+        this.refreshTokenValue = refreshToken;
+    }
+
+    getToken(): string | null {
+        return this.token;
+    }
+
+    refreshTokenFromStorage() {
+        this.loadTokenFromStorage();
+    }
+
+    /**
+     * Check if token is expired or about to expire
+     * Returns true if token will expire in less than 5 minutes
+     */
+    private isTokenExpired(): boolean {
+        if (!this.tokenExpiresAt) {
+            return false; // Unknown expiration, don't assume expired
+        }
+
+        // Consider token expired if it expires in less than 5 minutes (300000 ms)
+        const bufferTime = 5 * 60 * 1000; // 5 minutes
+        return Date.now() + bufferTime >= this.tokenExpiresAt;
+    }
+
+    /**
+     * Add subscriber to be notified when token is refreshed
+     */
+    private subscribeTokenRefresh(callback: (token: string) => void): void {
+        this.refreshSubscribers.push(callback);
+    }
+
+    /**
+     * Notify all subscribers that token has been refreshed
+     */
+    private onTokenRefreshed(token: string): void {
+        this.refreshSubscribers.forEach(callback => callback(token));
+        this.refreshSubscribers = [];
+    }
+
+    /**
+     * Perform token refresh
+     */
+    private async performTokenRefresh(): Promise<string | null> {
+        if (!this.refreshTokenValue) {
+            console.warn("No refresh token available");
+            return null;
+        }
+
+        try {
+            console.log("Refreshing access token...");
+
+            // Call refresh endpoint without going through request() to avoid infinite loop
+            const url = `${this.baseURL}/auth/refresh`;
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ refreshToken: this.refreshTokenValue }),
+            });
+
+            if (!response.ok) {
+                console.error("Token refresh failed:", response.status);
+                // If refresh token is invalid, logout user
+                if (response.status === 401 || response.status === 403) {
+                    this.handleLogout();
+                }
+                return null;
+            }
+
+            const data = await response.json();
+
+            if (data.success && data.data) {
+                const newAccessToken = data.data.accessToken;
+                const newRefreshToken = data.data.refreshToken;
+                const expiresIn = data.data.expiresIn;
+
+                // Update tokens
+                this.setToken(newAccessToken, expiresIn);
+                this.setRefreshToken(newRefreshToken);
+
+                // Update auth store
+                if (typeof window !== "undefined") {
+                    const { useAuthStore } = await import("@/lib/stores/auth");
+                    useAuthStore.getState().updateTokens(newAccessToken, newRefreshToken);
+                }
+
+                console.log("Token refreshed successfully");
+                return newAccessToken;
+            }
+
+            return null;
+        } catch (error) {
+            console.error("Error refreshing token:", error);
+            return null;
+        }
+    }
+
+    /**
+     * Handle logout when refresh token fails
+     */
+    private async handleLogout(): Promise<void> {
+        console.log("Refresh token invalid, logging out user...");
+
+        this.token = null;
+        this.refreshTokenValue = null;
+        this.tokenExpiresAt = null;
+
+        if (typeof window !== "undefined") {
+            const { useAuthStore } = await import("@/lib/stores/auth");
+            useAuthStore.getState().logout();
+
+            // Redirect to login page
+            window.location.href = "/auth/login";
+        }
+    }
+
+    /**
+     * Ensure token is valid before making request
+     */
+    private async ensureValidToken(): Promise<boolean> {
+        // If token is expired or about to expire, refresh it
+        if (this.isTokenExpired() && this.refreshTokenValue) {
+            if (this.isRefreshing) {
+                // Wait for ongoing refresh to complete
+                return new Promise((resolve) => {
+                    this.subscribeTokenRefresh((token) => {
+                        resolve(!!token);
+                    });
+                });
+            }
+
+            this.isRefreshing = true;
+            const newToken = await this.performTokenRefresh();
+            this.isRefreshing = false;
+
+            if (newToken) {
+                this.onTokenRefreshed(newToken);
+                return true;
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    private async request<T>(
+        endpoint: string,
+        options: RequestInit = {},
+        isRetry: boolean = false
+    ): Promise<ApiResponse<T>> {
+        const url = `${this.baseURL}${endpoint}`;
+
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            ...(options.headers as Record<string, string>),
+        };
+
+        // Refresh token from storage before making request
+        this.refreshTokenFromStorage();
+
+        // Ensure token is valid before making request (unless it's the refresh endpoint)
+        if (!endpoint.includes("/auth/refresh") && !endpoint.includes("/auth/login")) {
+            const isValid = await this.ensureValidToken();
+            if (!isValid && this.token) {
+                // Token refresh failed, return unauthorized error
+                return {
+                    success: false,
+                    error: "Session expired. Please login again.",
+                    status: 401,
+                };
+            }
+        }
+
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+
+        try {
+            console.log("API Request:", {
+                url,
+                method: options.method || "GET",
+                headers: {
+                    ...headers,
+                    Authorization: this.token ? "Bearer ***" : "None",
+                },
+                body: options.body,
+            });
+
+            const response = await fetch(url, {
+                ...options,
+                headers,
+            });
+
+            let data: unknown;
+            const contentType = response.headers.get("content-type");
+
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            } else {
+                data = {message: await response.text()};
+            }
+
+            console.log("API Response:", {
+                status: response.status,
+                statusText: response.statusText,
+                data,
+                dataType: typeof data,
+                dataKeys: data ? Object.keys(data) : "null",
+            });
+
+            // Handle 401 Unauthorized - token expired
+            if (response.status === 401 && !isRetry && !endpoint.includes("/auth/")) {
+                console.log("Received 401, attempting to refresh token...");
+
+                // Try to refresh token
+                if (this.refreshTokenValue) {
+                    const newToken = await this.performTokenRefresh();
+
+                    if (newToken) {
+                        // Retry the original request with new token
+                        console.log("Retrying request with new token...");
+                        return this.request<T>(endpoint, options, true);
+                    }
+                }
+
+                // If refresh failed, logout user
+                await this.handleLogout();
+                return {
+                    success: false,
+                    error: "Session expired. Please login again.",
+                    status: 401,
+                    data: data as T,
+                };
+            }
+
+            if (!response.ok) {
+                let errorMessage = `HTTP error! status: ${response.status}`;
+
+                // Handle complex error structure from backend
+                if (
+                    data &&
+                    typeof data === "object" &&
+                    "error" in data &&
+                    data.error &&
+                    typeof data.error === "object" &&
+                    "message" in data.error
+                ) {
+                    errorMessage = String(data.error.message);
+                } else if (data && typeof data === "object" && "message" in data) {
+                    errorMessage = String(data.message);
+                } else if (data && typeof data === "object" && "error" in data) {
+                    errorMessage = String(data.error);
+                }
+
+                console.error("API Error:", errorMessage);
+                console.error("API Error Data:", data);
+                return {
+                    success: false,
+                    error: errorMessage,
+                    status: response.status,
+                    data: data as T,
+                };
+            }
+
+            return {
+                success: true,
+                data:
+                    data && typeof data === "object" && "data" in data
+                        ? (data.data as T)
+                        : (data as T),
+                message:
+                    data && typeof data === "object" && "message" in data
+                        ? String(data.message)
+                        : undefined,
+            };
+        } catch (error) {
+            console.error("API request failed:", error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : "Network error",
+            };
+        }
+    }
+
+    // Authentication methods
+    async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
+        const response = await this.request<LoginResponse>("/auth/login", {
+            method: "POST",
+            body: JSON.stringify(credentials),
+        });
+
+        if (response.success && response.data?.accessToken) {
+            this.setToken(response.data.accessToken, response.data.expiresIn);
+            this.setRefreshToken(response.data.refreshToken);
+        }
+
+        return response;
+    }
+
+    async logout(): Promise<ApiResponse> {
+        try {
+            const response = await this.request("/auth/logout", {
+                method: "POST",
+            });
+            return response;
+        } catch (error) {
+            console.warn('Logout API error:', error);
+            return { success: false, status_code: 500 } as ApiResponse;
+        } finally {
+            // Clear all tokens and state
+            this.setToken(null);
+            this.setRefreshToken(null);
+            this.tokenExpiresAt = null;
+            this.isRefreshing = false;
+            this.refreshSubscribers = [];
+
+            // Clear localStorage
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('auth-token');
+                localStorage.removeItem('auth-refresh-token');
+                localStorage.removeItem('auth-token-expires-at');
+            }
+        }
+    }
+
+    async refreshToken(
+        refreshToken: string
+    ): Promise<ApiResponse<LoginResponse>> {
+        return this.request<LoginResponse>("/auth/refresh", {
+            method: "POST",
+            body: JSON.stringify({refreshToken}),
+        });
+    }
+
+    async getProfile(): Promise<ApiResponse<LoginResponse["user"]>> {
+        return this.request<LoginResponse["user"]>("/auth/profile");
+    }
+
+    // Category management methods
+    async getCategories(): Promise<ApiResponse<Category[]>> {
+        return this.request<Category[]>("/categories");
+    }
+
+    async getCategory(id: string): Promise<ApiResponse<Category>> {
+        return this.request<Category>(`/categories/${id}`);
+    }
+
+    async createCategory(
+        category: CategoryRequest
+    ): Promise<ApiResponse<Category>> {
+        return this.request<Category>("/categories", {
+            method: "POST",
+            body: JSON.stringify(category),
+        });
+    }
+
+    async updateCategory(
+        id: string,
+        category: Partial<CategoryRequest>
+    ): Promise<ApiResponse<Category>> {
+        return this.request<Category>(`/categories/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(category),
+        });
+    }
+
+    async deleteCategory(id: string): Promise<ApiResponse> {
+        return this.request(`/categories/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    // Branch management methods
+    async getBranches(filters?: BranchFilters): Promise<
+        ApiResponse<{
+            items: Branch[];
+            pagination: {
+                limit: number;
+                offset: number;
+                total: number;
+                has_next: boolean;
+                has_prev: boolean;
+            };
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: Branch[];
+            pagination: {
+                limit: number;
+                offset: number;
+                total: number;
+                has_next: boolean;
+                has_prev: boolean;
+            };
+        }>(`/branches${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getBranch(id: string): Promise<ApiResponse<Branch>> {
+        return this.request<Branch>(`/branches/${id}`);
+    }
+
+    async createBranch(branch: BranchRequest): Promise<ApiResponse<Branch>> {
+        return this.request<Branch>("/branches", {
+            method: "POST",
+            body: JSON.stringify(branch),
+        });
+    }
+
+    async updateBranch(
+        id: string,
+        branch: Partial<BranchRequest>
+    ): Promise<ApiResponse<Branch>> {
+        return this.request<Branch>(`/branches/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(branch),
+        });
+    }
+
+    async deleteBranch(id: string): Promise<ApiResponse> {
+        return this.request(`/branches/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    async getBranchesByProvince(
+        provinceId: string,
+        limit = 10,
+        offset = 0
+    ): Promise<
+        ApiResponse<{
+            items: Branch[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        return this.request<{
+            items: Branch[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/provinces/${provinceId}/branches?limit=${limit}&offset=${offset}`);
+    }
+
+    // Province management methods
+    async getProvinces(filters?: ProvinceFilters): Promise<
+        ApiResponse<{
+            provinces: Province[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            provinces: Province[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/provinces${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getProvince(id: string): Promise<ApiResponse<Province>> {
+        return this.request<Province>(`/provinces/${id}`);
+    }
+
+    async createProvince(
+        province: ProvinceRequest
+    ): Promise<ApiResponse<Province>> {
+        return this.request<Province>("/provinces", {
+            method: "POST",
+            body: JSON.stringify(province),
+        });
+    }
+
+    async updateProvince(
+        id: string,
+        province: Partial<ProvinceRequest>
+    ): Promise<ApiResponse<Province>> {
+        return this.request<Province>(`/provinces/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(province),
+        });
+    }
+
+    async deleteProvince(id: string): Promise<ApiResponse> {
+        return this.request(`/provinces/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    // Ward management methods
+    async getWards(filters?: WardFilters): Promise<
+        ApiResponse<{
+            wards: Ward[];
+            pagination: {
+                total: number;
+                limit: number;
+                offset: number;
+                hasNext: boolean;
+                hasPrev: boolean;
+                totalPages: number;
+                currentPage: number;
+            };
+            statistics: {
+                total: number;
+                active: number;
+                inactive: number;
+            };
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            wards: Ward[];
+            pagination: {
+                total: number;
+                limit: number;
+                offset: number;
+                hasNext: boolean;
+                hasPrev: boolean;
+                totalPages: number;
+                currentPage: number;
+            };
+            statistics: {
+                total: number;
+                active: number;
+                inactive: number;
+            };
+        }>(`/wards${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getWard(id: string): Promise<ApiResponse<Ward>> {
+        return this.request<Ward>(`/wards/${id}`);
+    }
+
+    async getWardsByProvince(
+        provinceId: string,
+        limit = 10,
+        offset = 0
+    ): Promise<
+        ApiResponse<{
+            items: Ward[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        return this.request<{
+            items: Ward[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/wards/province/${provinceId}?limit=${limit}&offset=${offset}`);
+    }
+
+    async createWard(ward: WardRequest): Promise<ApiResponse<Ward>> {
+        return this.request<Ward>("/wards", {
+            method: "POST",
+            body: JSON.stringify(ward),
+        });
+    }
+
+    async updateWard(
+        id: string,
+        ward: Partial<WardRequest>
+    ): Promise<ApiResponse<Ward>> {
+        return this.request<Ward>(`/wards/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(ward),
+        });
+    }
+
+    async deleteWard(id: string): Promise<ApiResponse> {
+        return this.request(`/wards/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    // HIS Integration methods
+    async hisLogin(): Promise<ApiResponse<HisTokenResponse>> {
+        return this.request<HisTokenResponse>("/his-integration/login", {
+            method: "POST",
+        });
+    }
+
+    async hisLoginWithCredentials(credentials: {
+        username: string;
+        password: string;
+    }): Promise<ApiResponse<HisDirectLoginResponse>> {
+        return this.request<HisDirectLoginResponse>("/his-direct-login/login", {
+            method: "POST",
+            body: JSON.stringify(credentials),
+        });
+    }
+
+    async validateHisToken(
+        token: string
+    ): Promise<ApiResponse<HisTokenValidationResponse>> {
+        return this.request<HisTokenValidationResponse>(
+            "/his-direct-login/validate-token",
+            {
+                method: "POST",
+                body: JSON.stringify({token}),
+            }
+        );
+    }
+
+    async hisRenewToken(
+        renewCode: string
+    ): Promise<ApiResponse<HisTokenResponse>> {
+        return this.request<HisTokenResponse>("/his-integration/renew-token", {
+            method: "POST",
+            body: JSON.stringify({renewCode}),
+        });
+    }
+
+    async getHisToken(username?: string): Promise<ApiResponse<HisTokenResponse>> {
+        const endpoint = username
+            ? `/his-integration/token?username=${username}`
+            : "/his-integration/token";
+        return this.request<HisTokenResponse>(endpoint);
+    }
+
+    async refreshHisToken(
+        username?: string
+    ): Promise<ApiResponse<HisTokenResponse>> {
+        const endpoint = username
+            ? `/his-integration/refresh-token?username=${username}`
+            : "/his-integration/refresh-token";
+        return this.request<HisTokenResponse>(endpoint, {
+            method: "POST",
+        });
+    }
+
+    async callHisApi(request: HisApiCallRequest): Promise<ApiResponse> {
+        return this.request("/his-integration/call-api", {
+            method: "POST",
+            body: JSON.stringify(request),
+        });
+    }
+
+    async getHisUserInfo(username: string): Promise<ApiResponse<HisUserInfo>> {
+        return this.request<HisUserInfo>(`/his-integration/user-info/${username}`);
+    }
+
+    async hisLogout(username: string): Promise<ApiResponse> {
+        return this.request(`/his-integration/logout/${username}`, {
+            method: "POST",
+        });
+    }
+
+    async getHisTokenStatus(
+        username?: string
+    ): Promise<ApiResponse<HisTokenStatus>> {
+        const endpoint = username
+            ? `/his-integration/token-status?username=${username}`
+            : "/his-integration/token-status";
+        return this.request<HisTokenStatus>(endpoint);
+    }
+
+    async cleanupExpiredHisTokens(): Promise<ApiResponse> {
+        return this.request("/his-integration/cleanup-expired-tokens", {
+            method: "POST",
+        });
+    }
+
+    // User management methods
+    async getUsers(filters?: UserFilters): Promise<
+        ApiResponse<{
+            items: User[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: User[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/users${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getUser(id: string): Promise<ApiResponse<User>> {
+        return this.request<User>(`/users/${id}`);
+    }
+
+    async createUser(user: UserRequest): Promise<ApiResponse<User>> {
+        return this.request<User>("/users", {
+            method: "POST",
+            body: JSON.stringify(user),
+        });
+    }
+
+    async updateUser(
+        id: string,
+        user: Partial<UserRequest>
+    ): Promise<ApiResponse<User>> {
+        return this.request<User>(`/users/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(user),
+        });
+    }
+
+    async deleteUser(id: string): Promise<ApiResponse> {
+        return this.request(`/users/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    // Department Type management methods
+    async getDepartmentTypes(filters?: DepartmentTypeFilters): Promise<
+        ApiResponse<{
+            items: DepartmentType[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: DepartmentType[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/department-types${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getDepartmentType(id: string): Promise<ApiResponse<DepartmentType>> {
+        return this.request<DepartmentType>(`/department-types/${id}`);
+    }
+
+    async createDepartmentType(
+        departmentType: DepartmentTypeRequest
+    ): Promise<ApiResponse<DepartmentType>> {
+        return this.request<DepartmentType>("/department-types", {
+            method: "POST",
+            body: JSON.stringify(departmentType),
+        });
+    }
+
+    async updateDepartmentType(
+        id: string,
+        departmentType: Partial<DepartmentTypeRequest>
+    ): Promise<ApiResponse<DepartmentType>> {
+        return this.request<DepartmentType>(`/department-types/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(departmentType),
+        });
+    }
+
+    async deleteDepartmentType(id: string): Promise<ApiResponse> {
+        return this.request(`/department-types/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    // Department management methods
+    async getDepartments(filters?: DepartmentFilters): Promise<
+        ApiResponse<{
+            items: Department[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: Department[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/departments${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getDepartment(id: string): Promise<ApiResponse<Department>> {
+        return this.request<Department>(`/departments/${id}`);
+    }
+
+    async createDepartment(
+        department: DepartmentRequest
+    ): Promise<ApiResponse<Department>> {
+        return this.request<Department>("/departments", {
+            method: "POST",
+            body: JSON.stringify(department),
+        });
+    }
+
+    async updateDepartment(
+        id: string,
+        department: Partial<DepartmentRequest>
+    ): Promise<ApiResponse<Department>> {
+        return this.request<Department>(`/departments/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(department),
+        });
+    }
+
+    async deleteDepartment(id: string): Promise<ApiResponse> {
+        return this.request(`/departments/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    async getDepartmentsByBranch(
+        branchId: string,
+        limit = 10,
+        offset = 0
+    ): Promise<
+        ApiResponse<{
+            items: Department[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        return this.request<{
+            items: Department[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/branches/${branchId}/departments?limit=${limit}&offset=${offset}`);
+    }
+
+    // Service Group management methods
+    async getServiceGroups(filters?: ServiceGroupFilters): Promise<
+        ApiResponse<{
+            items: ServiceGroup[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: ServiceGroup[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/service-groups${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getServiceGroup(id: string): Promise<ApiResponse<ServiceGroup>> {
+        return this.request<ServiceGroup>(`/service-groups/${id}`);
+    }
+
+    async createServiceGroup(
+        serviceGroup: ServiceGroupRequest
+    ): Promise<ApiResponse<ServiceGroup>> {
+        return this.request<ServiceGroup>("/service-groups", {
+            method: "POST",
+            body: JSON.stringify(serviceGroup),
+        });
+    }
+
+    async updateServiceGroup(
+        id: string,
+        serviceGroup: Partial<ServiceGroupRequest>
+    ): Promise<ApiResponse<ServiceGroup>> {
+        return this.request<ServiceGroup>(`/service-groups/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(serviceGroup),
+        });
+    }
+
+    async deleteServiceGroup(id: string): Promise<ApiResponse> {
+        return this.request(`/service-groups/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    // Unit of Measure management methods
+    async getUnitOfMeasures(filters?: UnitOfMeasureFilters): Promise<
+        ApiResponse<{
+            items: UnitOfMeasure[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: UnitOfMeasure[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/unit-of-measures${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getUnitOfMeasure(id: string): Promise<ApiResponse<UnitOfMeasure>> {
+        return this.request<UnitOfMeasure>(`/unit-of-measures/${id}`);
+    }
+
+    async createUnitOfMeasure(
+        unitOfMeasure: UnitOfMeasureRequest
+    ): Promise<ApiResponse<UnitOfMeasure>> {
+        return this.request<UnitOfMeasure>("/unit-of-measures", {
+            method: "POST",
+            body: JSON.stringify(unitOfMeasure),
+        });
+    }
+
+    async updateUnitOfMeasure(
+        id: string,
+        unitOfMeasure: Partial<UnitOfMeasureRequest>
+    ): Promise<ApiResponse<UnitOfMeasure>> {
+        return this.request<UnitOfMeasure>(`/unit-of-measures/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(unitOfMeasure),
+        });
+    }
+
+    async deleteUnitOfMeasure(id: string): Promise<ApiResponse> {
+        return this.request(`/unit-of-measures/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    // Service management methods
+    async getServices(filters?: ServiceFilters): Promise<
+        ApiResponse<{
+            items: Service[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: Service[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/services${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getService(id: string): Promise<ApiResponse<Service>> {
+        return this.request<Service>(`/services/${id}`);
+    }
+
+    async createService(service: ServiceRequest): Promise<ApiResponse<Service>> {
+        return this.request<Service>("/services", {
+            method: "POST",
+            body: JSON.stringify(service),
+        });
+    }
+
+    async updateService(
+        id: string,
+        service: Partial<ServiceRequest>
+    ): Promise<ApiResponse<Service>> {
+        return this.request<Service>(`/services/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(service),
+        });
+    }
+
+    async deleteService(id: string): Promise<ApiResponse> {
+        return this.request(`/services/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    async getServicesByGroup(
+        serviceGroupId: string,
+        limit = 10,
+        offset = 0
+    ): Promise<
+        ApiResponse<{
+            items: Service[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        return this.request<{
+            items: Service[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(
+            `/service-groups/${serviceGroupId}/services?limit=${limit}&offset=${offset}`
+        );
+    }
+
+    // Room management methods
+    async getRooms(filters?: RoomFilters): Promise<
+        ApiResponse<{
+            items: Room[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: Room[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/rooms${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getRoom(id: string): Promise<ApiResponse<Room>> {
+        return this.request<Room>(`/rooms/${id}`);
+    }
+
+    async createRoom(room: RoomRequest): Promise<ApiResponse<Room>> {
+        return this.request<Room>("/rooms", {
+            method: "POST",
+            body: JSON.stringify(room),
+        });
+    }
+
+    async updateRoom(
+        id: string,
+        room: Partial<RoomRequest>
+    ): Promise<ApiResponse<Room>> {
+        return this.request<Room>(`/rooms/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(room),
+        });
+    }
+
+    async deleteRoom(id: string): Promise<ApiResponse> {
+        return this.request(`/rooms/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    // Room Group management methods
+    async getRoomGroups(filters?: RoomGroupFilters): Promise<
+        ApiResponse<{
+            items: RoomGroup[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: RoomGroup[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/room-groups${queryString ? `?${queryString}` : ""}`);
+    }
+
+    async getRoomsByDepartment(
+        departmentId: string,
+        limit = 10,
+        offset = 0
+    ): Promise<
+        ApiResponse<{
+            items: Room[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        return this.request<{
+            items: Room[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/departments/${departmentId}/rooms?limit=${limit}&offset=${offset}`);
+    }
+
+    // Sample Type management methods
+    async getSampleTypes(filters?: SampleTypeFilters): Promise<
+        ApiResponse<{
+            sampleTypes: SampleType[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+
+        // Set defaults
+        params.append("limit", "100");
+        params.append("offset", "0");
+        params.append("sortBy", "sortOrder");
+        params.append("sortOrder", "ASC");
+
+        // Apply filters (excluding isActive as backend doesn't support it)
+        if (filters) {
+            if (filters.search) {
+                params.set("search", filters.search);
+            }
+            if (filters.limit !== undefined) {
+                params.set("limit", filters.limit.toString());
+            }
+            if (filters.offset !== undefined) {
+                params.set("offset", filters.offset.toString());
+            }
+        }
+
+        const queryString = params.toString();
+        return this.request<{
+            sampleTypes: SampleType[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/sample-types?${queryString}`);
+    }
+
+    async getSampleType(id: string): Promise<ApiResponse<SampleType>> {
+        return this.request<SampleType>(`/sample-types/${id}`);
+    }
+
+    async createSampleType(
+        sampleType: SampleTypeRequest
+    ): Promise<ApiResponse<SampleType>> {
+        return this.request<SampleType>("/sample-types", {
+            method: "POST",
+            body: JSON.stringify(sampleType),
+        });
+    }
+
+    async updateSampleType(
+        id: string,
+        sampleType: Partial<SampleTypeRequest>
+    ): Promise<ApiResponse<SampleType>> {
+        return this.request<SampleType>(`/sample-types/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(sampleType),
+        });
+    }
+
+    async deleteSampleType(id: string): Promise<ApiResponse> {
+        return this.request(`/sample-types/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    async getServiceRequestByCode(
+        serviceReqCode: string
+    ): Promise<ApiResponse<ServiceRequestResponse>> {
+        return this.request<ServiceRequestResponse>(
+            `/service-requests/code/${serviceReqCode}`
+        );
+    }
+
+    async searchServiceRequests(query: string): Promise<ApiResponse<any>> {
+        const params = new URLSearchParams();
+        if (query) {
+            params.append("search", query);
+        }
+        return this.request<any>(`/service-requests?${params.toString()}`);
+    }
+
+    async createSampleReception(
+        request: SampleReceptionRequest
+    ): Promise<ApiResponse<SampleReceptionResponse>> {
+        return this.request<SampleReceptionResponse>("/sample-receptions", {
+            method: "POST",
+            body: JSON.stringify(request),
+        });
+    }
+
+    async generateSampleReceptionCode(
+        sampleTypeCode: string,
+        date: string
+    ): Promise<ApiResponse<SampleReceptionResponse>> {
+        const params = new URLSearchParams();
+        params.append("sampleTypeCode", sampleTypeCode);
+        params.append("date", date);
+        return this.request<SampleReceptionResponse>(
+            `/sample-receptions/generate-code?${params.toString()}`
+        );
+    }
+
+    async getMyRooms(): Promise<ApiResponse<UserRoom[]>> {
+        // BE trả về { success, status_code, data: UserRoom[] }
+        return this.request<UserRoom[]>("/user-rooms/my-rooms");
+    }
+
+    async storeServiceRequest(
+        body: StoreServiceRequestBody
+    ): Promise<ApiResponse<unknown>> {
+        return this.request<unknown>("/service-requests/store", {
+            method: "POST",
+            body: JSON.stringify(body),
+        });
+    }
+
+    async getWorkflowStates(params?: {
+        limit?: number;
+        offset?: number;
+        isActive?: number;
+        order?: 'ASC' | 'DESC';
+        orderBy?: 'stateOrder' | 'stateName';
+    }): Promise<ApiResponse<{
+        items: Array<{
+            id: string;
+            stateCode: string;
+            stateName: string;
+            stateDescription: string;
+            stateOrder: number;
+            canSkip: number;
+            requiresApproval: number;
+            isActive: number;
+        }>;
+        pagination: {
+            total: number;
+            limit: number;
+            offset: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+        };
+    }>> {
+        const queryParams = new URLSearchParams();
+
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.offset !== undefined) queryParams.append('offset', params.offset.toString());
+        if (params?.isActive !== undefined) queryParams.append('isActive', params.isActive.toString());
+        if (params?.order) queryParams.append('order', params.order);
+        if (params?.orderBy) queryParams.append('orderBy', params.orderBy);
+
+        return this.request(`/workflow-states?${queryParams.toString()}`);
+    }
+
+    async getWorkflowHistory(params: {
+        roomId: string;
+        stateId?: string;
+        roomType?: 'actionRoomId' | 'currentRoomId' | 'transitionedByRoomId';
+        stateType?: 'toStateId' | 'fromStateId';
+        isCurrent?: number;
+        timeType?: 'actionTimestamp' | 'startedAt' | 'completedAt' | 'currentStateStartedAt';
+        fromDate?: string;
+        toDate?: string;
+        limit?: number;
+        offset?: number;
+        order?: 'ASC' | 'DESC';
+        orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
+        serviceReqCode?: string;
+    }): Promise<ApiResponse<{
+        items: Array<{
+            id: string;
+            storedServiceReqId: string;
+            createdAt?: string;
+            serviceRequest?: {
+                id?: string;
+                hisServiceReqCode?: string;
+                serviceReqCode?: string;
+                patientName?: string;
+                patientCode?: string;
+                patientGenderName?: string;
+            };
+        }>;
+        pagination: {
+            total: number;
+            limit: number;
+            offset: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+        };
+    }>> {
+        const queryParams = new URLSearchParams();
+
+        // Required params
+        queryParams.append('roomId', params.roomId);
+        if (params.stateId) queryParams.append('stateId', params.stateId);
+
+        // Optional params
+        if (params.roomType) queryParams.append('roomType', params.roomType);
+        if (params.stateType) queryParams.append('stateType', params.stateType);
+        if (params.isCurrent !== undefined) queryParams.append('isCurrent', params.isCurrent.toString());
+        if (params.timeType) queryParams.append('timeType', params.timeType);
+        if (params.fromDate) queryParams.append('fromDate', params.fromDate);
+        if (params.toDate) queryParams.append('toDate', params.toDate);
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+        if (params.offset) queryParams.append('offset', params.offset.toString());
+        if (params.order) queryParams.append('order', params.order);
+        if (params.orderBy) queryParams.append('orderBy', params.orderBy);
+        if (params.serviceReqCode) queryParams.append('serviceReqCode', params.serviceReqCode);
+
+        return this.request(
+            `/workflow-history/by-room-and-state?${queryParams.toString()}`
+        );
+    }
+
+    async transitionWorkflow(body: {
+        storedServiceReqId: string;
+        toStateId: string;
+        actionType: 'START' | 'COMPLETE' | 'PAUSE' | 'RESUME' | 'CANCEL' | 'SKIP';
+        currentUserId?: string;
+        currentDepartmentId?: string;
+        currentRoomId?: string;
+        notes?: string;
+        attachmentUrl?: string;
+        metadata?: Record<string, any>;
+    }): Promise<ApiResponse<{
+        id: string;
+        storedServiceReqId: string;
+        fromStateId: string | null;
+        toStateId: string;
+        actionType: string;
+        actionTimestamp: string;
+        currentStateStartedAt: string;
+        notes?: string;
+    }>> {
+        return this.request('/workflow-history/transition', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+    }
+
+}
+
+export const apiClient = new ApiClient();
