@@ -52,9 +52,15 @@
 @layer base {
   * {
     @apply border-border;
+    /* Ensure proper rendering of Vietnamese diacritics */
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1;
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -65,6 +71,24 @@
 
 .medical-shadow {
   box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.1), 0 2px 4px -1px rgba(14, 165, 233, 0.06);
+}
+
+/* Print styles for PDF export with proper Vietnamese font rendering */
+@media print {
+  body {
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  * {
+    text-rendering: optimizeLegibility !important;
+    font-feature-settings: "kern" 1 !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
 }
 
 /* TipTap Editor Styles */
@@ -96,12 +120,66 @@
   margin: 0.25em 0;
 }
 
+/* Indent all content except headings (for medical report format) */
+.ProseMirror p,
+.ProseMirror ul,
+.ProseMirror ol,
+.ProseMirror blockquote {
+  margin-left: 3rem;
+}
+
+/* Headings stay at the left */
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin-left: 0 !important;
+  font-weight: bold;
+}
+
+/* Nested lists need additional indentation on top of the base indent */
+.ProseMirror ul ul,
+.ProseMirror ul ol,
+.ProseMirror ol ul,
+.ProseMirror ol ol {
+  margin: 0.25em 0;
+  padding-left: 2rem;
+  margin-left: 2rem;
+}
+
 .ProseMirror strong {
   font-weight: bold;
 }
 
 .ProseMirror em {
   font-style: italic;
+}
+
+/* Apply same indentation for prose (display mode, PDF export) */
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote {
+  margin-left: 3rem !important;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  margin-left: 0 !important;
+  font-weight: bold !important;
+}
+
+.prose ul ul,
+.prose ul ol,
+.prose ol ul,
+.prose ol ol {
+  margin-left: 2rem !important;
 }
 
 .ProseMirror u {

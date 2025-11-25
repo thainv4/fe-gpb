@@ -19,7 +19,9 @@ import {
     AlignJustify,
     Heading1,
     Heading2,
-    Heading3
+    Heading3,
+    Indent,
+    Outdent
 } from 'lucide-react'
 
 interface RichTextEditorProps {
@@ -167,6 +169,30 @@ export default function RichTextEditor({
                     title="Numbered List"
                 >
                     <ListOrdered className="h-4 w-4" />
+                </button>
+
+                <div className="w-px h-6 bg-gray-300 mx-1" />
+
+                {/* Outdent */}
+                <button
+                    type="button"
+                    onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+                    disabled={!editor.can().liftListItem('listItem')}
+                    className="p-2 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Giảm thụt lề (Shift+Tab)"
+                >
+                    <Outdent className="h-4 w-4" />
+                </button>
+
+                {/* Indent */}
+                <button
+                    type="button"
+                    onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+                    disabled={!editor.can().sinkListItem('listItem')}
+                    className="p-2 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Tăng thụt lề (Tab)"
+                >
+                    <Indent className="h-4 w-4" />
                 </button>
 
                 <div className="w-px h-6 bg-gray-300 mx-1" />

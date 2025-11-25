@@ -291,8 +291,19 @@ export default function TestIndicationsTable() {
             await storeServiceRequestMutation.mutateAsync(body);
             console.log("✅ Lưu thành công!");
 
+            // Hiển thị thông báo thành công
+            toast({
+                title: "Thành công",
+                description: "✅ Đã lưu chỉ định xét nghiệm thành công!",
+            });
+
             // Bước 3: Reset form
             clearAll();
+
+            // Bước 4: Reload trang để cập nhật dữ liệu
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000); // Delay 1s để user thấy toast trước khi reload
         } catch (error) {
             console.error("❌ Lỗi:", error);
             toast({
@@ -332,16 +343,6 @@ export default function TestIndicationsTable() {
 
             {/* Main Content - 3/4 màn hình */}
             <div className="flex-1 overflow-y-auto p-6 bg-white">
-                {/* Room info display */}
-                {(tabRoomName || tabDepartmentName) && (
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <div className="text-sm font-medium text-blue-900">
-                            Phòng làm việc: <span className="font-bold">{tabRoomName || 'N/A'}</span>
-                            {tabDepartmentName && <span> - Khoa: <span className="font-bold">{tabDepartmentName}</span></span>}
-                        </div>
-                    </div>
-                )}
-
                 {!tabRoomId && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                         <div className="text-sm font-medium text-yellow-900">

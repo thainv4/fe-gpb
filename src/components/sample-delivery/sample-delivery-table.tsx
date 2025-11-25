@@ -235,7 +235,7 @@ export default function SampleDeliveryTable() {
                         </div>
 
                         {/* Phần 1: Đơn vị gửi mẫu */}
-                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                        {/*<div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                             <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
                                 Đơn vị gửi mẫu
                             </h3>
@@ -259,33 +259,13 @@ export default function SampleDeliveryTable() {
                                     />
                                 </div>
                             </div>
-                        </div>
+                        </div>*/}
 
                         {/* Phần 2: Đơn vị nhận mẫu */}
                         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                             <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
                                 Đơn vị thực hiện
                             </h3>
-
-                            {/* Status indicators */}
-                            <div className="mb-4 p-3 bg-gray-50 rounded-md text-xs space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <span className={storedServiceReqId ? 'text-green-600' : 'text-red-600'}>{storedServiceReqId ? '✓' : '✗'}</span>
-                                    <span>Workflow ID: {storedServiceReqId || 'Chưa tìm thấy'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className={selectedStateId ? 'text-green-600' : 'text-red-600'}>{selectedStateId ? '✓' : '✗'}</span>
-                                    <span>Trạng thái: {selectedStateId ? 'Đã chọn' : 'Chưa chọn'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className={receiverRoomId ? 'text-green-600' : 'text-red-600'}>{receiverRoomId ? '✓' : '✗'}</span>
-                                    <span>Phòng nhận: {receiverRoomName ? receiverRoomName : 'Chưa chọn'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className={receiverDepartmentId ? 'text-green-600' : 'text-red-600'}>{receiverDepartmentId ? '✓' : '✗'}</span>
-                                    <span>Khoa nhận: {receiverDepartmentName ? receiverDepartmentName : 'Chưa chọn'}</span>
-                                </div>
-                            </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="flex flex-col gap-2">

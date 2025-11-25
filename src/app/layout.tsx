@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Roboto } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import { Toaster } from '@/components/ui/toaster'
@@ -9,7 +9,13 @@ if (process.env.NODE_ENV === 'development') {
     import('@/lib/utils/token-debug')
 }
 
-const inter = Inter({ subsets: ['latin'] })
+// Roboto font with Vietnamese support for better rendering
+const roboto = Roboto({
+    weight: ['300', '400', '500', '700'],
+    subsets: ['latin', 'vietnamese'],
+    display: 'swap',
+    variable: '--font-roboto',
+})
 
 export const metadata: Metadata = {
     title: 'Bạch Mai LIS GPB',
@@ -24,7 +30,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="vi">
-            <body className={inter.className}>
+            <body className={roboto.className}>
                 <Providers>
                     {children}
                     <Toaster />

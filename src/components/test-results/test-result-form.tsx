@@ -10,10 +10,12 @@ import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
+import {useToast} from "@/hooks/use-toast";
 
 export default function TestResultForm() {
     const pathname = usePathname()
     const {setTabData, getTabData} = useTabsStore()
+    const {toast} = useToast()
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
     const [storedServiceReqId, setStoredServiceReqId] = useState<string>('')
 
@@ -38,6 +40,8 @@ export default function TestResultForm() {
         <p></p>
     `
     const [testResult, setTestResult] = useState<string>(defaultTemplate)
+    const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set())
+    const [isSaving, setIsSaving] = useState(false)
 
     // Restore tab state on mount
     useEffect(() => {
@@ -64,13 +68,127 @@ export default function TestResultForm() {
         staleTime: 5 * 60 * 1000,
     })
 
+    // Fetch stored service request with services
+    const {data: storedServiceRequestData} = useQuery({
+        queryKey: ['stored-service-request', storedServiceReqId],
+        queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId),
+        enabled: !!storedServiceReqId,
+        staleTime: 5 * 60 * 1000,
+    })
+
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient
+    const storedServiceRequest = storedServiceRequestData?.data
+    const services = storedServiceRequest?.services || []
 
-    const handleSelect = (serviceReqCode: string, reqId?: string) => {
+    const handleSelect = (serviceReqCode: string, storedServiceReqId?: string) => {
         setSelectedServiceReqCode(serviceReqCode)
-        if (reqId) {
-            setStoredServiceReqId(reqId)
+        if (storedServiceReqId) {
+            setStoredServiceReqId(storedServiceReqId)
+        }
+    }
+
+    // Handler cho checkbox
+    const handleServiceCheck = (serviceId: string, checked: boolean) => {
+        setSelectedServices(prev => {
+            const newSet = new Set(prev)
+            if (checked) {
+                newSet.add(serviceId)
+            } else {
+                newSet.delete(serviceId)
+            }
+            return newSet
+        })
+    }
+
+    // Handler Check All
+    const handleCheckAll = (checked: boolean) => {
+        if (checked) {
+            // Select all services
+            const allServiceIds = new Set(services.map(s => s.id))
+            setSelectedServices(allServiceIds)
+        } else {
+            // Deselect all
+            setSelectedServices(new Set())
+        }
+    }
+
+    // Check if all services are selected
+    const isAllSelected = services.length > 0 && selectedServices.size === services.length
+
+    // Handler xuất PDF - Mở trang preview
+    const handleExportPdf = () => {
+        if (!storedServiceReqId) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng chọn một phiếu xét nghiệm"
+            })
+            return
+        }
+
+        // Mở trang preview trong tab mới
+        const previewUrl = `/test-results/preview/${storedServiceReqId}`;
+        window.open(previewUrl, '_blank');
+    }
+
+    // Handler lưu kết quả
+    const handleSaveResults = async () => {
+        if (selectedServices.size === 0) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng chọn ít nhất một dịch vụ"
+            })
+            return
+        }
+
+        if (!testResult.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng nhập kết quả xét nghiệm"
+            })
+            return
+        }
+
+        if (!storedServiceRequest?.id) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Không tìm thấy thông tin yêu cầu dịch vụ"
+            })
+            return
+        }
+
+        setIsSaving(true)
+        try {
+            const promises = Array.from(selectedServices).map(serviceId =>
+                apiClient.saveServiceResult(storedServiceRequest.id, serviceId, {
+                    resultValue: 12.5,
+                    resultValueText: "12.5",
+                    resultText: testResult,
+                    resultStatus: 'NORMAL'
+                })
+            )
+
+            await Promise.all(promises)
+            toast({
+                title: "Thành công",
+                description: `Đã lưu kết quả cho ${selectedServices.size} dịch vụ`,
+                variant: "default"
+            })
+            setSelectedServices(new Set())
+            setTestResult(defaultTemplate)
+        } catch (error) {
+            console.error('Error saving results:', error)
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Có lỗi xảy ra khi lưu kết quả"
+            })
+        } finally {
+            setIsSaving(false)
         }
     }
 
@@ -148,6 +266,90 @@ export default function TestResultForm() {
                                     </div>
                                 </div>
 
+                                {/* Services Table */}
+                                {storedServiceReqId && services.length > 0 && (
+                                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                                        <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
+                                            Danh sách dịch vụ
+                                        </h3>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            <Input
+                                                                type="checkbox"
+                                                                checked={isAllSelected}
+                                                                onChange={(e) => handleCheckAll(e.target.checked)}
+                                                                title="Chọn tất cả"
+                                                            />
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            STT
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Mã dịch vụ
+                                                        </th>
+                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Tên dịch vụ
+                                                        </th>
+                                                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Đơn giá
+                                                        </th>
+                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Mã tiếp nhận
+                                                        </th>
+                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Thao tác
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {services.map((service, index) => (
+                                                        <tr key={service.id} className="hover:bg-gray-50">
+                                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                                                <Input
+                                                                    type="checkbox"
+                                                                    checked={selectedServices.has(service.id)}
+                                                                    onChange={(e) => handleServiceCheck(service.id, e.target.checked)}
+                                                                />
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                                                {index + 1}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                                {service.serviceCode}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                                                {service.serviceName}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                                {service.price.toLocaleString('vi-VN')} đ
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                                {service.receptionCode || '-'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                                <button
+                                                                    onClick={() => handleExportPdf()}
+                                                                    disabled={!storedServiceReqId}
+                                                                    className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:text-gray-400 disabled:hover:bg-transparent"
+                                                                    title="Xem trước phiếu xét nghiệm"
+                                                                >
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                    </svg>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
                         {/* Test Results */}
                         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                             <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
@@ -174,9 +376,11 @@ export default function TestResultForm() {
                             </button>
                             <button
                                 type="button"
-                                className="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                onClick={handleSaveResults}
+                                disabled={isSaving || selectedServices.size === 0}
+                                className="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
                             >
-                                Lưu kết quả
+                                {isSaving ? 'Đang lưu...' : 'Lưu kết quả'}
                             </button>
                         </div>
                             </div>

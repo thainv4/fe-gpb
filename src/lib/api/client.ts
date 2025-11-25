@@ -639,6 +639,127 @@ export interface ServiceRequestService {
     serviceTests?: ServiceTest[];
 }
 
+export interface StoredService {
+    id: string;
+    parentServiceId?: string | null;
+    isChildService: number;
+    hisSereServId: number;
+    serviceId: number;
+    serviceCode: string;
+    serviceName: string;
+    price: number;
+    lisServiceId?: string | null;
+    unitOfMeasureId?: string | null;
+    unitOfMeasureCode?: string | null;
+    unitOfMeasureName?: string | null;
+    rangeText?: string | null;
+    rangeLow?: number | null;
+    rangeHigh?: number | null;
+    mapping?: string | null;
+    testOrder?: number | null;
+    shortName?: string | null;
+    description?: string | null;
+    resultText?: string | null;
+    resultValue?: number | null;
+    resultValueText?: string | null;
+    resultStatus?: string | null;
+    isNormal: number;
+    resultEnteredAt?: string | null;
+    resultReviewedAt?: string | null;
+    resultApprovedAt?: string | null;
+    resultCompletedAt?: string | null;
+    resultEnteredByUserId?: string | null;
+    resultReviewedByUserId?: string | null;
+    resultApprovedByUserId?: string | null;
+    resultNotes?: string | null;
+    resultMetadata?: string | null;
+    qcStatus?: string | null;
+    qcCheckedByUserId?: string | null;
+    qcCheckedAt?: string | null;
+    receptionCode?: string | null;
+    sampleCollectionTime?: string | null;
+    collectedByUserId?: string | null;
+    testId?: string | null;
+    isActive?: number | null;
+}
+
+export interface StoredServiceRequestResponse {
+    id: string;
+    hisServiceReqCode: string;
+    hisServiceReqId: number;
+    serviceReqCode: string;
+    serviceReqSttId: number;
+    serviceReqSttCode: string;
+    serviceReqTypeId: number;
+    serviceReqTypeCode: string;
+    instructionTime: number;
+    instructionDate: number;
+    icdCode: string;
+    icdName: string;
+    icdSubCode?: string | null;
+    icdText?: string | null;
+    treatmentId: number;
+    treatmentCode: string;
+    note?: string | null;
+    requestRoomId: string;
+    requestRoomCode: string;
+    requestRoomName: string;
+    requestRoomLisId?: string | null;
+    requestDepartmentId: string;
+    requestDepartmentCode: string;
+    requestDepartmentName: string;
+    requestDepartmentLisId?: string | null;
+    executeRoomId: string;
+    executeRoomCode: string;
+    executeRoomName: string;
+    executeRoomLisId?: string | null;
+    executeDepartmentId: string;
+    executeDepartmentCode: string;
+    executeDepartmentName: string;
+    executeDepartmentLisId?: string | null;
+    currentRoomId: string;
+    currentDepartmentId: string;
+    patientId: string;
+    patientCode: string;
+    patientName: string;
+    patientDob: number;
+    patientCmndNumber: string;
+    patientCmndDate?: number | null;
+    patientCmndPlace?: string | null;
+    patientMobile?: string | null;
+    patientPhone?: string | null;
+    patientProvinceCode: string;
+    patientProvinceName: string;
+    patientProvinceLisId?: string | null;
+    patientCommuneCode: string;
+    patientCommuneName: string;
+    patientCommuneLisId?: string | null;
+    patientAddress: string;
+    patientGenderId: number;
+    patientGenderName: string;
+    patientCareerName?: string | null;
+    patientLisId?: string | null;
+    storedAt: string;
+    storedBy: string;
+    rawResponseJson?: string | null;
+    services: StoredService[];
+    workflowCurrentState?: {
+        id: string;
+        toStateId: string;
+        stateCode: string;
+        stateName: string;
+        actionType: string;
+        startedAt: string;
+        actionTimestamp: string;
+        completedAt?: string | null;
+        isCurrent: number;
+        notes?: string | null;
+    };
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null;
+}
+
 export interface ServiceRequestDetail {
     id: number;
     serviceReqCode: string;
@@ -2046,6 +2167,33 @@ class ApiClient {
             method: "POST",
             body: JSON.stringify(body),
         });
+    }
+
+    async getStoredServiceRequest(
+        id: string
+    ): Promise<ApiResponse<StoredServiceRequestResponse>> {
+        return this.request<StoredServiceRequestResponse>(
+            `/service-requests/stored/${id}`
+        );
+    }
+
+    async saveServiceResult(
+        storedReqId: string,
+        serviceId: string,
+        data: {
+            resultValue?: number;
+            resultValueText?: string;
+            resultText?: string;
+            resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
+        }
+    ): Promise<ApiResponse> {
+        return this.request(
+            `/service-requests/stored/${storedReqId}/services/${serviceId}/result`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(data),
+            }
+        );
     }
 
     async getWorkflowStates(params?: {
