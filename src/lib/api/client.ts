@@ -2177,6 +2177,14 @@ class ApiClient {
         );
     }
 
+    async getStoredServiceById(
+        serviceId: string
+    ): Promise<ApiResponse<StoredService>> {
+        return this.request<StoredService>(
+            `/service-requests/stored/services/${serviceId}`
+        );
+    }
+
     async saveServiceResult(
         storedReqId: string,
         serviceId: string,

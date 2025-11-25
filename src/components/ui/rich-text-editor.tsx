@@ -70,8 +70,8 @@ export default function RichTextEditor({
     return (
         <div className="border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
             {/* Toolbar */}
-            <div className="flex items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 flex-wrap">
-                {/* Bold */}
+            {/*<div className="flex items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 flex-wrap">
+                 Bold
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleBold().run()}
@@ -83,7 +83,7 @@ export default function RichTextEditor({
                     <Bold className="h-4 w-4" />
                 </button>
 
-                {/* Italic */}
+                 Italic
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -95,7 +95,7 @@ export default function RichTextEditor({
                     <Italic className="h-4 w-4" />
                 </button>
 
-                {/* Underline */}
+                 Underline
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleUnderline().run()}
@@ -109,7 +109,7 @@ export default function RichTextEditor({
 
                 <div className="w-px h-6 bg-gray-300 mx-1" />
 
-                {/* Heading 1 */}
+                 Heading 1
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -121,7 +121,7 @@ export default function RichTextEditor({
                     <Heading1 className="h-4 w-4" />
                 </button>
 
-                {/* Heading 2 */}
+                 Heading 2
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -133,7 +133,7 @@ export default function RichTextEditor({
                     <Heading2 className="h-4 w-4" />
                 </button>
 
-                {/* Heading 3 */}
+                 Heading 3
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
@@ -147,7 +147,7 @@ export default function RichTextEditor({
 
                 <div className="w-px h-6 bg-gray-300 mx-1" />
 
-                {/* Bullet List */}
+                 Bullet List
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -159,7 +159,7 @@ export default function RichTextEditor({
                     <List className="h-4 w-4" />
                 </button>
 
-                {/* Ordered List */}
+                 Ordered List
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().toggleOrderedList().run()}
@@ -173,7 +173,7 @@ export default function RichTextEditor({
 
                 <div className="w-px h-6 bg-gray-300 mx-1" />
 
-                {/* Outdent */}
+                 Outdent
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().liftListItem('listItem').run()}
@@ -184,7 +184,7 @@ export default function RichTextEditor({
                     <Outdent className="h-4 w-4" />
                 </button>
 
-                {/* Indent */}
+                 Indent
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
@@ -197,7 +197,7 @@ export default function RichTextEditor({
 
                 <div className="w-px h-6 bg-gray-300 mx-1" />
 
-                {/* Align Left */}
+                 Align Left
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().setTextAlign('left').run()}
@@ -209,7 +209,7 @@ export default function RichTextEditor({
                     <AlignLeft className="h-4 w-4" />
                 </button>
 
-                {/* Align Center */}
+                 Align Center
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().setTextAlign('center').run()}
@@ -221,7 +221,7 @@ export default function RichTextEditor({
                     <AlignCenter className="h-4 w-4" />
                 </button>
 
-                {/* Align Right */}
+                 Align Right
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().setTextAlign('right').run()}
@@ -233,7 +233,7 @@ export default function RichTextEditor({
                     <AlignRight className="h-4 w-4" />
                 </button>
 
-                {/* Align Justify */}
+                 Align Justify
                 <button
                     type="button"
                     onClick={() => editor.chain().focus().setTextAlign('justify').run()}
@@ -244,7 +244,7 @@ export default function RichTextEditor({
                 >
                     <AlignJustify className="h-4 w-4" />
                 </button>
-            </div>
+            </div>*/}
 
             {/* Editor Content */}
             <EditorContent

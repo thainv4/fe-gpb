@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { FormTemplate } from '@/components/test-results/form-export-pdf/form-template';
@@ -9,14 +9,26 @@ import { useReactToPrint } from 'react-to-print';
 
 export default function PreviewPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const storedServiceReqId = params.serviceReqCode as string;
+    const serviceId = searchParams.get('serviceId');
     const componentRef = useRef<HTMLDivElement>(null);
 
-    const { data: storedServiceRequestData, isLoading } = useQuery({
+    // Fetch stored service request
+    const { data: storedServiceRequestData, isLoading: isLoadingRequest } = useQuery({
         queryKey: ['stored-service-request-preview', storedServiceReqId],
         queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId),
         enabled: !!storedServiceReqId,
     });
+
+    // Fetch specific service if serviceId is provided
+    const { data: serviceData, isLoading: isLoadingService } = useQuery({
+        queryKey: ['stored-service-detail', serviceId],
+        queryFn: () => apiClient.getStoredServiceById(serviceId!),
+        enabled: !!serviceId,
+    });
+
+    const isLoading = isLoadingRequest || isLoadingService;
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
@@ -142,7 +154,10 @@ export default function PreviewPage() {
 
                 {/* Preview Content */}
                 <div ref={componentRef}>
-                    <FormTemplate data={storedServiceRequestData.data} />
+                    <FormTemplate
+                        data={storedServiceRequestData.data}
+                        specificService={serviceData?.data}
+                    />
                 </div>
             </div>
         </div>

@@ -1,10 +1,11 @@
 ﻿'use client';
 
 import React from 'react';
-import { StoredServiceRequestResponse } from '@/lib/api/client';
+import { StoredServiceRequestResponse, StoredService } from '@/lib/api/client';
 
 interface FormTemplateProps {
     data: StoredServiceRequestResponse;
+    specificService?: StoredService; // Service cụ thể để hiển thị resultText
 }
 
 // Helper function to calculate age from DOB
@@ -15,7 +16,7 @@ function calculateAge(dob: number): number {
     return currentYear - year;
 }
 
-export function FormTemplate({ data }: FormTemplateProps) {
+export function FormTemplate({ data, specificService }: FormTemplateProps) {
     const {
         patientCode,
         patientName,
@@ -27,14 +28,13 @@ export function FormTemplate({ data }: FormTemplateProps) {
         requestRoomName,
         icdCode,
         icdName,
-        services,
         serviceReqCode
     } = data;
 
     const age = calculateAge(patientDob);
 
-    // Get resultText from the first service that has it
-    const resultText = services.find(s => s.resultText)?.resultText || '';
+    // Chỉ lấy resultText từ specificService (API /api/v1/service-requests/stored/services/{serviceId})
+    const resultText = specificService?.resultText || '';
 
     return (
         <div className="w-[210mm] min-h-[297mm] mx-auto bg-white shadow-lg">
@@ -65,7 +65,7 @@ export function FormTemplate({ data }: FormTemplateProps) {
                 </h1>
 
                 {/* Patient Info Section */}
-                <div className="mt-6 mb-6 p-4">
+                <div className="mt-6 mb-3 p-4">
                     <div className="space-y-2 text-sm">
                         <div className="flex flex-wrap gap-x-14">
                             <span className="flex-shrink-0">
@@ -110,8 +110,8 @@ export function FormTemplate({ data }: FormTemplateProps) {
                 </div>
 
                 {/* Results Section */}
-                <div className="mt-6">
-                    <h2 className="text-center font-bold text-lg uppercase mb-4 py-2">
+                <div className="mb-2">
+                    <h2 className="text-center font-bold text-lg uppercase py-2">
                         KẾT QUẢ
                     </h2>
 

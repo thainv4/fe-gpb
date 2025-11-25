@@ -11,6 +11,7 @@ import {Input} from "@/components/ui/input";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import {useToast} from "@/hooks/use-toast";
+import {CheckCircle2, XCircle} from "lucide-react";
 
 export default function TestResultForm() {
     const pathname = usePathname()
@@ -116,8 +117,8 @@ export default function TestResultForm() {
     // Check if all services are selected
     const isAllSelected = services.length > 0 && selectedServices.size === services.length
 
-    // Handler xuất PDF - Mở trang preview
-    const handleExportPdf = () => {
+    // Handler xuất PDF - Mở trang preview với service ID
+    const handleExportPdf = (serviceId?: string) => {
         if (!storedServiceReqId) {
             toast({
                 variant: "destructive",
@@ -127,8 +128,10 @@ export default function TestResultForm() {
             return
         }
 
-        // Mở trang preview trong tab mới
-        const previewUrl = `/test-results/preview/${storedServiceReqId}`;
+        // Nếu có serviceId, mở preview cho service cụ thể, nếu không thì mở preview chung
+        const previewUrl = serviceId
+            ? `/test-results/preview/${storedServiceReqId}?serviceId=${serviceId}`
+            : `/test-results/preview/${storedServiceReqId}`;
         window.open(previewUrl, '_blank');
     }
 
@@ -270,7 +273,7 @@ export default function TestResultForm() {
                                 {storedServiceReqId && services.length > 0 && (
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                                         <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
-                                            Danh sách dịch vụ
+                                            Chọn danh sách dịch vụ để trả kết quả
                                         </h3>
                                         <div className="overflow-x-auto">
                                             <table className="min-w-full divide-y divide-gray-200">
@@ -300,7 +303,10 @@ export default function TestResultForm() {
                                                             Mã tiếp nhận
                                                         </th>
                                                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Thao tác
+                                                            Trạng thái
+                                                        </th>
+                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Xem phiếu
                                                         </th>
                                                     </tr>
                                                 </thead>
@@ -329,12 +335,25 @@ export default function TestResultForm() {
                                                             <td className="px-4 py-3 text-sm text-gray-900 text-center">
                                                                 {service.receptionCode || '-'}
                                                             </td>
+                                                            <td className="px-4 py-3 text-sm text-center">
+                                                                {service.resultText ? (
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                        Đã có kết quả
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                                        <XCircle className="w-3.5 h-3.5" />
+                                                                        Chưa có kết quả
+                                                                    </span>
+                                                                )}
+                                                            </td>
                                                             <td className="px-4 py-3 text-sm text-gray-900 text-center">
                                                                 <button
-                                                                    onClick={() => handleExportPdf()}
+                                                                    onClick={() => handleExportPdf(service.id)}
                                                                     disabled={!storedServiceReqId}
                                                                     className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:text-gray-400 disabled:hover:bg-transparent"
-                                                                    title="Xem trước phiếu xét nghiệm"
+                                                                    title="Xem trước kết quả dịch vụ này"
                                                                 >
                                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
