@@ -1,6 +1,6 @@
 const API_BASE_URL =
     process.env.NEXT_PUBLIC_BACKEND_API_URL ||
-    "http://192.168.68.209:8000/api/v1";
+    "http://localhost:8000/api/v1";
 
 export interface ApiResponse<T = unknown> {
     success: boolean;

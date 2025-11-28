@@ -23,7 +23,7 @@ import {Button} from "@/components/ui/button";
 
 export default function TestResultForm() {
     const pathname = usePathname()
-    const {setTabData, getTabData} = useTabsStore()
+    const {setTabData, getTabData, activeKey, tabs} = useTabsStore()
     const {toast} = useToast()
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
     const [storedServiceReqId, setStoredServiceReqId] = useState<string>('')
@@ -95,10 +95,23 @@ export default function TestResultForm() {
         enabled: !!previewServiceId && previewDialogOpen,
     })
 
+    // Lấy thông tin người dùng hiện tại
+    const { data: profileData } = useQuery({
+        queryKey: ['profile'],
+        queryFn: () => apiClient.getProfile(),
+        staleTime: 5 * 60 * 1000,
+    })
+
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient
     const storedServiceRequest = storedServiceRequestData?.data
     const services = storedServiceRequest?.services || []
+
+    // Xác định phòng/khoa hiện tại từ tab đang hoạt động
+    const currentTab = (tabs as any)?.find?.((t: any) => t?.key === activeKey) ?? (tabs as any)?.[0]
+    const currentRoomId = currentTab?.roomId as string | undefined
+    const currentDepartmentId = currentTab?.departmentId as string | undefined
+    const currentUserId = profileData?.data?.id as string | undefined
 
     const handleSelect = (serviceReqCode: string, storedServiceReqId?: string) => {
         setSelectedServiceReqCode(serviceReqCode)
@@ -251,6 +264,26 @@ export default function TestResultForm() {
             )
 
             await Promise.all(promises)
+
+            // Sau khi lưu kết quả thành công, gọi API chuyển trạng thái workflow
+            try {
+                await apiClient.transitionWorkflow({
+                    storedServiceReqId: storedServiceRequest.id,
+                    toStateId: '426df256-bbfe-28d1-e065-9e6b783dd008',
+                    actionType: 'COMPLETE',
+                    currentUserId: currentUserId,
+                    currentDepartmentId: currentDepartmentId,
+                    currentRoomId: currentRoomId,
+                })
+            } catch (err) {
+                console.error('Error transitioning workflow:', err)
+                // Không chặn luồng lưu kết quả; thông báo cảnh báo cho người dùng
+                toast({
+                    variant: 'destructive',
+                    title: 'Cảnh báo',
+                    description: 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.'
+                })
+            }
             toast({
                 title: "Thành công",
                 description: `Đã lưu kết quả cho ${selectedServices.size} dịch vụ`,

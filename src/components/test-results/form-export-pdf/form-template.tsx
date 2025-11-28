@@ -36,6 +36,9 @@ export function FormTemplate({ data, specificService }: FormTemplateProps) {
     // Chỉ lấy resultText từ specificService (API /api/v1/service-requests/stored/services/{serviceId})
     const resultText = specificService?.resultText || '';
 
+    // Use receptionCode from the specific service as the sample code (Mã bệnh phẩm)
+    const receptionCode = specificService?.receptionCode || '';
+
     return (
         <div className="w-[210mm] min-h-[297mm] mx-auto bg-white shadow-lg">
             <div className="p-10 text-[15px] text-black">
@@ -100,6 +103,8 @@ export function FormTemplate({ data, specificService }: FormTemplateProps) {
 
                         <div>
                             <span className="text-gray-600">Mã bệnh phẩm:</span>
+                            <span className="ml-2 font-semibold">{receptionCode}</span>
+
                         </div>
 
                         <div>

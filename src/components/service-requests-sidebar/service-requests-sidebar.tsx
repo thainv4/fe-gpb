@@ -1,12 +1,12 @@
 ﻿// src/components/service-requests-sidebar/service-requests-sidebar.tsx
-import {useState, useEffect, useMemo} from 'react'
+import {useState, useMemo} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {apiClient} from '@/lib/api/client'
 import {useCurrentRoomStore} from '@/lib/stores/current-room'
 import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
-import {Loader2, Filter} from 'lucide-react'
+import {Loader2} from 'lucide-react'
 import {cn} from '@/lib/utils'
 
 interface ServiceRequestsSidebarProps {
@@ -105,11 +105,21 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode}:
     const serviceRequests = data?.data?.items ?? []
     const total = data?.data?.pagination?.total ?? 0
 
+    // Pagination helpers (page-based). limit is fixed in filters (default 10)
+    const currentPage = Math.floor((filters.offset || 0) / (filters.limit || 10)) + 1
+    const totalPages = Math.max(1, Math.ceil(total / (filters.limit || 10)))
+
+    const goToPage = (page: number) => {
+        const p = Math.max(1, Math.min(page, totalPages))
+        setFilters(prev => ({...prev, offset: (p - 1) * prev.limit}))
+    }
+
     const updateFilter = <K extends keyof FilterParams>(key: K, value: FilterParams[K]) => {
         setFilters(prev => ({...prev, [key]: value, offset: 0}))
     }
 
     const loadMore = () => {
+        // keep for compatibility: move to next page
         setFilters(prev => ({...prev, offset: prev.offset + prev.limit}))
     }
 
@@ -125,7 +135,12 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode}:
                 {/* Workflow State Selector */}
                 <div className="mb-3">
                     <Select value={selectedStateId ?? 'all'}
-                            onValueChange={(v) => setSelectedStateId(v === 'all' ? 'all' : v)}>
+                            onValueChange={(v) => {
+                                const val = v === 'all' ? 'all' : v
+                                setSelectedStateId(val)
+                                // reset to first page when changing state
+                                setFilters(prev => ({...prev, offset: 0}))
+                            }}>
                         <SelectTrigger className="text-sm">
                             <SelectValue placeholder="Chọn trạng thái..."/>
                         </SelectTrigger>
@@ -288,20 +303,21 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode}:
                     </div>
                 )}
 
-                {serviceRequests.length < total && (
-                    <div className="p-3 text-center border-t bg-white">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={loadMore}
-                            disabled={isLoading}
-                            className="w-full"
-                        >
-                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Tải thêm'}
+                {/* Pagination controls: Prev / Page X of Y / Next */}
+                <div className="p-3 text-center border-t bg-white">
+                    <div className="flex items-center justify-between gap-2">
+                        <Button size="sm" variant="outline" onClick={() => goToPage(currentPage - 1)} disabled={isLoading || currentPage <= 1}>
+                            Trước
+                        </Button>
+
+                        <div className="text-sm text-gray-700">Trang {currentPage} / {totalPages}</div>
+
+                        <Button size="sm" variant="outline" onClick={() => goToPage(currentPage + 1)} disabled={isLoading || currentPage >= totalPages}>
+                            Sau
                         </Button>
                     </div>
-                )}
-            </div>
-        </div>
-    )
-}
+                </div>
+             </div>
+         </div>
+     )
+ }
