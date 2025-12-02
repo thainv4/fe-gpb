@@ -28,6 +28,7 @@ export interface LoginResponse {
     accessToken: string;
     refreshToken: string;
     expiresIn: number;
+    hisTokenCode?: string;
 }
 
 export interface HisTokenResponse {
@@ -1647,6 +1648,26 @@ class ApiClient {
     async cleanupExpiredHisTokens(): Promise<ApiResponse> {
         return this.request("/his-integration/cleanup-expired-tokens", {
             method: "POST",
+        });
+    }
+
+    // EMR Sign methods
+    async createAndSignHsm(
+        signRequest: EmrSignRequest,
+        tokenCode: string,
+        applicationCode: string = 'EMR'
+    ): Promise<ApiResponse<EmrSignResponse>> {
+        if (!tokenCode) {
+            throw new Error('TokenCode header is required');
+        }
+
+        return this.request<EmrSignResponse>("/emr-sign/create-and-sign-hsm", {
+            method: "POST",
+            body: JSON.stringify(signRequest),
+            headers: {
+                'TokenCode': tokenCode,
+                'ApplicationCode': applicationCode,
+            },
         });
     }
 

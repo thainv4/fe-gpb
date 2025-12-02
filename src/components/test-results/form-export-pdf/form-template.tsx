@@ -6,6 +6,8 @@ import {StoredServiceRequestResponse, StoredService} from '@/lib/api/client';
 interface FormTemplateProps {
     data: StoredServiceRequestResponse;
     specificService?: StoredService; // Service cụ thể để hiển thị resultText
+    // Ảnh chữ ký (base64, KHÔNG gồm tiền tố data:image/png;base64, ...)
+    signatureImageBase64?: string;
 }
 
 // Helper function to calculate age from DOB
@@ -16,7 +18,7 @@ function calculateAge(dob: number): number {
     return currentYear - year;
 }
 
-export function FormTemplate({data, specificService}: FormTemplateProps) {
+export function FormTemplate({data, specificService, signatureImageBase64}: FormTemplateProps) {
     const {
         patientCode,
         patientName,
@@ -146,16 +148,16 @@ export function FormTemplate({data, specificService}: FormTemplateProps) {
                         <div className="font-bold text-base mb-12">Bác sĩ đọc kết quả</div>
 
                         {/* TextLocationIdentifier: marker for digital signature
-                            This element marks where the digital signature will be placed
-                            Size: 200mm x 80mm (approx 756px x 302px at 96 DPI)
+                            - id: TextLocationIdentifier_Signature
+                            - data-text-location-identifier: a stable attribute your signing tool can query
+                            - data-signature-field: optional hint about which field to sign (e.g., doctor)
+                            - className sr-only: hidden visually but present in DOM; remove or adjust if you need a visible anchor in PDF
                         */}
-                        <div id="TextLocationIdentifier_Signature"
+                        <span id="TextLocationIdentifier_Signature"
                               data-text-location-identifier="signature"
                               data-signature-field="doctor"
-                              className="h-[80mm] w-[200mm] mx-auto border-2 border-dashed border-gray-300 flex items-center justify-center text-sm text-gray-400"
-                        >
-                            [Vị trí chữ ký số - 200mm x 80mm]
-                        </div>
+                              className="sr-only"
+                        />
                     </div>
                 </div>
             </div>
