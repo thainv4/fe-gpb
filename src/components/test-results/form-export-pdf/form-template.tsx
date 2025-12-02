@@ -146,16 +146,16 @@ export function FormTemplate({data, specificService}: FormTemplateProps) {
                         <div className="font-bold text-base mb-12">Bác sĩ đọc kết quả</div>
 
                         {/* TextLocationIdentifier: marker for digital signature
-                            - id: TextLocationIdentifier_Signature
-                            - data-text-location-identifier: a stable attribute your signing tool can query
-                            - data-signature-field: optional hint about which field to sign (e.g., doctor)
-                            - className sr-only: hidden visually but present in DOM; remove or adjust if you need a visible anchor in PDF
+                            This element marks where the digital signature will be placed
+                            Size: 200mm x 80mm (approx 756px x 302px at 96 DPI)
                         */}
-                        <span id="TextLocationIdentifier_Signature"
+                        <div id="TextLocationIdentifier_Signature"
                               data-text-location-identifier="signature"
                               data-signature-field="doctor"
-                              className="sr-only"
-                        />
+                              className="h-[80mm] w-[200mm] mx-auto border-2 border-dashed border-gray-300 flex items-center justify-center text-sm text-gray-400"
+                        >
+                            [Vị trí chữ ký số - 200mm x 80mm]
+                        </div>
                     </div>
                 </div>
             </div>

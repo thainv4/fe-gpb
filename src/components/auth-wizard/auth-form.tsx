@@ -86,6 +86,11 @@ export function AuthForm() {
                     lastLoginAt: result.data.user.lastLoginAt,
                 })
 
+                // Save hisTokenCode to sessionStorage if available
+                if (result.data.hisTokenCode && typeof window !== 'undefined') {
+                    sessionStorage.setItem('hisTokenCode', result.data.hisTokenCode)
+                }
+
                 toast({
                     title: 'Đăng nhập thành công',
                     description: `Chào mừng ${result.data.user.username}!`,

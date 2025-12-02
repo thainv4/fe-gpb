@@ -819,6 +819,73 @@ export interface StoreServiceRequestBody {
 // API trả về data trực tiếp, không có wrapper serviceRequest
 export type ServiceRequestResponse = ServiceRequestDetail;
 
+// EMR Sign interfaces
+export interface EmrSignPointSign {
+    CoorXRectangle: number;
+    CoorYRectangle: number;
+    PageNumber: number;
+    MaxPageNumber: number;
+    WidthRectangle?: number;
+    HeightRectangle?: number;
+    TextPosition: number;
+    TypeDisplay: number;
+    SizeFont?: number;
+    FormatRectangleText?: string;
+}
+
+export interface EmrSignSigner {
+    SignerId: number;
+    SerialNumber: string;
+    NumOrder: number;
+    IsSigned: boolean;
+}
+
+export interface EmrSignOriginalVersion {
+    Base64Data: string;
+    Url?: string | null;
+}
+
+export interface EmrSignRequest {
+    ApiData: {
+        Description?: string;
+        PointSign: EmrSignPointSign;
+        DocumentName: string;
+        TreatmentCode: string;
+        DocumentTypeId: number;
+        DocumentGroupId?: number;
+        HisCode: string;
+        FileType?: number;
+        OriginalVersion: EmrSignOriginalVersion;
+        Signs: EmrSignSigner[];
+    };
+}
+
+export interface EmrSignResponse {
+    Data: {
+        DocumentCode: string;
+        DocumentName: string;
+        TreatmentCode: string;
+        OriginalVersion: {
+            Url: string | null;
+            Base64Data: string;
+        };
+        Signs: Array<{
+            Loginname?: string;
+            Username?: string;
+            SignerId: number;
+            SerialNumber: string;
+            NumOrder: number;
+            IsSigned: boolean;
+            SignTime?: string;
+        }>;
+    };
+    Success: boolean;
+    Param: {
+        HasException: boolean;
+        Messages?: string[];
+    };
+}
+
 class ApiClient {
     private baseURL: string;
     private token: string | null = null;
