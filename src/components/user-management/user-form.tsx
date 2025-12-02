@@ -83,10 +83,10 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
                 ])
 
                 if (provincesRes.success && provincesRes.data) {
-                    setProvinces(provincesRes.data.items)
+                    setProvinces(provincesRes.data.provinces)
                 }
                 if (wardsRes.success && wardsRes.data) {
-                    setWards(wardsRes.data.items)
+                    setWards(wardsRes.data.wards)
                 }
                 if (departmentsRes.success && departmentsRes.data) {
                     setDepartments(departmentsRes.data.items)

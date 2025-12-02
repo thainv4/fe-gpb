@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import React from 'react';
-import { StoredServiceRequestResponse, StoredService } from '@/lib/api/client';
+import {StoredServiceRequestResponse, StoredService} from '@/lib/api/client';
 
 interface FormTemplateProps {
     data: StoredServiceRequestResponse;
@@ -16,7 +16,7 @@ function calculateAge(dob: number): number {
     return currentYear - year;
 }
 
-export function FormTemplate({ data, specificService }: FormTemplateProps) {
+export function FormTemplate({data, specificService}: FormTemplateProps) {
     const {
         patientCode,
         patientName,
@@ -56,15 +56,18 @@ export function FormTemplate({ data, specificService }: FormTemplateProps) {
 
                     {/* Patient Code Info */}
                     <div className="text-left text-sm leading-tight space-y-1 p-3 rounded">
-                        <div><span className="font-semibold text-gray-700">Mã ID:</span> <span className="font-bold">{serviceReqCode}</span></div>
-                        <div><span className="font-semibold text-gray-700">Mã BN:</span> <span className="font-bold">{patientCode}</span></div>
-                        <div><span className="font-semibold text-gray-700">Mã ĐT:</span> <span className="font-bold">{treatmentCode}</span></div>
+                        <div><span className="font-semibold text-gray-700">Mã ID:</span> <span
+                            className="font-bold">{serviceReqCode}</span></div>
+                        <div><span className="font-semibold text-gray-700">Mã BN:</span> <span
+                            className="font-bold">{patientCode}</span></div>
+                        <div><span className="font-semibold text-gray-700">Mã ĐT:</span> <span
+                            className="font-bold">{treatmentCode}</span></div>
                     </div>
                 </div>
 
                 {/* Title */}
                 <h1 className="text-center font-bold text-2xl uppercase mt-6 mb-6">
-                     Phiếu xét nghiệm sinh thiết
+                    Phiếu xét nghiệm sinh thiết
                 </h1>
 
                 {/* Patient Info Section */}
@@ -123,10 +126,11 @@ export function FormTemplate({ data, specificService }: FormTemplateProps) {
                     {resultText ? (
                         <div
                             className="mt-4 prose prose-sm max-w-none leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: resultText }}
+                            dangerouslySetInnerHTML={{__html: resultText}}
                         />
                     ) : (
-                        <div className="mt-4 p-8 text-gray-400 italic text-center border-2 border-dashed border-gray-300 rounded">
+                        <div
+                            className="mt-4 p-8 text-gray-400 italic text-center border-2 border-dashed border-gray-300 rounded">
                             Chưa có kết quả xét nghiệm
                         </div>
                     )}
@@ -138,8 +142,20 @@ export function FormTemplate({ data, specificService }: FormTemplateProps) {
                         <div className="text-sm text-gray-600 mb-1 border-t border-gray-400 px-10">
                             Ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}
                         </div>
+
                         <div className="font-bold text-base mb-12">Bác sĩ đọc kết quả</div>
 
+                        {/* TextLocationIdentifier: marker for digital signature
+                            - id: TextLocationIdentifier_Signature
+                            - data-text-location-identifier: a stable attribute your signing tool can query
+                            - data-signature-field: optional hint about which field to sign (e.g., doctor)
+                            - className sr-only: hidden visually but present in DOM; remove or adjust if you need a visible anchor in PDF
+                        */}
+                        <span id="TextLocationIdentifier_Signature"
+                              data-text-location-identifier="signature"
+                              data-signature-field="doctor"
+                              className="sr-only"
+                        />
                     </div>
                 </div>
             </div>
