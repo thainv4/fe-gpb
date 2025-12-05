@@ -13,6 +13,7 @@ interface ServiceRequestsSidebarProps {
     readonly onSelect: (serviceReqCode: string, storedServiceReqId?: string) => void
     readonly selectedCode?: string
     readonly serviceReqCode?: string
+    readonly defaultStateId?: string
 }
 
 interface FilterParams {
@@ -51,16 +52,16 @@ const getStateColor = (stateCode?: string) => {
     }
 }
 
-export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode}: ServiceRequestsSidebarProps) {
+export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, defaultStateId}: ServiceRequestsSidebarProps) {
     const {currentRoomId} = useCurrentRoomStore()
     // selectedStateId: 'all' means show all states (no state filter)
-    // Default to 'all' to show all states
-    const [selectedStateId, setSelectedStateId] = useState<string | undefined>('all')
+    // Default to 'all' to show all states, or use defaultStateId if provided
+    const [selectedStateId, setSelectedStateId] = useState<string | undefined>(defaultStateId ?? 'all')
     const [filters, setFilters] = useState<FilterParams>({
         roomType: 'currentRoomId',
         stateType: '',
         timeType: 'actionTimestamp',
-        limit: 10,
+        limit: 20,
         offset: 0,
         order: 'ASC',
         orderBy: 'actionTimestamp',
@@ -80,7 +81,6 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode}:
     })
 
     const workflowStates = useMemo(() => statesData?.data?.items ?? [], [statesData?.data?.items])
-
 
     // Query service requests
     const {data, isLoading} = useQuery({

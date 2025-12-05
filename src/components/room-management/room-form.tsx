@@ -103,10 +103,7 @@ export function RoomForm({ initialData, onSubmit, isLoading = false }: RoomFormP
     }, [])
 
     function handleSubmit(data: RoomFormData) {
-        console.log('Form submitted with data:', data)
         onSubmit(data)
-        console.log('📋 onSubmit called')
-        console.log('📋 ====================================================')
     }
 
     return (

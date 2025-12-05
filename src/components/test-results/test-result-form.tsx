@@ -21,6 +21,7 @@ import {
 import {FormTemplate} from "@/components/test-results/form-export-pdf/form-template";
 import {Button} from "@/components/ui/button";
 import {useHisStore} from "@/lib/stores/his";
+import {downloadPdfFromContainer, pdfBase64FromContainer} from '@/lib/utils/pdf-export';
 
 export default function TestResultForm() {
     const pathname = usePathname()
@@ -64,6 +65,9 @@ export default function TestResultForm() {
     const [testResult, setTestResult] = useState<string>(defaultTemplate)
     const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set())
     const [isSaving, setIsSaving] = useState(false)
+    const [signaturePageTotal, setSignaturePageTotal] = useState(1)
+
+
 
     // Restore tab state on mount
     useEffect(() => {
@@ -177,48 +181,8 @@ export default function TestResultForm() {
         if (!previewRef.current || !storedServiceRequestData?.data || !previewServiceData?.data) return;
 
         try {
-            const html2canvas = (await import('html2canvas')).default;
-            const jsPDF = (await import('jspdf')).default;
-
-            const element = previewRef.current;
-
-            // Render với scale cao để đảm bảo chất lượng tốt nhất
-            const canvas = await html2canvas(element, {
-                scale: 3,
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                windowWidth: element.scrollWidth,
-                windowHeight: element.scrollHeight,
-            } as any);
-
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-                compress: false
-            });
-
-            const imgWidth = 210;
-            const pageHeight = 297;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= pageHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pageHeight;
-            }
-
             const fileName = `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`;
-            pdf.save(fileName);
+            await downloadPdfFromContainer(previewRef.current, fileName);
         } catch (error) {
             console.error('Error downloading PDF:', error);
             toast({
@@ -227,10 +191,23 @@ export default function TestResultForm() {
                 description: "Có lỗi xảy ra khi tải PDF"
             });
         }
-    }
+    };
 
-    const handlePrintPdf = () => {
-        window.print();
+    const handlePrintPdf = async () => {
+        if (!previewRef.current || !storedServiceRequestData?.data) return;
+        try {
+            await downloadPdfFromContainer(
+                previewRef.current,
+                `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`
+            );
+        } catch (error) {
+            console.error('Error printing PDF:', error);
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Có lỗi xảy ra khi in PDF"
+            });
+        }
     }
 
     // Convert PDF to base64
@@ -238,48 +215,12 @@ export default function TestResultForm() {
         if (!previewRef.current || !storedServiceRequestData?.data || !previewServiceData?.data) return null;
 
         try {
-            const html2canvas = (await import('html2canvas')).default;
-            const jsPDF = (await import('jspdf')).default;
-
-            const element = previewRef.current;
-
-            const canvas = await html2canvas(element, {
-                scale: 3,
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                windowWidth: element.scrollWidth,
-                windowHeight: element.scrollHeight,
-            } as any);
-
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-                compress: false
-            });
-
-            const imgWidth = 210;
-            const pageHeight = 297;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= pageHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pageHeight;
-            }
-
-            // Get base64 string without prefix
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            return pdfBase64;
+            const {base64, pageCount} = await pdfBase64FromContainer(previewRef.current);
+            console.log('=== convertPdfToBase64 ===');
+            console.log('pageCount:', pageCount);
+            console.log('==========================');
+            setSignaturePageTotal(pageCount);
+            return base64;
         } catch (error) {
             console.error('Error converting PDF to base64:', error);
             return null;
@@ -302,6 +243,15 @@ export default function TestResultForm() {
                 variant: "destructive",
                 title: "Lỗi",
                 description: "Không tìm thấy dữ liệu phiếu xét nghiệm"
+            })
+            return
+        }
+
+        if (!previewRef.current) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Không thể tạo PDF để ký"
             })
             return
         }
@@ -339,9 +289,9 @@ export default function TestResultForm() {
                 return
             }
 
-            // Convert PDF to base64
-            const pdfBase64 = await convertPdfToBase64()
-            if (!pdfBase64) {
+            // Convert PDF to base64 và lấy số trang - SỬ DỤNG BIẾN LOCAL
+            const pdfResult = await pdfBase64FromContainer(previewRef.current);
+            if (!pdfResult || !pdfResult.base64) {
                 toast({
                     variant: "destructive",
                     title: "Lỗi",
@@ -350,79 +300,23 @@ export default function TestResultForm() {
                 return
             }
 
-            // Find signature location from template
-            const signatureIdentifier = 'TextLocationIdentifier_Signature'
-            
-            // Signature size configuration (in mm)
-            const signatureWidthMM = 200
-            const signatureHeightMM = 80
-            
-            // Default signature position (bottom right, measured from bottom-left corner)
-            let signX = 120
-            let signY = 50
+            const { base64: pdfBase64, pageCount } = pdfResult;
 
-            // Try to find signature position in the preview element
-            if (previewRef.current) {
-                const signatureElement = previewRef.current.querySelector(`#${signatureIdentifier}`)
-                if (signatureElement) {
-                    const rect = signatureElement.getBoundingClientRect()
-                    const previewRect = previewRef.current.getBoundingClientRect()
+            // Cập nhật state để hiển thị
+            setSignaturePageTotal(pageCount);
 
-                    // Calculate relative position in pixels (from top-left)
-                    const relativeLeft = rect.left - previewRect.left
-                    const relativeTop = rect.top - previewRect.top
+            // Tính toạ độ chữ ký theo tỉ lệ cấu hình
 
-                    // PDF A4 dimensions in mm
-                    const pdfWidth = 210
-                    const pdfHeight = 297
-
-                    // Convert pixel position to mm
-                    const leftInMM = (relativeLeft / previewRect.width) * pdfWidth
-                    const topInMM = (relativeTop / previewRect.height) * pdfHeight
-                    
-                    // PDF coordinate system: origin at bottom-left
-                    // Y increases upward, so we need to flip the Y coordinate
-                    signX = leftInMM
-                    signY = pdfHeight - topInMM - signatureHeightMM
-
-                    console.log('Signature position calculation:', {
-                        domRect: { 
-                            left: relativeLeft, 
-                            top: relativeTop,
-                            width: rect.width,
-                            height: rect.height
-                        },
-                        previewSize: { 
-                            width: previewRect.width, 
-                            height: previewRect.height 
-                        },
-                        converted: {
-                            leftInMM,
-                            topInMM
-                        },
-                        pdfCoords: { 
-                            x: signX, 
-                            y: signY,
-                            width: signatureWidthMM,
-                            height: signatureHeightMM
-                        }
-                    })
-                } else {
-                    console.warn(`Signature element #${signatureIdentifier} not found`)
-                }
-            }
-
-            // Call sign API
             const signRequest = {
                 ApiData: {
                     Description: `Kết quả xét nghiệm ${previewServiceData.data.serviceName}`,
                     PointSign: {
-                        CoorXRectangle: signX,
-                        CoorYRectangle: signY,
-                        PageNumber: 1,
-                        MaxPageNumber: 1,
-                        WidthRectangle: signatureWidthMM,
-                        HeightRectangle: signatureHeightMM,
+                        CoorXRectangle: 460,
+                        CoorYRectangle: 45,
+                        PageNumber: pageCount,
+                        MaxPageNumber: pageCount,
+                        WidthRectangle: 150,
+                        HeightRectangle: 100,
                         TextPosition: 0,
                         TypeDisplay: 4,
                         SizeFont: 11,
@@ -442,7 +336,7 @@ export default function TestResultForm() {
                         {
                             SignerId: Number.parseInt(signerInfo.signerId, 10),
                             SerialNumber: signerInfo.serialNumber,
-                            NumOrder: 1,
+                            NumOrder: pageCount,
                             IsSigned: false
                         }
                     ]
@@ -575,6 +469,7 @@ export default function TestResultForm() {
                             <ServiceRequestsSidebar
                                 onSelect={handleSelect}
                                 selectedCode={selectedServiceReqCode}
+                                defaultStateId="426df256-bbfe-28d1-e065-9e6b783dd008"
                             />
                         </div>
 
