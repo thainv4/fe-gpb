@@ -95,7 +95,7 @@ export default function TestResultForm() {
     })
 
     // Fetch stored service request with services
-    const {data: storedServiceRequestData} = useQuery({
+    const {data: storedServiceRequestData, refetch: refetchStoredServiceRequest} = useQuery({
         queryKey: ['stored-service-request', storedServiceReqId],
         queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId),
         enabled: !!storedServiceReqId,
@@ -350,6 +350,28 @@ export default function TestResultForm() {
             )
 
             if (response.success) {
+                // Lấy documentId từ response
+                const documentId = response.data?.Data?.DocumentId;
+
+                console.log('=== EMR Sign Response ===');
+                console.log('Document ID:', documentId);
+                console.log('Service ID:', previewServiceId);
+                console.log('========================');
+
+                // Nếu có documentId và serviceId, gọi API cập nhật
+                if (documentId && previewServiceId) {
+                    try {
+                        await apiClient.postServiceRequestDocumentId(previewServiceId, documentId);
+                        console.log('✅ Document ID đã được cập nhật cho service');
+
+                        // Refresh danh sách services để hiển thị trạng thái "Đã ký"
+                        await refetchStoredServiceRequest();
+                    } catch (docIdError) {
+                        console.error('❌ Lỗi cập nhật document ID:', docIdError);
+                        // Không hiển thị lỗi cho user vì đã ký thành công
+                    }
+                }
+
                 toast({
                     title: "Thành công",
                     description: "Đã ký số tài liệu thành công",
@@ -571,6 +593,9 @@ export default function TestResultForm() {
                                                             Trạng thái
                                                         </th>
                                                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Trạng thái ký
+                                                        </th>
+                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Xem phiếu
                                                         </th>
                                                     </tr>
@@ -612,6 +637,19 @@ export default function TestResultForm() {
                                                                         className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                                                                         <XCircle className="w-3.5 h-3.5"/>
                                                                         Chưa có kết quả
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-center">
+                                                                {service.documentId ? (
+                                                                    <span
+                                                                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                        <CheckCircle2 className="w-3.5 h-3.5"/>
+                                                                        Đã ký
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-xs text-gray-400">
+                                                                        Chưa ký
                                                                     </span>
                                                                 )}
                                                             </td>

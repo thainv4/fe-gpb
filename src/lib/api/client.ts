@@ -682,6 +682,7 @@ export interface StoredService {
     collectedByUserId?: string | null;
     testId?: string | null;
     isActive?: number | null;
+    documentId?: string | number | null;
 }
 
 export interface StoredServiceRequestResponse {
@@ -866,6 +867,8 @@ export interface EmrSignResponse {
         DocumentCode: string;
         DocumentName: string;
         TreatmentCode: string;
+        DocumentId: string
+        DocumentTypeId: number;
         OriginalVersion: {
             Url: string | null;
             Base64Data: string;
@@ -2288,6 +2291,26 @@ class ApiClient {
             {
                 method: 'PUT',
                 body: JSON.stringify(data),
+            }
+        );
+    }
+
+    /**
+     * Gọi API POST /api/v1/service-requests/stored/services/{serviceId}/document-id
+     * Cập nhật document ID cho service sau khi ký số
+     * @param serviceId ID của service
+     * @param documentId ID của document từ EMR Sign
+     * @returns Promise<ApiResponse>
+     */
+    async postServiceRequestDocumentId(
+        serviceId: number | string,
+        documentId: number | string
+    ): Promise<ApiResponse> {
+        return this.request(
+            `/service-requests/stored/services/${serviceId}/document-id`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify({ documentId }),
             }
         );
     }
