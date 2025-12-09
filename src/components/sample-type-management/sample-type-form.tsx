@@ -25,12 +25,15 @@ import { Loader2 } from 'lucide-react'
 import { SampleType, SampleTypeRequest } from '@/lib/api/client'
 
 const sampleTypeSchema = z.object({
-    typeCode: z.string().min(1, 'Mã loại mẫu là bắt buộc').max(20, 'Mã loại mẫu tối đa 20 ký tự'),
-    typeName: z.string().min(1, 'Tên loại mẫu là bắt buộc').max(100, 'Tên loại mẫu tối đa 100 ký tự'),
-    shortName: z.string().max(50, 'Tên viết tắt tối đa 50 ký tự').optional(),
-    codeGenerationRule: z.string().max(500, 'Quy tắc sinh mã tối đa 500 ký tự').optional(),
-    description: z.string().max(500, 'Mô tả tối đa 500 ký tự').optional(),
-    isActive: z.boolean().default(true),
+    typeCode: z.string().min(2, 'Mã loại mẫu tối thiểu 2 ký tự').max(50, 'Mã loại mẫu tối đa 50 ký tự'),
+    typeName: z.string().min(2, 'Tên loại mẫu tối thiểu 2 ký tự').max(200, 'Tên loại mẫu tối đa 200 ký tự'),
+    shortName: z.string().max(100, 'Tên viết tắt tối đa 100 ký tự').optional(),
+    description: z.string().max(2000, 'Mô tả tối đa 2000 ký tự').optional(),
+    sortOrder: z.coerce.number().optional(),
+    codePrefix: z.string().min(1, 'Tiền tố mã là bắt buộc').max(5, 'Tiền tố mã tối đa 5 ký tự'),
+    codeWidth: z.coerce.number().min(1).max(5).optional(),
+    allowDuplicate: z.boolean().optional(),
+    resetPeriod: z.enum(['DAILY', 'MONTHLY', 'YEARLY', 'NEVER']).optional(),
 })
 
 type SampleTypeFormData = z.infer<typeof sampleTypeSchema>
@@ -48,9 +51,12 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
             typeCode: initialData?.typeCode ?? '',
             typeName: initialData?.typeName ?? '',
             shortName: initialData?.shortName ?? '',
-            codeGenerationRule: initialData?.codeGenerationRule ?? '',
             description: initialData?.description ?? '',
-            isActive: initialData?.isActiveFlag === 1,
+            sortOrder: initialData?.sortOrder ?? 1,
+            codePrefix: initialData?.codePrefix ?? '',
+            codeWidth: initialData?.codeWidth ?? 4,
+            allowDuplicate: initialData?.allowDuplicate ?? false,
+            resetPeriod: initialData?.resetPeriod ?? 'MONTHLY',
         },
     })
 
@@ -90,37 +96,110 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                     />
                 </div>
 
-                <FormField
-                    control={form.control}
-                    name="shortName"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Tên viết tắt</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Nhập tên viết tắt" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="shortName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Tên viết tắt</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Nhập tên viết tắt" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="sortOrder"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Số thứ tự</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="Nhập số thứ tự" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
 
-                <FormField
-                    control={form.control}
-                    name="codeGenerationRule"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Quy tắc sinh mã (JSON)</FormLabel>
-                            <FormControl>
-                                <Textarea
-                                    placeholder='{"prefix": "BLD", "sequence": "0001", "format": "{PREFIX}-{SEQUENCE}"}'
-                                    {...field}
-                                    rows={3}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="codePrefix"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Tiền tố mã tiếp nhận *</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Nhập tiền tố mã (1-5 ký tự)" maxLength={5} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="codeWidth"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Độ rộng phần số</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="Nhập độ rộng (1-5)" min={1} max={5} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="allowDuplicate"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Cho phép mã trùng lặp</FormLabel>
+                                <Select onValueChange={(value) => field.onChange(value === 'true')} value={field.value ? 'true' : 'false'}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Chọn" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="true">Có</SelectItem>
+                                        <SelectItem value="false">Không</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="resetPeriod"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Chu kỳ reset số thứ tự</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Chọn chu kỳ" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="DAILY">Hàng ngày</SelectItem>
+                                        <SelectItem value="MONTHLY">Hàng tháng</SelectItem>
+                                        <SelectItem value="YEARLY">Hàng năm</SelectItem>
+                                        <SelectItem value="NEVER">Không bao giờ</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
 
                 <FormField
                     control={form.control}
@@ -131,28 +210,6 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                             <FormControl>
                                 <Textarea placeholder="Nhập mô tả loại mẫu" {...field} rows={3} />
                             </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="isActive"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Trạng thái</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(value === 'true')} value={field.value ? 'true' : 'false'}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Chọn trạng thái" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="true">Hoạt động</SelectItem>
-                                    <SelectItem value="false">Không hoạt động</SelectItem>
-                                </SelectContent>
-                            </Select>
                             <FormMessage />
                         </FormItem>
                     )}

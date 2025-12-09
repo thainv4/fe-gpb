@@ -63,7 +63,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         timeType: 'actionTimestamp',
         limit: 20,
         offset: 0,
-        order: 'ASC',
+        order: 'DESC',
         orderBy: 'actionTimestamp',
         serviceReqCode: serviceReqCode
     })

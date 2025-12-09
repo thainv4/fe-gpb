@@ -22,31 +22,23 @@ import {
     DialogFooter
 } from '@/components/ui/dialog'
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
-import {useToast} from '@/hooks/use-toast'
-import {apiClient, SampleType, SampleTypeRequest, SampleTypeFilters} from '@/lib/api/client'
-import {
+    Hash,
     Plus,
-    Search,
-    Edit,
-    Trash2,
     Loader2,
     ChevronLeft,
     ChevronRight,
     TestTube,
-    Hash
+    Trash2,
+    Edit,
+    Search
 } from 'lucide-react'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
 import {SampleTypeForm} from './sample-type-form'
+import {useToast} from '@/hooks/use-toast'
+import {apiClient, SampleType, SampleTypeRequest, SampleTypeFilters} from '@/lib/api/client'
 
 export function SampleTypeTable() {
     const [searchTerm, setSearchTerm] = useState('')
-    const [selectedStatus, setSelectedStatus] = useState('all')
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [editingSampleType, setEditingSampleType] = useState<SampleType | null>(null)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -60,7 +52,6 @@ export function SampleTypeTable() {
     // Build filters
     const filters: SampleTypeFilters = {
         search: searchTerm || undefined,
-        isActive: selectedStatus && selectedStatus !== 'all' ? selectedStatus === 'active' : undefined,
         limit: pageSize,
         offset: currentPage * pageSize,
     }
@@ -217,16 +208,6 @@ export function SampleTypeTable() {
                                 className="pl-8"
                             />
                         </div>
-                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                            <SelectTrigger className="w-full sm:w-48">
-                                <SelectValue placeholder="Tất cả trạng thái"/>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                                <SelectItem value="active">Hoạt động</SelectItem>
-                                <SelectItem value="inactive">Không hoạt động</SelectItem>
-                            </SelectContent>
-                        </Select>
                     </div>
 
                     {isLoading ? (
@@ -243,7 +224,6 @@ export function SampleTypeTable() {
                                             <TableHead>Thông tin</TableHead>
                                             <TableHead>Quy tắc sinh mã</TableHead>
                                             <TableHead>Mô tả</TableHead>
-                                            <TableHead>Trạng thái</TableHead>
                                             <TableHead>Thao tác</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -282,15 +262,6 @@ export function SampleTypeTable() {
                                                             {sampleType.description || '-'}
                                                         </p>
                                                     </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span
-                                                        className={`px-2 py-1 rounded-full text-xs font-medium ${sampleType.isActiveFlag === 1
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-red-100 text-red-800'
-                                                        }`}>
-                                                        {sampleType.isActiveFlag === 1 ? 'Hoạt động' : 'Không hoạt động'}
-                                                    </span>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center space-x-2">

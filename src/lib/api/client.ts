@@ -470,9 +470,15 @@ export interface SampleType {
     typeCode: string;
     typeName: string;
     shortName?: string;
-    codeGenerationRule?: string;
     description?: string;
+    sortOrder?: number;
+    codePrefix: string;
+    codeWidth?: number;
+    allowDuplicate?: boolean;
+    resetPeriod?: 'DAILY' | 'MONTHLY' | 'YEARLY' | 'NEVER';
+    codeGenerationRule?: string;
     isActiveFlag: number;
+    isActive?: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -481,9 +487,12 @@ export interface SampleTypeRequest {
     typeCode: string;
     typeName: string;
     shortName?: string;
-    codeGenerationRule?: string;
     description?: string;
-    isActive?: boolean;
+    sortOrder?: number;
+    codePrefix: string;
+    codeWidth?: number;
+    allowDuplicate?: boolean;
+    resetPeriod?: 'DAILY' | 'MONTHLY' | 'YEARLY' | 'NEVER';
 }
 
 export interface SampleTypeFilters {
