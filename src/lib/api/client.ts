@@ -502,6 +502,29 @@ export interface SampleTypeFilters {
     offset?: number;
 }
 
+export interface ResultTemplate {
+    id: string;
+    templateName: string;
+    resultTextTemplate: string;
+    createdAt: string;
+    updatedAt: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+export interface ResultTemplateRequest {
+    templateName: string;
+    resultTextTemplate: string;
+}
+
+export interface ResultTemplateFilters {
+    keyword?: string;
+    limit?: number;
+    offset?: number;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
+}
+
 export interface SampleReceptionRequest {
     sampleTypeCode: string;
 }
@@ -2216,6 +2239,86 @@ class ApiClient {
         return this.request(`/sample-types/${id}`, {
             method: "DELETE",
         });
+    }
+
+    // ========== RESULT TEMPLATE ENDPOINTS ==========
+
+    async getResultTemplates(
+        filters?: ResultTemplateFilters
+    ): Promise<ApiResponse<{
+        data: ResultTemplate[];
+        total: number;
+        limit: number;
+        offset: number;
+    }>> {
+        const params = new URLSearchParams();
+        params.append("limit", filters?.limit?.toString() || "10");
+        params.append("offset", filters?.offset?.toString() || "0");
+        params.append("sortBy", filters?.sortBy || "createdAt");
+        params.append("sortOrder", filters?.sortOrder || "DESC");
+
+        const queryString = params.toString();
+        return this.request<{
+            data: ResultTemplate[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/result-templates?${queryString}`);
+    }
+
+    async getResultTemplate(id: string): Promise<ApiResponse<ResultTemplate>> {
+        return this.request<ResultTemplate>(`/result-templates/${id}`);
+    }
+
+    async createResultTemplate(
+        template: ResultTemplateRequest
+    ): Promise<ApiResponse<ResultTemplate>> {
+        return this.request<ResultTemplate>("/result-templates", {
+            method: "POST",
+            body: JSON.stringify(template),
+        });
+    }
+
+    async updateResultTemplate(
+        id: string,
+        template: Partial<ResultTemplateRequest>
+    ): Promise<ApiResponse<ResultTemplate>> {
+        return this.request<ResultTemplate>(`/result-templates/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(template),
+        });
+    }
+
+    async deleteResultTemplate(id: string): Promise<ApiResponse> {
+        return this.request(`/result-templates/${id}`, {
+            method: "DELETE",
+        });
+    }
+
+    async searchResultTemplates(
+        filters?: ResultTemplateFilters
+    ): Promise<ApiResponse<{
+        data: ResultTemplate[];
+        total: number;
+        limit: number;
+        offset: number;
+    }>> {
+        const params = new URLSearchParams();
+        if (filters?.keyword) {
+            params.append("keyword", filters.keyword);
+        }
+        params.append("limit", filters?.limit?.toString() || "10");
+        params.append("offset", filters?.offset?.toString() || "0");
+        params.append("sortBy", filters?.sortBy || "createdAt");
+        params.append("sortOrder", filters?.sortOrder || "DESC");
+
+        const queryString = params.toString();
+        return this.request<{
+            data: ResultTemplate[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/result-templates/search/keyword?${queryString}`);
     }
 
     async getServiceRequestByCode(

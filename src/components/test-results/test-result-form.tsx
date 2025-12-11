@@ -22,6 +22,7 @@ import {FormTemplate} from "@/components/test-results/form-export-pdf/form-templ
 import {Button} from "@/components/ui/button";
 import {useHisStore} from "@/lib/stores/his";
 import {downloadPdfFromContainer, pdfBase64FromContainer} from '@/lib/utils/pdf-export';
+import {ResultTemplateSelector} from "@/components/result-template/result-template-selector";
 
 export default function TestResultForm() {
     const pathname = usePathname()
@@ -42,24 +43,27 @@ export default function TestResultForm() {
     })
     const [isSigning, setIsSigning] = useState(false)
 
+    // Template selector dialog state
+    const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false)
+
     // Single rich text editor state with template
     const defaultTemplate = `
-        <h2>1. NHẬN XÉT ĐẠI THỂ:</h2>
+        <h2>NHẬN XÉT ĐẠI THỂ:</h2>
         <p></p>
         
-        <h2>2. MÔ TẢ VI THỂ:</h2>
+        <h2>MÔ TẢ VI THỂ:</h2>
         <p></p>
         
-        <h2>3. CHẨN ĐOÁN MÔ BỆNH HỌC:</h2>
+        <h2>CHẨN ĐOÁN MÔ BỆNH HỌC:</h2>
         <p></p>
         
-        <h2>4. BÀN LUẬN:</h2>
+        <h2>BÀN LUẬN:</h2>
         <p></p>
         
-        <h2>5. KHUYẾN NGHỊ:</h2>
+        <h2>KHUYẾN NGHỊ:</h2>
         <p></p>
         
-        <h2>6. HỘI CHẨN:</h2>
+        <h2>HỘI CHẨN:</h2>
         <p></p>
     `
     const [testResult, setTestResult] = useState<string>(defaultTemplate)
@@ -132,6 +136,15 @@ export default function TestResultForm() {
         if (storedServiceReqId) {
             setStoredServiceReqId(storedServiceReqId)
         }
+    }
+
+    // Handler khi chọn mẫu kết quả
+    const handleTemplateSelect = (templateContent: string) => {
+        setTestResult(templateContent)
+        toast({
+            title: 'Thành công',
+            description: 'Đã áp dụng mẫu kết quả xét nghiệm',
+        })
     }
 
     // Handler cho checkbox
@@ -681,9 +694,12 @@ export default function TestResultForm() {
 
                                     {/* Test Results */}
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                                        <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
-                                            Kết quả xét nghiệm
-                                        </h3>
+                                        <div className="flex justify-between mb-4 pb-3 border-b border-gray-200">
+                                            <h3 className="text-lg font-semibold">Kết quả xét nghiệm</h3>
+                                            <Button onClick={() => setTemplateSelectorOpen(true)}>
+                                                Chọn mẫu kết quả có sẵn
+                                            </Button>
+                                        </div>
 
                                         <div className="w-full">
                                             <RichTextEditor
@@ -867,6 +883,13 @@ export default function TestResultForm() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Result Template Selector Dialog */}
+            <ResultTemplateSelector
+                open={templateSelectorOpen}
+                onOpenChange={setTemplateSelectorOpen}
+                onSelect={handleTemplateSelect}
+            />
         </>
     )
 }

@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEditor, EditorContent } from '@tiptap/react'
+import { useEffect } from 'react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
@@ -62,6 +63,13 @@ export default function RichTextEditor({
             },
         },
     })
+
+    // Sync editor content when value prop changes from outside
+    useEffect(() => {
+        if (editor && value !== editor.getHTML()) {
+            editor.commands.setContent(value)
+        }
+    }, [value, editor])
 
     if (!editor) {
         return null

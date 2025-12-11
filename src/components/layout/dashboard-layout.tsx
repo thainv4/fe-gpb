@@ -157,6 +157,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: Users,
                     description: 'Quản lý danh mục chung hệ thống'
                 },
+                {
+                    name: 'Mẫu kết quả xét nghiệm',
+                    href: '/result-templates',
+                    icon: TestTube,
+                    description: 'Quản lý mẫu kết quả xét nghiệm'
+                }
             ]
         },
         {

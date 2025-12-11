@@ -34,6 +34,7 @@ export default function TestIndicationsTable() {
     const [selectedSampleType, setSelectedSampleType] = useState<string>('')
     const [selectOpen, setSelectOpen] = useState<boolean>(false)
     const [sampleCode, setSampleCode] = useState<string>('') // Mã bệnh phẩm từ API response
+    const [sampleTypeSearch, setSampleTypeSearch] = useState<string>('')
 
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
@@ -128,6 +129,11 @@ export default function TestIndicationsTable() {
     const errorMessage = error ? error.message : ''
 
     const sampleTypeItems: SampleType[] = (sampleTypesData?.data?.sampleTypes ?? []) as SampleType[]
+
+    // Lọc danh sách bệnh phẩm theo từ khóa tìm kiếm
+    const filteredSampleTypeItems = sampleTypeItems.filter(item =>
+        item.typeName.toLowerCase().includes(sampleTypeSearch.toLowerCase())
+    )
 
     // Helper function để format ngày hiện tại theo định dạng YYYY-MM-DD
     function getCurrentDate(): string {
@@ -299,11 +305,6 @@ export default function TestIndicationsTable() {
 
             // Bước 3: Reset form
             clearAll();
-
-            // Bước 4: Reload trang để cập nhật dữ liệu
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000); // Delay 1s để user thấy toast trước khi reload
         } catch (error) {
             console.error("❌ Lỗi:", error);
             toast({
@@ -332,9 +333,9 @@ export default function TestIndicationsTable() {
     }, [selectedSampleType, serviceRequest, sampleTypeItems])
 
     return (
-        <div className="flex h-full">
-            {/* Sidebar - 1/4 màn hình */}
-            <div className="w-1/4 border-r border-gray-200 bg-gray-50">
+        <div className="flex h-screen">
+            {/* Sidebar - 1/4 màn hình với scroll */}
+            <div className="w-1/4 border-r border-gray-200 bg-gray-50 overflow-hidden flex flex-col">
                 <ServiceRequestsSidebar
                     onSelect={handleSelectFromList}
                     selectedCode={searchCode || serviceReqCode}
@@ -342,7 +343,7 @@ export default function TestIndicationsTable() {
             </div>
 
             {/* Main Content - 3/4 màn hình */}
-            <div className="flex-1 overflow-y-auto p-6 bg-white">
+            <div className="flex-1 overflow-y-auto p-6 bg-white">{/* ...existing code... */}
                 {!tabRoomId && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                         <div className="text-sm font-medium text-yellow-900">
@@ -390,8 +391,18 @@ export default function TestIndicationsTable() {
                             <SelectValue placeholder="Chọn bệnh phẩm" />
                         </SelectTrigger>
                         <SelectContent>
-                            {sampleTypeItems?.length
-                                ? sampleTypeItems.map((sampleType) => (
+                            {/* Ô tìm kiếm bệnh phẩm */}
+                            <div className="px-2 py-1">
+                                <Input
+                                    placeholder="Tìm kiếm bệnh phẩm..."
+                                    value={sampleTypeSearch}
+                                    onChange={e => setSampleTypeSearch(e.target.value)}
+                                    className="text-sm mb-2"
+                                    // autoFocus bị loại bỏ để tránh mất focus khi gõ
+                                />
+                            </div>
+                            {filteredSampleTypeItems.length
+                                ? filteredSampleTypeItems.map((sampleType) => (
                                     <SelectItem key={sampleType.id} value={sampleType.id}>
                                         {sampleType.typeName}
                                     </SelectItem>

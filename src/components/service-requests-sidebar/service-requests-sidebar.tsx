@@ -61,7 +61,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         roomType: 'currentRoomId',
         stateType: '',
         timeType: 'actionTimestamp',
-        limit: 20,
+        limit: 15,
         offset: 0,
         order: 'DESC',
         orderBy: 'actionTimestamp',
@@ -202,7 +202,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
             </div>
 
             {/* Table Content */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-y-auto">
                 {!currentRoomId && (
                     <div className="p-4 text-center text-sm text-gray-500">
                         Vui lòng chọn phòng làm việc
@@ -302,8 +302,10 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                         </table>
                     </div>
                 )}
+            </div>
 
-                {/* Pagination controls: Prev / Page X of Y / Next */}
+            {/* Pagination controls: Fixed at bottom, outside scroll area */}
+            {currentRoomId && selectedStateId && serviceRequests.length > 0 && (
                 <div className="p-3 text-center border-t bg-white">
                     <div className="flex items-center justify-between gap-2">
                         <Button size="sm" variant="outline" onClick={() => goToPage(currentPage - 1)} disabled={isLoading || currentPage <= 1}>
@@ -317,7 +319,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                         </Button>
                     </div>
                 </div>
-             </div>
+            )}
          </div>
      )
  }
