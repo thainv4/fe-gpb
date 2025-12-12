@@ -49,7 +49,7 @@ import { UserForm } from './user-form'
 
 export function UserTable() {
     const [searchTerm, setSearchTerm] = useState('')
-    const [selectedRole, setSelectedRole] = useState('all')
+    const [searchEmail, setSearchEmail] = useState('')
     const [selectedStatus, setSelectedStatus] = useState('all')
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -64,17 +64,49 @@ export function UserTable() {
     // Build filters
     const filters: UserFilters = {
         search: searchTerm || undefined,
-        role: selectedRole && selectedRole !== 'all' ? selectedRole : undefined,
         isActive: selectedStatus && selectedStatus !== 'all' ? selectedStatus === 'active' : undefined,
         limit: pageSize,
         offset: currentPage * pageSize,
     }
 
-    // Fetch users
-    const { data: users, isLoading, error } = useQuery({
+    // Fetch users list
+    const { data: usersResponse, isLoading, error } = useQuery({
         queryKey: ['users', filters],
         queryFn: () => apiClient.getUsers(filters),
+        enabled: !searchEmail, // Chỉ fetch list khi không tìm kiếm theo email
     })
+
+    // Search user by email
+    const { data: emailSearchResponse, isLoading: isSearchingEmail, error: emailSearchError } = useQuery({
+        queryKey: ['user-email', searchEmail],
+        queryFn: () => apiClient.getUserByEmail(searchEmail),
+        enabled: !!searchEmail && searchEmail.includes('@'), // Chỉ search khi có @ trong email
+    })
+
+    // Type assertion to match actual API response
+    const users = usersResponse as typeof usersResponse & {
+        data: {
+            users: User[];
+            total: number;
+            limit: number;
+            offset: number;
+        }
+    } | undefined
+
+    // Convert email search result to list format
+    const displayUsers = searchEmail && emailSearchResponse?.data
+        ? {
+            data: {
+                users: [emailSearchResponse.data],
+                total: 1,
+                limit: 1,
+                offset: 0
+            }
+        }
+        : users
+
+    const displayError = searchEmail ? emailSearchError : error
+    const displayLoading = searchEmail ? isSearchingEmail : isLoading
 
     const createMutation = useMutation({
         mutationFn: (newUser: UserRequest) => apiClient.createUser(newUser),
@@ -162,17 +194,19 @@ export function UserTable() {
         }
     }
 
-    const totalPages = users?.data ? Math.ceil(users.data.total / pageSize) : 0
+    const totalPages = displayUsers?.data ? Math.ceil(displayUsers.data.total / pageSize) : 0
 
-    if (error) {
+    if (displayError) {
         return (
             <Card>
                 <CardContent className="p-6">
                     <CardTitle className="text-xl font-semibold text-red-600">Lỗi tải dữ liệu</CardTitle>
                     <CardDescription className="text-red-500">
-                        Không thể tải dữ liệu người dùng. Vui lòng thử lại sau.
+                        {searchEmail
+                            ? `Không tìm thấy người dùng với email: ${searchEmail}`
+                            : 'Không thể tải dữ liệu người dùng. Vui lòng thử lại sau.'}
                     </CardDescription>
-                    <p className="mt-2 text-sm text-red-700">{error.message}</p>
+                    <p className="mt-2 text-sm text-red-700">{displayError.message}</p>
                 </CardContent>
             </Card>
         )
@@ -216,26 +250,30 @@ export function UserTable() {
                         <div className="relative flex-1">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Tìm kiếm theo tên, email hoặc username..."
+                                placeholder="Tìm kiếm theo tên hoặc username..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value)
+                                    setSearchEmail('') // Clear email search khi search theo term
+                                }}
+                                className="pl-8"
+                                disabled={!!searchEmail}
+                            />
+                        </div>
+                        <div className="relative flex-1">
+                            <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Tìm kiếm theo email..."
+                                value={searchEmail}
+                                onChange={(e) => {
+                                    setSearchEmail(e.target.value)
+                                    if (e.target.value) {
+                                        setSearchTerm('') // Clear term search khi search theo email
+                                    }
+                                }}
                                 className="pl-8"
                             />
                         </div>
-                        <Select value={selectedRole} onValueChange={setSelectedRole}>
-                            <SelectTrigger className="w-full sm:w-48">
-                                <SelectValue placeholder="Tất cả vai trò" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Tất cả vai trò</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="manager">Manager</SelectItem>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="doctor">Doctor</SelectItem>
-                                <SelectItem value="nurse">Nurse</SelectItem>
-                                <SelectItem value="technician">Technician</SelectItem>
-                            </SelectContent>
-                        </Select>
                         <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                             <SelectTrigger className="w-full sm:w-48">
                                 <SelectValue placeholder="Tất cả trạng thái" />
@@ -248,10 +286,12 @@ export function UserTable() {
                         </Select>
                     </div>
 
-                    {isLoading ? (
+                    {displayLoading ? (
                         <div className="flex items-center justify-center py-8">
                             <Loader2 className="h-8 w-8 animate-spin" />
-                            <span className="ml-2">Đang tải dữ liệu...</span>
+                            <span className="ml-2">
+                                {searchEmail ? 'Đang tìm kiếm...' : 'Đang tải dữ liệu...'}
+                            </span>
                         </div>
                     ) : (
                         <>
@@ -261,16 +301,15 @@ export function UserTable() {
                                         <TableRow>
                                             <TableHead>Thông tin</TableHead>
                                             <TableHead>Liên hệ</TableHead>
-                                            <TableHead>Vai trò</TableHead>
                                             <TableHead>Địa chỉ</TableHead>
                                             <TableHead>Trạng thái</TableHead>
-                                            <TableHead>HIS</TableHead>
                                             <TableHead>Thao tác</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {users?.data?.items?.map((user) => (
-                                            <TableRow key={user.id}>
+                                        {displayUsers?.data?.users && displayUsers.data.users.length > 0 ? (
+                                            displayUsers.data.users.map((user) => (
+                                                <TableRow key={user.id}>
                                                 <TableCell>
                                                     <div className="flex items-center space-x-3">
                                                         <div className="p-2 bg-medical-100 rounded-full">
@@ -297,17 +336,6 @@ export function UserTable() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                                                            user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
-                                                                user.role === 'doctor' ? 'bg-green-100 text-green-800' :
-                                                                    user.role === 'nurse' ? 'bg-purple-100 text-purple-800' :
-                                                                        user.role === 'technician' ? 'bg-orange-100 text-orange-800' :
-                                                                            'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                        {user.role}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>
                                                     <div className="space-y-1">
                                                         {user.province && (
                                                             <div className="flex items-center text-sm">
@@ -329,22 +357,12 @@ export function UserTable() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.isActiveFlag === 1
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.isActive
                                                             ? 'bg-green-100 text-green-800'
                                                             : 'bg-red-100 text-red-800'
                                                         }`}>
-                                                        {user.isActiveFlag === 1 ? 'Hoạt động' : 'Không hoạt động'}
+                                                        {user.isActive ? 'Hoạt động' : 'Không hoạt động'}
                                                     </span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {user.hisUsername ? (
-                                                        <div className="text-sm">
-                                                            <div className="font-medium">{user.hisUsername}</div>
-                                                            <div className="text-muted-foreground">HIS User</div>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted-foreground text-sm">-</span>
-                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center space-x-2">
@@ -365,16 +383,27 @@ export function UserTable() {
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                        ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                    <div className="flex flex-col items-center justify-center space-y-2">
+                                                        <UserIcon className="h-12 w-12 text-gray-300" />
+                                                        <p className="text-lg font-medium">Không có người dùng nào</p>
+                                                        <p className="text-sm">Hãy thêm người dùng mới để bắt đầu</p>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
                                     </TableBody>
                                 </Table>
                             </div>
 
                             {/* Pagination */}
-                            {totalPages > 1 && (
+                            {totalPages > 1 && !searchEmail && (
                                 <div className="flex items-center justify-between mt-4">
                                     <div className="text-sm text-muted-foreground">
-                                        Hiển thị {users?.data?.items?.length || 0} trong tổng số {users?.data?.total || 0} người dùng
+                                        Hiển thị {displayUsers?.data?.users?.length || 0} trong tổng số {displayUsers?.data?.total || 0} người dùng
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <Button

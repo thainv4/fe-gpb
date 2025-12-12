@@ -354,11 +354,11 @@ export function RoomTable() {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${room.isActiveFlag === 1
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${room.isActive
                                                                 ? 'bg-green-100 text-green-800'
                                                                 : 'bg-red-100 text-red-800'
                                                             }`}>
-                                                            {room.isActiveFlag === 1 ? 'Hoạt động' : 'Không hoạt động'}
+                                                            {room.isActive ? 'Hoạt động' : 'Không hoạt động'}
                                                         </span>
                                                     </TableCell>
                                                     <TableCell>

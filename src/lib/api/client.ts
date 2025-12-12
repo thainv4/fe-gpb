@@ -210,19 +210,24 @@ export interface User {
     username: string;
     email: string;
     fullName: string;
+    isActive: boolean;
     phoneNumber?: string;
     dateOfBirth?: string;
     address?: string;
-    role: string;
-    isActiveFlag: number;
-    lastLoginAt?: string;
-    hisUsername?: string;
-    hisPassword?: string;
-    provinceId?: string;
-    wardId?: string;
-    departmentId?: string;
     createdAt: string;
     updatedAt: string;
+    // Profile relationship data (if populated)
+    profile?: {
+        provinceId?: string;
+        wardId?: string;
+        departmentId?: string;
+        position?: string;
+        employeeCode?: string;
+        gender?: string;
+        avatar?: string;
+        mappedUsername?: string;
+    };
+    // Populated relationships
     province?: Province;
     ward?: Ward;
     department?: Department;
@@ -231,22 +236,26 @@ export interface User {
 export interface UserRequest {
     username: string;
     email: string;
+    password?: string;
     fullName: string;
+    isActive?: boolean;
     phoneNumber?: string;
     dateOfBirth?: string;
     address?: string;
-    role: string;
-    isActive?: boolean;
-    hisUsername?: string;
-    hisPassword?: string;
+    // Profile data (optional)
     provinceId?: string;
     wardId?: string;
     departmentId?: string;
+    position?: string;
+    employeeCode?: string;
+    gender?: string;
+    avatar?: string;
+    mappedUsername?: string;
+    mappedPassword?: string;
 }
 
 export interface UserFilters {
     search?: string;
-    role?: string;
     isActive?: boolean;
     provinceId?: string;
     wardId?: string;
@@ -422,10 +431,12 @@ export interface Room {
     departmentId: string;
     roomGroupId?: string;
     description?: string;
-    isActiveFlag: number;
+    isActive: boolean;
+    sortOrder?: number;
     createdAt: string;
     updatedAt: string;
     department?: Department;
+    roomGroup?: RoomGroup;
 }
 
 export interface RoomGroup {
@@ -717,6 +728,16 @@ export interface StoredService {
     documentId?: string | number | null;
 }
 
+export interface StoreServiceRequestBody {
+    serviceReqCode: string;
+    currentRoomId: string;
+    currentDepartmentId: string;
+    receptionCode: string;
+    sampleCollectionTime: string;
+    collectedByUserId: string;
+    saveRawJson: boolean;
+}
+
 export interface StoredServiceRequestResponse {
     id: string;
     hisServiceReqCode: string;
@@ -821,33 +842,40 @@ export interface ServiceRequestDetail {
 export interface UserRoom {
     id: string;
     userId: string;
-    username?: string;
-    userFullName?: string;
+    username: string;
+    userFullName: string;
     roomId: string;
     roomCode: string;
     roomName: string;
-    roomAddress?: string;
-    roomDescription?: string;
+    roomAddress: string;
+    roomDescription: string;
     departmentId: string;
-    departmentName?: string;
-    departmentCode?: string;
-    roomGroupId?: string;
-    roomGroupName?: string;
-    branchId?: string;
-    branchName?: string;
-    isActive: number;
+    departmentName: string;
+    departmentCode: string;
+    roomGroupId: string;
+    roomGroupName: string;
+    branchId: string;
+    branchName: string;
+    isActive: boolean;
     createdAt: string;
     updatedAt: string;
 }
 
-export interface StoreServiceRequestBody {
-    serviceReqCode: string;
-    currentRoomId: string;
-    currentDepartmentId: string;
-    receptionCode: string;
-    sampleCollectionTime: string; // ISO string
-    collectedByUserId: string;
-    saveRawJson: boolean;
+export interface AssignRoomsRequest {
+    roomIds: string[];
+}
+
+export interface UpdateUserRoomRequest {
+    isActive?: boolean;
+}
+
+export interface GetUserRoomsFilters {
+    userId?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
 }
 
 // API trả về data trực tiếp, không có wrapper serviceRequest
@@ -923,7 +951,7 @@ export interface EmrSignResponse {
 }
 
 class ApiClient {
-    private baseURL: string;
+    private readonly baseURL: string;
     private token: string | null = null;
     private refreshTokenValue: string | null = null;
     private tokenExpiresAt: number | null = null;
@@ -933,7 +961,7 @@ class ApiClient {
     constructor(baseURL: string = API_BASE_URL) {
         this.baseURL = baseURL;
         // Get token from auth store if available
-        if (typeof window !== "undefined") {
+        if (typeof globalThis.window !== "undefined") {
             this.loadTokenFromStorage();
         }
     }
@@ -959,7 +987,7 @@ class ApiClient {
             // Load token expiration time if available
             const expiresAt = localStorage.getItem("auth-token-expires-at");
             if (expiresAt) {
-                this.tokenExpiresAt = parseInt(expiresAt, 10);
+                this.tokenExpiresAt = Number.parseInt(expiresAt, 10);
             }
         } catch (error) {
             console.warn("Failed to parse auth storage:", error);
@@ -968,7 +996,7 @@ class ApiClient {
             this.refreshTokenValue = localStorage.getItem("auth-refresh-token");
             const expiresAt = localStorage.getItem("auth-token-expires-at");
             if (expiresAt) {
-                this.tokenExpiresAt = parseInt(expiresAt, 10);
+                this.tokenExpiresAt = Number.parseInt(expiresAt, 10);
             }
         }
     }
@@ -980,13 +1008,13 @@ class ApiClient {
         if (expiresIn && token) {
             // expiresIn is in seconds, convert to milliseconds and add to current time
             this.tokenExpiresAt = Date.now() + (expiresIn * 1000);
-            if (typeof window !== "undefined") {
+            if (typeof globalThis.window !== "undefined") {
                 localStorage.setItem("auth-token-expires-at", this.tokenExpiresAt.toString());
             }
         } else if (!token) {
             // Clear expiration time when token is cleared
             this.tokenExpiresAt = null;
-            if (typeof window !== "undefined") {
+            if (typeof globalThis.window !== "undefined") {
                 localStorage.removeItem("auth-token-expires-at");
             }
         }
@@ -1076,7 +1104,7 @@ class ApiClient {
                 this.setRefreshToken(newRefreshToken);
 
                 // Update auth store
-                if (typeof window !== "undefined") {
+                if (typeof globalThis.window !== "undefined") {
                     const { useAuthStore } = await import("@/lib/stores/auth");
                     useAuthStore.getState().updateTokens(newAccessToken, newRefreshToken);
                 }
@@ -1102,12 +1130,12 @@ class ApiClient {
         this.refreshTokenValue = null;
         this.tokenExpiresAt = null;
 
-        if (typeof window !== "undefined") {
+        if (typeof globalThis.window !== "undefined") {
             const { useAuthStore } = await import("@/lib/stores/auth");
             useAuthStore.getState().logout();
 
             // Redirect to login page
-            window.location.href = "/auth/login";
+            globalThis.window.location.href = "/auth/login";
         }
     }
 
@@ -1191,7 +1219,7 @@ class ApiClient {
             let data: unknown;
             const contentType = response.headers.get("content-type");
 
-            if (contentType && contentType.includes("application/json")) {
+            if (contentType?.includes("application/json")) {
                 data = await response.json();
             } else {
                 data = {message: await response.text()};
@@ -1296,10 +1324,10 @@ class ApiClient {
 
     async logout(): Promise<ApiResponse> {
         try {
-            const response = await this.request("/auth/logout", {
+            await this.request("/auth/logout", {
                 method: "POST",
             });
-            return response;
+            return { success: true, status_code: 200 } as ApiResponse;
         } catch (error) {
             console.warn('Logout API error:', error);
             return { success: false, status_code: 500 } as ApiResponse;
@@ -1312,7 +1340,7 @@ class ApiClient {
             this.refreshSubscribers = [];
 
             // Clear localStorage
-            if (typeof window !== 'undefined') {
+            if (typeof globalThis.window !== 'undefined') {
                 localStorage.removeItem('auth-token');
                 localStorage.removeItem('auth-refresh-token');
                 localStorage.removeItem('auth-token-expires-at');
@@ -1709,7 +1737,7 @@ class ApiClient {
     // User management methods
     async getUsers(filters?: UserFilters): Promise<
         ApiResponse<{
-            items: User[];
+            users: User[];
             total: number;
             limit: number;
             offset: number;
@@ -1725,7 +1753,7 @@ class ApiClient {
         }
         const queryString = params.toString();
         return this.request<{
-            items: User[];
+            users: User[];
             total: number;
             limit: number;
             offset: number;
@@ -1734,6 +1762,10 @@ class ApiClient {
 
     async getUser(id: string): Promise<ApiResponse<User>> {
         return this.request<User>(`/users/${id}`);
+    }
+
+    async getUserByEmail(email: string): Promise<ApiResponse<User>> {
+        return this.request<User>(`/users/email/${encodeURIComponent(email)}`);
     }
 
     async createUser(user: UserRequest): Promise<ApiResponse<User>> {
@@ -1817,7 +1849,7 @@ class ApiClient {
     // Department management methods
     async getDepartments(filters?: DepartmentFilters): Promise<
         ApiResponse<{
-            items: Department[];
+            departments: Department[];
             total: number;
             limit: number;
             offset: number;
@@ -1833,7 +1865,7 @@ class ApiClient {
         }
         const queryString = params.toString();
         return this.request<{
-            items: Department[];
+            departments: Department[];
             total: number;
             limit: number;
             offset: number;
@@ -2155,22 +2187,44 @@ class ApiClient {
 
     async getRoomsByDepartment(
         departmentId: string,
-        limit = 10,
-        offset = 0
+        filters?: {
+            limit?: number;
+            offset?: number;
+            isActive?: boolean;
+        }
     ): Promise<
         ApiResponse<{
-            items: Room[];
-            total: number;
-            limit: number;
-            offset: number;
+            rooms: Room[];
+            pagination: {
+                total: number;
+                limit: number;
+                offset: number;
+                hasNext: boolean;
+                hasPrev: boolean;
+            };
         }>
     > {
+        const params = new URLSearchParams();
+        if (filters?.limit !== undefined) {
+            params.append('limit', filters.limit.toString());
+        }
+        if (filters?.offset !== undefined) {
+            params.append('offset', filters.offset.toString());
+        }
+        if (filters?.isActive !== undefined) {
+            params.append('isActive', filters.isActive.toString());
+        }
+        const queryString = params.toString();
         return this.request<{
-            items: Room[];
-            total: number;
-            limit: number;
-            offset: number;
-        }>(`/departments/${departmentId}/rooms?limit=${limit}&offset=${offset}`);
+            rooms: Room[];
+            pagination: {
+                total: number;
+                limit: number;
+                offset: number;
+                hasNext: boolean;
+                hasPrev: boolean;
+            };
+        }>(`/rooms/by-department/${departmentId}${queryString ? `?${queryString}` : ""}`);
     }
 
     // Sample Type management methods
@@ -2547,6 +2601,136 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify(body),
         });
+    }
+
+    // ========== USER ROOM ENDPOINTS ==========
+
+    /**
+     * Gán phòng cho user
+     * POST /user-rooms/users/:userId/rooms
+     */
+    async assignRoomsToUser(
+        userId: string,
+        request: AssignRoomsRequest
+    ): Promise<ApiResponse<{ message: string }>> {
+        return this.request<{ message: string }>(
+            `/user-rooms/users/${userId}/rooms`,
+            {
+                method: 'POST',
+                body: JSON.stringify(request),
+            }
+        );
+    }
+
+    /**
+     * Gỡ phòng khỏi user
+     * DELETE /user-rooms/users/:userId/rooms/:roomId
+     */
+    async removeRoomFromUser(
+        userId: string,
+        roomId: string
+    ): Promise<ApiResponse<{ message: string }>> {
+        return this.request<{ message: string }>(
+            `/user-rooms/users/${userId}/rooms/${roomId}`,
+            {
+                method: 'DELETE',
+            }
+        );
+    }
+
+    /**
+     * Cập nhật phân quyền phòng
+     * PUT /user-rooms/:userRoomId
+     */
+    async updateUserRoom(
+        userRoomId: string,
+        request: UpdateUserRoomRequest
+    ): Promise<ApiResponse<{ message: string }>> {
+        return this.request<{ message: string }>(
+            `/user-rooms/${userRoomId}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(request),
+            }
+        );
+    }
+
+    /**
+     * Lấy danh sách phân quyền phòng
+     * GET /user-rooms
+     */
+    async getUserRooms(
+        filters?: GetUserRoomsFilters
+    ): Promise<ApiResponse<{
+        items: UserRoom[];
+        total: number;
+        limit: number;
+        offset: number;
+    }>> {
+        const params = new URLSearchParams();
+        if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    params.append(key, value.toString());
+                }
+            });
+        }
+        const queryString = params.toString();
+        return this.request<{
+            items: UserRoom[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/user-rooms${queryString ? `?${queryString}` : ""}`);
+    }
+
+    /**
+     * Lấy danh sách phòng của user
+     * GET /user-rooms/users/:userId
+     */
+    async getUserRoomsByUserId(
+        userId: string
+    ): Promise<ApiResponse<UserRoom[]>> {
+        return this.request<UserRoom[]>(`/user-rooms/users/${userId}`);
+    }
+
+    /**
+     * Lấy danh sách phòng của user hiện tại
+     * GET /user-rooms/my-rooms
+     */
+    async getMyUserRooms(): Promise<ApiResponse<UserRoom[]>> {
+        return this.request<UserRoom[]>("/user-rooms/my-rooms");
+    }
+
+    /**
+     * Lấy thông tin phân quyền phòng
+     * GET /user-rooms/:userRoomId
+     */
+    async getUserRoomById(
+        userRoomId: string
+    ): Promise<ApiResponse<UserRoom>> {
+        return this.request<UserRoom>(`/user-rooms/${userRoomId}`);
+    }
+
+    /**
+     * Kiểm tra quyền truy cập phòng
+     * GET /user-rooms/check/:userId/:roomId
+     */
+    async checkUserRoomAccess(
+        userId: string,
+        roomId: string
+    ): Promise<ApiResponse<{
+        userId: string;
+        roomId: string;
+        hasAccess: boolean;
+        message: string;
+    }>> {
+        return this.request<{
+            userId: string;
+            roomId: string;
+            hasAccess: boolean;
+            message: string;
+        }>(`/user-rooms/check/${userId}/${roomId}`);
     }
 
 }

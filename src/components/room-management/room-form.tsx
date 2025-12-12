@@ -58,7 +58,7 @@ export function RoomForm({ initialData, onSubmit, isLoading = false }: RoomFormP
             departmentId: initialData?.departmentId || '',
             roomGroupId: initialData?.roomGroupId || '',
             description: initialData?.description || '',
-            isActive: initialData?.isActiveFlag === 1,
+            isActive: initialData ? (initialData as any).isActive ?? 1 : true,
         },
     })
 

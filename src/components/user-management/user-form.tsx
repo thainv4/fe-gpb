@@ -63,13 +63,13 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
             phoneNumber: initialData?.phoneNumber || '',
             dateOfBirth: initialData?.dateOfBirth || '',
             address: initialData?.address || '',
-            role: initialData?.role || 'user',
-            isActive: initialData?.isActiveFlag === 1,
-            hisUsername: initialData?.hisUsername || '',
-            hisPassword: initialData?.hisPassword || '',
-            provinceId: initialData?.provinceId || '',
-            wardId: initialData?.wardId || '',
-            departmentId: initialData?.departmentId || '',
+            role: 'user',
+            isActive: initialData?.isActive ?? true,
+            hisUsername: initialData?.profile?.mappedUsername || '',
+            hisPassword: '',
+            provinceId: initialData?.profile?.provinceId || '',
+            wardId: initialData?.profile?.wardId || '',
+            departmentId: initialData?.profile?.departmentId || '',
         },
     })
 
@@ -83,13 +83,13 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
                 ])
 
                 if (provincesRes.success && provincesRes.data) {
-                    setProvinces(provincesRes.data.provinces)
+                    setProvinces(provincesRes.data.provinces || [])
                 }
                 if (wardsRes.success && wardsRes.data) {
-                    setWards(wardsRes.data.wards)
+                    setWards(wardsRes.data.wards || [])
                 }
                 if (departmentsRes.success && departmentsRes.data) {
-                    setDepartments(departmentsRes.data.items)
+                    setDepartments(departmentsRes.data.departments || [])
                 }
             } catch (error) {
                 console.error('Error fetching data:', error)
@@ -289,7 +289,7 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {provinces.map((province) => (
+                                        {provinces?.map((province) => (
                                             <SelectItem key={province.id} value={province.id}>
                                                 {province.provinceName}
                                             </SelectItem>
@@ -337,7 +337,7 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {departments.map((department) => (
+                                        {departments?.map((department) => (
                                             <SelectItem key={department.id} value={department.id}>
                                                 {department.departmentName}
                                             </SelectItem>
