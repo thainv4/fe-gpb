@@ -34,7 +34,8 @@ export default function TestIndicationsTable() {
     const [selectedSampleType, setSelectedSampleType] = useState<string>('')
     const [selectOpen, setSelectOpen] = useState<boolean>(false)
     const [sampleCode, setSampleCode] = useState<string>('') // Mã bệnh phẩm từ API response
-    const [sampleTypeSearch, setSampleTypeSearch] = useState<string>('')
+    const [sampleTypeSearch, setSampleTypeSearch] = useState<string>('') // Từ khóa đang gõ
+    const [appliedSearch, setAppliedSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
 
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
@@ -113,6 +114,12 @@ export default function TestIndicationsTable() {
         }
     }
 
+    const handleSampleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            setAppliedSearch(sampleTypeSearch)
+        }
+    }
+
     const handleSelectFromList = (code: string) => {
         setServiceReqCode(code)
         setSearchCode(code)
@@ -130,9 +137,9 @@ export default function TestIndicationsTable() {
 
     const sampleTypeItems: SampleType[] = (sampleTypesData?.data?.sampleTypes ?? []) as SampleType[]
 
-    // Lọc danh sách bệnh phẩm theo từ khóa tìm kiếm
+    // Lọc danh sách bệnh phẩm theo từ khóa đã apply (sau khi nhấn Enter)
     const filteredSampleTypeItems = sampleTypeItems.filter(item =>
-        item.typeName.toLowerCase().includes(sampleTypeSearch.toLowerCase())
+        item.typeName.toLowerCase().includes(appliedSearch.toLowerCase())
     )
 
     // Helper function để format ngày hiện tại theo định dạng YYYY-MM-DD
@@ -394,11 +401,11 @@ export default function TestIndicationsTable() {
                             {/* Ô tìm kiếm bệnh phẩm */}
                             <div className="px-2 py-1">
                                 <Input
-                                    placeholder="Tìm kiếm bệnh phẩm..."
+                                    placeholder="Tìm kiếm bệnh phẩm (nhấn Enter)..."
                                     value={sampleTypeSearch}
                                     onChange={e => setSampleTypeSearch(e.target.value)}
+                                    onKeyDown={handleSampleSearchKeyDown}
                                     className="text-sm mb-2"
-                                    // autoFocus bị loại bỏ để tránh mất focus khi gõ
                                 />
                             </div>
                             {filteredSampleTypeItems.length

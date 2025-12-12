@@ -14,13 +14,6 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
 import { SampleType, SampleTypeRequest } from '@/lib/api/client'
 
@@ -61,12 +54,21 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
     })
 
     function handleSubmit(data: SampleTypeFormData) {
-        onSubmit(data)
+        // Đảm bảo các giá trị mặc định luôn được gửi lên
+        const submitData: SampleTypeRequest = {
+            ...data,
+            allowDuplicate: false,
+            resetPeriod: 'MONTHLY' as const,
+            codeWidth: 4,
+            sortOrder: 1,
+        }
+        onSubmit(submitData)
     }
 
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                {/* Hàng 1: Mã loại mẫu + Tiền tố mã tiếp nhận */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
@@ -83,6 +85,23 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                     />
                     <FormField
                         control={form.control}
+                        name="codePrefix"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Tiền tố mã tiếp nhận *</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Nhập tiền tố mã (1-5 ký tự)" maxLength={5} {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                {/* Hàng 2: Tên loại mẫu + Tên viết tắt */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
                         name="typeName"
                         render={({ field }) => (
                             <FormItem>
@@ -94,9 +113,6 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                             </FormItem>
                         )}
                     />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
                         name="shortName"
@@ -110,97 +126,9 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                             </FormItem>
                         )}
                     />
-                    <FormField
-                        control={form.control}
-                        name="sortOrder"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Số thứ tự</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="Nhập số thứ tự" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="codePrefix"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Tiền tố mã tiếp nhận *</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Nhập tiền tố mã (1-5 ký tự)" maxLength={5} {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="codeWidth"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Độ rộng phần số</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="Nhập độ rộng (1-5)" min={1} max={5} {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="allowDuplicate"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Cho phép mã trùng lặp</FormLabel>
-                                <Select onValueChange={(value) => field.onChange(value === 'true')} value={field.value ? 'true' : 'false'}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="true">Có</SelectItem>
-                                        <SelectItem value="false">Không</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="resetPeriod"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Chu kỳ reset số thứ tự</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn chu kỳ" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="DAILY">Hàng ngày</SelectItem>
-                                        <SelectItem value="MONTHLY">Hàng tháng</SelectItem>
-                                        <SelectItem value="YEARLY">Hàng năm</SelectItem>
-                                        <SelectItem value="NEVER">Không bao giờ</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-
+                {/* Hàng 3: Mô tả (full width) */}
                 <FormField
                     control={form.control}
                     name="description"

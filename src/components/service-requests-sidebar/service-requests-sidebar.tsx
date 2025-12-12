@@ -10,7 +10,7 @@ import {Loader2} from 'lucide-react'
 import {cn} from '@/lib/utils'
 
 interface ServiceRequestsSidebarProps {
-    readonly onSelect: (serviceReqCode: string, storedServiceReqId?: string) => void
+    readonly onSelect: (serviceReqCode: string, storedServiceReqId?: string, receptionCode?: string) => void
     readonly selectedCode?: string
     readonly serviceReqCode?: string
     readonly defaultStateId?: string
@@ -116,11 +116,6 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
     const updateFilter = <K extends keyof FilterParams>(key: K, value: FilterParams[K]) => {
         setFilters(prev => ({...prev, [key]: value, offset: 0}))
-    }
-
-    const loadMore = () => {
-        // keep for compatibility: move to next page
-        setFilters(prev => ({...prev, offset: prev.offset + prev.limit}))
     }
 
     return (
@@ -258,10 +253,12 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                     serviceReqCode?: string;
                                     patientName?: string;
                                     patientCode?: string;
+                                    receptionCode?: string;
                                 };
                             }) => {
                                 const serviceReq = item.serviceRequest
                                 const serviceReqCode = serviceReq?.hisServiceReqCode || serviceReq?.serviceReqCode || ''
+                                const receptionCode = serviceReq?.receptionCode || ''
                                 const stateName = item.toState?.stateName || 'Chưa xác định'
                                 const stateColor = getStateColor(item.toState?.stateCode)
                                 const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
@@ -275,7 +272,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                 return (
                                     <tr
                                         key={item.id}
-                                        onClick={() => onSelect(serviceReqCode, item.storedServiceReqId)}
+                                        onClick={() => onSelect(serviceReqCode, item.storedServiceReqId, receptionCode)}
                                         className={cn(
                                             'cursor-pointer hover:bg-blue-50 transition-colors border-b border-gray-100',
                                             selectedCode === serviceReqCode && 'bg-blue-100'

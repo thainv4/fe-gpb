@@ -1,6 +1,6 @@
 ﻿import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
-import { useState, useEffect, useMemo } from "react";
-import { Package } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Package, Printer } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import { Textarea } from "@/components/ui/textarea";
+import Barcode from 'react-barcode';
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -63,6 +64,73 @@ export default function SampleDeliveryTable() {
     const [storedServiceReqId, setStoredServiceReqId] = useState<string | undefined>(undefined)
     // Thêm state cho ghi chú bàn giao
     const [handoverNote, setHandoverNote] = useState<string>('')
+    // Thêm state cho receptionCode
+    const [receptionCode, setReceptionCode] = useState<string>('')
+
+    // Ref cho phần barcode để in
+    const barcodeRef = useRef<HTMLDivElement>(null)
+
+    // Function để in barcode - chỉ in barcode và ngày giờ
+    const handlePrintBarcode = () => {
+        if (!barcodeRef.current) return
+
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) return
+
+        const barcodeHtml = barcodeRef.current.innerHTML
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>In mã vạch - ${receptionCode}</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <style>
+                    @page {
+                        size: auto;
+                        margin: 5mm;
+                    }
+                    @media print {
+                        html, body {
+                            width: 100%;
+                            height: 100%;
+                            margin: 0;
+                            padding: 0;
+                            overflow: hidden;
+                        }
+                        .print-container {
+                            page-break-after: avoid;
+                            page-break-inside: avoid;
+                        }
+                    }
+                </style>
+            </head>
+            <body class="min-h-screen flex items-center justify-center bg-white p-4">
+                <div class="print-container text-center">
+                    <div class="flex justify-center items-center mb-2">
+                        ${barcodeHtml}
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        <p>Ngày in: ${new Date().toLocaleString('vi-VN')}</p>
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.print();
+                        }, 500);
+                        window.onafterprint = function() {
+                            window.close();
+                        }
+                    }
+                </script>
+            </body>
+            </html>
+        `)
+        printWindow.document.close()
+    }
 
     // Tạo danh sách phòng/khoa từ các tab hiện có để chọn làm đơn vị nhận mẫu
     const availableRooms = useMemo(
@@ -96,28 +164,6 @@ export default function SampleDeliveryTable() {
             setSelectedStateId(handoverStateId)
         }
     }, [handoverStateId, selectedStateId])
-
-    // Debug logs
-    /*useEffect(() => {
-        if (selectedServiceReqCode) {
-            console.log('🔍 Debug Info:', {
-                selectedServiceReqCode,
-                selectedStateId,
-                storedServiceReqId,
-                currentUserId,
-                receiverRoomId,
-                receiverDepartmentId,
-                buttonWillBeEnabled: !!(storedServiceReqId && selectedStateId && currentUserId && receiverRoomId && receiverDepartmentId),
-                missingFields: {
-                    storedServiceReqId: !storedServiceReqId,
-                    selectedStateId: !selectedStateId,
-                    currentUserId: !currentUserId,
-                    receiverRoomId: !receiverRoomId,
-                    receiverDepartmentId: !receiverDepartmentId,
-                },
-            })
-        }
-    }, [selectedServiceReqCode, selectedStateId, storedServiceReqId, currentUserId, receiverRoomId, receiverDepartmentId])*/
 
     // Mutation for workflow transition
     const transitionMutation = useMutation({
@@ -190,9 +236,10 @@ export default function SampleDeliveryTable() {
     }
 
     // Handle selection from sidebar
-    const handleSelectServiceRequest = (code: string, storedId?: string) => {
+    const handleSelectServiceRequest = (code: string, storedId?: string, receptionCode?: string) => {
         setSelectedServiceReqCode(code)
         setStoredServiceReqId(storedId)
+        setReceptionCode(receptionCode || '')
         setReceiveDateTime(getVietnamTime())
     }
 
@@ -220,9 +267,38 @@ export default function SampleDeliveryTable() {
                         {/* Header with selected service request code */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-blue-600 font-medium">Mã Y lệnh đang xử lý</p>
-                                    <p className="text-xl font-bold text-blue-900">{selectedServiceReqCode}</p>
+                                <div className="flex-1 grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-blue-600 font-medium">Mã Y lệnh đang xử lý</p>
+                                        <p className="text-xl font-bold text-blue-900">{selectedServiceReqCode}</p>
+                                    </div>
+                                    {receptionCode && (
+                                        <div>
+                                            <div className="flex items-center gap-6 mb-2">
+                                                <p className="text-sm text-blue-600 font-medium">Mã bệnh phẩm</p>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handlePrintBarcode}
+                                                    className="h-7"
+                                                >
+                                                    <Printer className="h-4 w-4 mr-1" />
+                                                    In mã vạch
+                                                </Button>
+                                            </div>
+                                            <div ref={barcodeRef}>
+                                                <Barcode
+                                                    value={receptionCode}
+                                                    format="CODE128"
+                                                    width={2}
+                                                    height={60}
+                                                    displayValue={true}
+                                                    fontSize={14}
+                                                    margin={0}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <Button
                                     variant="outline"
@@ -233,33 +309,6 @@ export default function SampleDeliveryTable() {
                                 </Button>
                             </div>
                         </div>
-
-                        {/* Phần 1: Đơn vị gửi mẫu */}
-                        {/*<div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
-                                Đơn vị gửi mẫu
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-2">
-                                    <Label>Đơn vị gửi mẫu</Label>
-                                    <Input
-                                        type="text"
-                                        value="...."
-                                        disabled
-                                        className="font-semibold text-gray-500 italic"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <Label>Người giao mẫu</Label>
-                                    <Input
-                                        type="text"
-                                        value="...."
-                                        disabled
-                                        className="font-semibold text-gray-500 italic"
-                                    />
-                                </div>
-                            </div>
-                        </div>*/}
 
                         {/* Phần 2: Đơn vị nhận mẫu */}
                         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
