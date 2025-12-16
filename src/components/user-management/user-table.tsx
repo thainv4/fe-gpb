@@ -29,7 +29,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { apiClient, User, UserRequest, UserFilters } from '@/lib/api/client'
+import { apiClient, User, UserRequest, UserFilters, RegisterWithProfileRequest } from '@/lib/api/client'
 import {
     Plus,
     Search,
@@ -46,6 +46,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { UserForm } from './user-form'
+import { RegisterForm } from './register-form'
 
 export function UserTable() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -109,7 +110,9 @@ export function UserTable() {
     const displayLoading = searchEmail ? isSearchingEmail : isLoading
 
     const createMutation = useMutation({
-        mutationFn: (newUser: UserRequest) => apiClient.createUser(newUser),
+        mutationFn: (newUser: RegisterWithProfileRequest) => {
+            return apiClient.registerWithProfile(newUser)
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] })
             toast({
@@ -128,13 +131,42 @@ export function UserTable() {
     })
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: Partial<UserRequest> }) =>
-            apiClient.updateUser(id, data),
+        mutationFn: ({ id, data }: { id: string; data: Partial<UserRequest> }) => {
+            // Chỉ gửi các trường có giá trị thực sự (không phải empty string hoặc undefined)
+            const profileData: {
+                provinceId?: string;
+                wardId?: string;
+                address?: string;
+                departmentId?: string;
+                position?: string;
+                employeeCode?: string;
+                phoneNumber?: string;
+                dateOfBirth?: string;
+                gender?: 'MALE' | 'FEMALE' | 'OTHER';
+                mappedUsername?: string;
+                mappedPassword?: string;
+            } = {};
+            
+            if (data.provinceId) profileData.provinceId = data.provinceId;
+            if (data.wardId) profileData.wardId = data.wardId;
+            if (data.address) profileData.address = data.address;
+            if (data.departmentId) profileData.departmentId = data.departmentId;
+            if (data.position) profileData.position = data.position;
+            if (data.employeeCode) profileData.employeeCode = data.employeeCode;
+            if (data.phoneNumber) profileData.phoneNumber = data.phoneNumber;
+            if (data.dateOfBirth) profileData.dateOfBirth = data.dateOfBirth;
+            if (data.gender) profileData.gender = data.gender as 'MALE' | 'FEMALE' | 'OTHER';
+            if (data.mappedUsername) profileData.mappedUsername = data.mappedUsername;
+            if (data.mappedPassword) profileData.mappedPassword = data.mappedPassword;
+            
+            // Gọi API updateProfile thay vì updateUser
+            return apiClient.updateProfile(id, profileData);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] })
             toast({
                 title: 'Thành công',
-                description: 'Người dùng đã được cập nhật thành công',
+                description: 'Profile đã được cập nhật thành công',
             })
             setIsCreateDialogOpen(false)
             setEditingUser(null)
@@ -142,7 +174,7 @@ export function UserTable() {
         onError: (error: Error) => {
             toast({
                 title: 'Lỗi',
-                description: error.message || 'Không thể cập nhật người dùng',
+                description: error.message || 'Không thể cập nhật profile',
                 variant: 'destructive',
             })
         },
@@ -166,7 +198,7 @@ export function UserTable() {
         },
     })
 
-    const handleCreateUser = (data: UserRequest) => {
+    const handleCreateUser = (data: RegisterWithProfileRequest) => {
         createMutation.mutate(data)
     }
 
@@ -237,7 +269,7 @@ export function UserTable() {
                                     isLoading={updateMutation.isPending}
                                 />
                             ) : (
-                                <UserForm
+                                <RegisterForm
                                     onSubmit={handleCreateUser}
                                     isLoading={createMutation.isPending}
                                 />

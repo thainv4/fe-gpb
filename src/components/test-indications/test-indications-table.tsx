@@ -198,18 +198,6 @@ export default function TestIndicationsTable() {
             collectedByUserId: string;
             saveRawJson: boolean;
         }) => apiClient.storeServiceRequest(body),
-        onSuccess: () => {
-            console.log('✅ Lưu chỉ định xét nghiệm thành công!')
-            toast({
-                title: "Thành công",
-                description: "✅ Lưu chỉ định xét nghiệm thành công!",
-                variant: "default",
-            })
-            // Reset form after successful save
-            setTimeout(() => {
-                clearAll()
-            }, 500)
-        },
         onError: (error) => {
             console.error('❌ Lỗi khi lưu chỉ định:', error)
             toast({
@@ -301,7 +289,19 @@ export default function TestIndicationsTable() {
                 saveRawJson: false,
             };
 
-            await storeServiceRequestMutation.mutateAsync(body);
+            const storeResponse = await storeServiceRequestMutation.mutateAsync(body);
+
+            // Kiểm tra response từ API
+            if (!storeResponse.success) {
+                console.error("Lưu chỉ định thất bại:", storeResponse);
+                toast({
+                    title: "Lỗi",
+                    description: storeResponse.message || "Không thể lưu chỉ định xét nghiệm",
+                    variant: "destructive",
+                });
+                return;
+            }
+
             console.log("✅ Lưu thành công!");
 
             // Hiển thị thông báo thành công
@@ -313,10 +313,10 @@ export default function TestIndicationsTable() {
             // Bước 3: Reset form
             clearAll();
         } catch (error) {
-            console.error("❌ Lỗi:", error);
+            console.error("Lỗi:", error);
             toast({
                 title: "Lỗi",
-                description: `❌ Có lỗi xảy ra: ${error instanceof Error ? error.message : 'Không xác định'}`,
+                description: `Có lỗi xảy ra: ${error instanceof Error ? error.message : 'Không xác định'}`,
                 variant: "destructive",
             })
         }

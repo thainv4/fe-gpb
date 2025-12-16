@@ -15,6 +15,47 @@ export interface LoginRequest {
     password: string;
 }
 
+export interface RegisterRequest {
+    username: string;
+    email: string;
+    password: string;
+    fullName: string;
+}
+
+export interface RegisterResponse {
+    user: {
+        id: string;
+        username: string;
+        email: string;
+        fullName: string;
+        isActive: boolean;
+    };
+    accessToken: string;
+    refreshToken: string;
+}
+
+export interface RegisterWithProfileRequest {
+    // User fields (required)
+    username: string;
+    email: string;
+    password: string;
+    fullName: string;
+    
+    // Profile fields (optional)
+    provinceId?: string;
+    wardId?: string;
+    address?: string;
+    departmentId?: string;
+    position?: string;
+    employeeCode?: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
+    gender?: 'MALE' | 'FEMALE' | 'OTHER';
+    avatar?: string;
+    mappedUsername?: string;
+    mappedPassword?: string;
+}
+
 export interface LoginResponse {
     user: {
         id: string;
@@ -908,18 +949,16 @@ export interface EmrSignOriginalVersion {
 }
 
 export interface EmrSignRequest {
-    ApiData: {
-        Description?: string;
-        PointSign: EmrSignPointSign;
-        DocumentName: string;
-        TreatmentCode: string;
-        DocumentTypeId: number;
-        DocumentGroupId?: number;
-        HisCode: string;
-        FileType?: number;
-        OriginalVersion: EmrSignOriginalVersion;
-        Signs: EmrSignSigner[];
-    };
+    Description?: string;
+    PointSign: EmrSignPointSign;
+    DocumentName?: string;
+    TreatmentCode: string;
+    DocumentTypeId?: number;
+    DocumentGroupId?: number;
+    HisCode?: string;
+    FileType?: number;
+    OriginalVersion: EmrSignOriginalVersion;
+    Signs: EmrSignSigner[];
 }
 
 export interface EmrSignResponse {
@@ -948,6 +987,58 @@ export interface EmrSignResponse {
         HasException: boolean;
         Messages?: string[];
     };
+}
+
+export interface EmrSignerData {
+    ID: number;
+    CREATE_TIME: number;
+    MODIFY_TIME: number;
+    CREATOR: string;
+    MODIFIER: string;
+    APP_CREATOR: string;
+    APP_MODIFIER: string;
+    IS_ACTIVE: number;
+    IS_DELETE: number;
+    GROUP_CODE: string;
+    LOGINNAME: string;
+    USERNAME: string;
+    TITLE: string;
+    DEPARTMENT_CODE: string;
+    DEPARTMENT_NAME: string;
+    NUM_ORDER: number;
+    SIGN_IMAGE: string;
+    PCA_SERIAL: string;
+    CMND_NUMBER: string;
+    EMAIL: string;
+    SCA_SERIAL?: string | null;
+    PHONE?: string | null;
+    HSM_USER_CODE: string;
+    SIGNATURE_DISPLAY_TYPE: number;
+    SIGNALTURE_IMAGE_WIDTH?: number | null;
+    PASSWORD?: string | null;
+    SECRET_KEY?: string | null;
+    EMR_SIGN_ORDER?: any[];
+    EMR_SIGNER_FLOW?: any[];
+    EMR_TREATMENT?: any[];
+}
+
+export interface EmrSignerParam {
+    Messages: string[];
+    BugCodes: string[];
+    MessageCodes: string[];
+    Start: number;
+    Limit: number;
+    Count: number;
+    ModuleCode?: string | null;
+    LanguageCode?: string | null;
+    Now: number;
+    HasException: boolean;
+}
+
+export interface EmrSignerResponse {
+    Data: EmrSignerData[];
+    Success: boolean;
+    Param: EmrSignerParam;
 }
 
 class ApiClient {
@@ -1322,6 +1413,38 @@ class ApiClient {
         return response;
     }
 
+    async register(userData: RegisterRequest): Promise<ApiResponse<RegisterResponse>> {
+        const response = await this.request<RegisterResponse>("/auth/register", {
+            method: "POST",
+            body: JSON.stringify(userData),
+        });
+
+        // Nếu đăng ký thành công, có thể lưu token (tùy chọn)
+        if (response.success && response.data?.accessToken) {
+            // Không tự động set token khi register, để user tự login sau
+            // this.setToken(response.data.accessToken, expiresIn);
+            // this.setRefreshToken(response.data.refreshToken);
+        }
+
+        return response;
+    }
+
+    async registerWithProfile(userData: RegisterWithProfileRequest): Promise<ApiResponse<RegisterResponse>> {
+        const response = await this.request<RegisterResponse>("/auth/register-with-profile", {
+            method: "POST",
+            body: JSON.stringify(userData),
+        });
+
+        // Nếu đăng ký thành công, có thể lưu token (tùy chọn)
+        if (response.success && response.data?.accessToken) {
+            // Không tự động set token khi register, để user tự login sau
+            // this.setToken(response.data.accessToken, expiresIn);
+            // this.setRefreshToken(response.data.refreshToken);
+        }
+
+        return response;
+    }
+
     async logout(): Promise<ApiResponse> {
         try {
             await this.request("/auth/logout", {
@@ -1359,6 +1482,98 @@ class ApiClient {
 
     async getProfile(): Promise<ApiResponse<LoginResponse["user"]>> {
         return this.request<LoginResponse["user"]>("/auth/profile");
+    }
+
+    async createProfile(profileData: {
+        provinceId?: string;
+        wardId?: string;
+        address?: string;
+        departmentId?: string;
+        position?: string;
+        employeeCode?: string;
+        phoneNumber?: string;
+        dateOfBirth?: string;
+        gender?: 'MALE' | 'FEMALE' | 'OTHER';
+        avatar?: string;
+        mappedUsername?: string;
+        mappedPassword?: string;
+    }): Promise<ApiResponse<{
+        id: string;
+        userId: string;
+        provinceId?: string;
+        provinceName?: string;
+        wardId?: string;
+        wardName?: string;
+        address?: string;
+        fullAddress?: string;
+        departmentId?: string;
+        departmentName?: string;
+        position?: string;
+        employeeCode?: string;
+        workInfo?: string;
+        phoneNumber?: string;
+        dateOfBirth?: Date;
+        age?: number;
+        gender?: string;
+        avatar?: string;
+        mappedUsername?: string;
+        hasMappedPassword?: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        createdBy?: string;
+        updatedBy?: string;
+        version: number;
+    }>> {
+        return this.request("/profiles", {
+            method: "POST",
+            body: JSON.stringify(profileData),
+        });
+    }
+
+    async updateProfile(userId: string, profileData: {
+        provinceId?: string;
+        wardId?: string;
+        address?: string;
+        departmentId?: string;
+        position?: string;
+        employeeCode?: string;
+        phoneNumber?: string;
+        dateOfBirth?: string;
+        gender?: 'MALE' | 'FEMALE' | 'OTHER';
+        avatar?: string;
+        mappedUsername?: string;
+        mappedPassword?: string;
+    }): Promise<ApiResponse<{
+        id: string;
+        userId: string;
+        provinceId?: string;
+        provinceName?: string;
+        wardId?: string;
+        wardName?: string;
+        address?: string;
+        fullAddress?: string;
+        departmentId?: string;
+        departmentName?: string;
+        position?: string;
+        employeeCode?: string;
+        workInfo?: string;
+        phoneNumber?: string;
+        dateOfBirth?: Date;
+        age?: number;
+        gender?: string;
+        avatar?: string;
+        mappedUsername?: string;
+        hasMappedPassword?: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        createdBy?: string;
+        updatedBy?: string;
+        version: number;
+    }>> {
+        return this.request(`/profiles/user/${userId}`, {
+            method: "PUT",
+            body: JSON.stringify(profileData),
+        });
     }
 
     // Category management methods
@@ -1724,7 +1939,7 @@ class ApiClient {
             throw new Error('TokenCode header is required');
         }
 
-        return this.request<EmrSignResponse>("/emr-sign/create-and-sign-hsm", {
+        return this.request<EmrSignResponse>("/emr/create-and-sign-hsm", {
             method: "POST",
             body: JSON.stringify(signRequest),
             headers: {
@@ -1732,6 +1947,43 @@ class ApiClient {
                 'ApplicationCode': applicationCode,
             },
         });
+    }
+
+    async getEmrSigner(
+        tokenCode: string,
+        applicationCode: string = 'EMR',
+        params?: {
+            Start?: number;
+            Limit?: number;
+            loginname?: string;
+        }
+    ): Promise<ApiResponse<EmrSignerResponse>> {
+        if (!tokenCode) {
+            throw new Error('TokenCode header is required');
+        }
+
+        const queryParams = new URLSearchParams();
+        if (params?.Start !== undefined) {
+            queryParams.append('Start', params.Start.toString());
+        }
+        if (params?.Limit !== undefined) {
+            queryParams.append('Limit', params.Limit.toString());
+        }
+        if (params?.loginname) {
+            queryParams.append('loginname', params.loginname);
+        }
+
+        const queryString = queryParams.toString();
+        return this.request<EmrSignerResponse>(
+            `/emr/signer${queryString ? `?${queryString}` : ''}`,
+            {
+                method: "GET",
+                headers: {
+                    'TokenCode': tokenCode,
+                    'ApplicationCode': applicationCode,
+                },
+            }
+        );
     }
 
     // User management methods

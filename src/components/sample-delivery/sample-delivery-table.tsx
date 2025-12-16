@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTabsStore } from "@/lib/stores/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +24,6 @@ const getVietnamTime = () => {
 
 export default function SampleDeliveryTable() {
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
-    const { activeKey, tabs, setTabData, getTabData } = useTabsStore()
     const queryClient = useQueryClient()
     const { toast } = useToast()
 
@@ -37,6 +35,30 @@ export default function SampleDeliveryTable() {
     })
     const currentUserId = profileData?.data?.id
     const currentUserName = profileData?.data?.username || profileData?.data?.email || ''
+
+    // Query user's assigned rooms
+    const { data: userRoomsData, isLoading: isLoadingUserRooms } = useQuery({
+        queryKey: ['user-rooms', currentUserId],
+        queryFn: () => apiClient.getUserRoomsByUserId(currentUserId!),
+        enabled: !!currentUserId,
+    })
+
+    // Map user rooms to available rooms format
+    const availableRooms = useMemo(() => {
+        if (!userRoomsData?.data) return []
+
+        return userRoomsData.data
+            .filter((ur: any) => ur.isActive === 1 || ur.isActive === true)
+            .map((ur: any) => ({
+                key: ur.id,
+                roomId: ur.roomId,
+                departmentId: ur.departmentId,
+                roomName: ur.roomName,
+                departmentName: ur.departmentName,
+                roomCode: ur.roomCode,
+                departmentCode: ur.departmentCode,
+            }))
+    }, [userRoomsData])
 
     // Query workflow states to get "Bàn giao mẫu" state ID
     const { data: statesData } = useQuery({
@@ -67,12 +89,29 @@ export default function SampleDeliveryTable() {
     // Thêm state cho receptionCode
     const [receptionCode, setReceptionCode] = useState<string>('')
 
+    // Fetch storedServiceRequest để lấy receptionCode
+    const { data: storedServiceRequestData } = useQuery({
+        queryKey: ['stored-service-request', storedServiceReqId],
+        queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId!),
+        enabled: !!storedServiceReqId,
+        staleTime: 5 * 60 * 1000,
+    })
+
+    // Lấy receptionCode từ storedServiceRequest
+    const receptionCodeFromStored = useMemo(() => {
+        if (!storedServiceRequestData?.data?.services || storedServiceRequestData.data.services.length === 0) {
+            return receptionCode // Fallback về receptionCode từ sidebar nếu không có
+        }
+        // Lấy receptionCode từ service đầu tiên (hoặc có thể lấy từ tất cả services)
+        return storedServiceRequestData.data.services[0]?.receptionCode || receptionCode
+    }, [storedServiceRequestData, receptionCode])
+
     // Ref cho phần barcode để in
     const barcodeRef = useRef<HTMLDivElement>(null)
 
     // Function để in barcode - chỉ in barcode và ngày giờ
     const handlePrintBarcode = () => {
-        if (!barcodeRef.current) return
+        if (!barcodeRef.current || !receptionCodeFromStored) return
 
         const printWindow = window.open('', '_blank')
         if (!printWindow) return
@@ -85,7 +124,7 @@ export default function SampleDeliveryTable() {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>In mã vạch - ${receptionCode}</title>
+                <title>In mã vạch - ${receptionCodeFromStored}</title>
                 <script src="https://cdn.tailwindcss.com"></script>
                 <style>
                     @page {
@@ -132,22 +171,8 @@ export default function SampleDeliveryTable() {
         printWindow.document.close()
     }
 
-    // Tạo danh sách phòng/khoa từ các tab hiện có để chọn làm đơn vị nhận mẫu
-    const availableRooms = useMemo(
-        () => tabs
-            .filter(t => t.roomId && t.departmentId)
-            .map(t => ({
-                key: t.key,
-                roomId: t.roomId!,
-                departmentId: t.departmentId!,
-                roomName: t.roomName,
-                departmentName: t.departmentName,
-            })),
-        [tabs]
-    )
-
-    // Lưu lựa chọn phòng nhận mẫu (mặc định là phòng của tab hiện tại nếu có)
-    const [selectedReceiverRoomKey, setSelectedReceiverRoomKey] = useState<string | undefined>(activeKey || undefined)
+    // Lưu lựa chọn phòng nhận mẫu
+    const [selectedReceiverRoomKey, setSelectedReceiverRoomKey] = useState<string | undefined>(undefined)
 
     const selectedReceiverRoom = useMemo(() => {
         return availableRooms.find(r => r.key === selectedReceiverRoomKey) ?? availableRooms[0]
@@ -272,7 +297,7 @@ export default function SampleDeliveryTable() {
                                         <p className="text-sm text-blue-600 font-medium">Mã Y lệnh đang xử lý</p>
                                         <p className="text-xl font-bold text-blue-900">{selectedServiceReqCode}</p>
                                     </div>
-                                    {receptionCode && (
+                                    {receptionCodeFromStored && (
                                         <div>
                                             <div className="flex items-center gap-6 mb-2">
                                                 <p className="text-sm text-blue-600 font-medium">Mã bệnh phẩm</p>
@@ -288,7 +313,7 @@ export default function SampleDeliveryTable() {
                                             </div>
                                             <div ref={barcodeRef}>
                                                 <Barcode
-                                                    value={receptionCode}
+                                                    value={receptionCodeFromStored}
                                                     format="CODE128"
                                                     width={2}
                                                     height={60}

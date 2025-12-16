@@ -36,7 +36,6 @@ export default function TestResultForm() {
     const previewRef = useRef<HTMLDivElement>(null)
 
     // Digital signature states
-    const [signDialogOpen, setSignDialogOpen] = useState(false)
     const [signerInfo, setSignerInfo] = useState({
         signerId: '',
         serialNumber: '',
@@ -240,13 +239,75 @@ export default function TestResultForm() {
         }
     }
 
-    // Handler ký số
-    const handleDigitalSign = async () => {
-        if (!signerInfo.signerId || !signerInfo.serialNumber) {
+    // Handler ký số trực tiếp - lấy thông tin signer từ API rồi ký luôn
+    const handleSignDocument = async () => {
+        // Lấy HIS token code
+        let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
+        if (!tokenCode) {
+            tokenCode = hisToken?.tokenCode || null;
+        }
+        if (!tokenCode) {
+            const hisStorage = localStorage.getItem('his-storage');
+            if (hisStorage) {
+                try {
+                    const parsed = JSON.parse(hisStorage);
+                    tokenCode = parsed.state?.token?.tokenCode || null;
+                } catch (e) {
+                    console.error('Error parsing HIS storage:', e);
+                }
+            }
+        }
+
+        if (!tokenCode) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Vui lòng nhập đầy đủ thông tin chứng thư số"
+                description: "Vui lòng đăng nhập để sử dụng tính năng ký điện tử"
+            })
+            return
+        }
+
+        try {
+            // Gọi API để lấy thông tin signer
+            const response = await apiClient.getEmrSigner(tokenCode, 'EMR', {
+                Start: 0,
+                Limit: 1
+            })
+
+            if (response.success && response.data?.Data && response.data.Data.length > 0) {
+                const signerData = response.data.Data[0]
+                // Set signerId từ ID của signer và serialNumber = ""
+                setSignerInfo({
+                    signerId: signerData.ID.toString(),
+                    serialNumber: ''
+                })
+                
+                // Gọi hàm ký số ngay sau khi lấy được signerId
+                await handleDigitalSign()
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Lỗi",
+                    description: "Không tìm thấy thông tin người ký trong hệ thống EMR"
+                })
+            }
+        } catch (error: any) {
+            console.error('Error fetching EMR signer:', error)
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: error?.message || "Có lỗi xảy ra khi lấy thông tin người ký"
+            })
+        }
+    }
+
+    // Handler ký số
+    const handleDigitalSign = async () => {
+        if (!signerInfo.signerId) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng nhập mã người ký"
             })
             return
         }
@@ -321,39 +382,36 @@ export default function TestResultForm() {
             // Tính toạ độ chữ ký theo tỉ lệ cấu hình
 
             const signRequest = {
-                ApiData: {
-                    Description: `Kết quả xét nghiệm ${previewServiceData.data.serviceName}`,
-                    PointSign: {
-                        CoorXRectangle: 460,
-                        CoorYRectangle: 45,
-                        PageNumber: pageCount,
-                        MaxPageNumber: pageCount,
-                        WidthRectangle: 150,
-                        HeightRectangle: 100,
-                        TextPosition: 0,
-                        TypeDisplay: 4,
-                        SizeFont: 11,
-                        FormatRectangleText: "Người ký: {USERNAME}\\nThời gian: {SIGNTIME}"
-                    },
-                    DocumentName: `Phiếu XN ${storedServiceRequestData.data.serviceReqCode}`,
-                    TreatmentCode: storedServiceRequestData.data.treatmentCode || storedServiceRequestData.data.patientCode,
-                    DocumentTypeId: 1,
-                    DocumentGroupId: 1,
-                    HisCode: `HIS_${storedServiceRequestData.data.serviceReqCode}_${Date.now()}`,
-                    FileType: 0,
-                    OriginalVersion: {
-                        Base64Data: pdfBase64,
-                        Url: null
-                    },
-                    Signs: [
-                        {
-                            SignerId: Number.parseInt(signerInfo.signerId, 10),
-                            SerialNumber: signerInfo.serialNumber,
-                            NumOrder: pageCount,
-                            IsSigned: false
-                        }
-                    ]
-                }
+                Description: `Kết quả xét nghiệm ${previewServiceData.data.serviceName}`,
+                PointSign: {
+                    CoorXRectangle: 460,
+                    CoorYRectangle: 45,
+                    PageNumber: pageCount,
+                    MaxPageNumber: pageCount,
+                    WidthRectangle: 150,
+                    HeightRectangle: 100,
+                    TextPosition: 0,
+                    TypeDisplay: 4,
+                    SizeFont: 11,
+                    FormatRectangleText: "Người ký: {USERNAME}\\nThời gian: {SIGNTIME}"
+                },
+                DocumentName: `Phiếu XN ${storedServiceRequestData.data.serviceReqCode}`,
+                TreatmentCode: storedServiceRequestData.data.treatmentCode || storedServiceRequestData.data.patientCode,
+                DocumentTypeId: 1,
+                DocumentGroupId: 1,
+                HisCode: `HIS_${storedServiceRequestData.data.serviceReqCode}_${Date.now()}`,
+                FileType: 0,
+                OriginalVersion: {
+                    Base64Data: pdfBase64
+                },
+                Signs: [
+                    {
+                        SignerId: Number.parseInt(signerInfo.signerId, 10),
+                        SerialNumber: '', // Gán serialNumber = "" như yêu cầu
+                        NumOrder: pageCount,
+                        IsSigned: false
+                    }
+                ]
             }
 
             const response = await apiClient.createAndSignHsm(
@@ -390,7 +448,6 @@ export default function TestResultForm() {
                     description: "Đã ký số tài liệu thành công",
                     variant: "default"
                 })
-                setSignDialogOpen(false)
                 setSignerInfo({ signerId: '', serialNumber: '' })
             } else {
                 toast({
@@ -773,8 +830,8 @@ export default function TestResultForm() {
                                 <Button
                                     variant="default"
                                     size="sm"
-                                    onClick={() => setSignDialogOpen(true)}
-                                    disabled={!storedServiceRequestData?.data || !previewServiceData?.data}
+                                    onClick={handleSignDocument}
+                                    disabled={!storedServiceRequestData?.data || !previewServiceData?.data || isSigning}
                                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -810,79 +867,6 @@ export default function TestResultForm() {
                 </DialogContent>
             </Dialog>
 
-            {/* Digital Signature Dialog */}
-            <Dialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold">
-                            Ký số tài liệu
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="signerId" className="text-sm font-medium">
-                                Mã người ký (Signer ID) <span className="text-red-500">*</span>
-                            </Label>
-                            <Input
-                                id="signerId"
-                                type="number"
-                                placeholder="Nhập mã người ký"
-                                value={signerInfo.signerId}
-                                onChange={(e) => setSignerInfo({ ...signerInfo, signerId: e.target.value })}
-                                disabled={isSigning}
-                                className="w-full"
-                            />
-                            <p className="text-xs text-gray-500">
-                                ID người ký trong hệ thống EMR
-                            </p>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="serialNumber" className="text-sm font-medium">
-                                Số Serial Chứng thư số <span className="text-red-500">*</span>
-                            </Label>
-                            <Input
-                                id="serialNumber"
-                                type="text"
-                                placeholder="Nhập số serial chứng thư số"
-                                value={signerInfo.serialNumber}
-                                onChange={(e) => setSignerInfo({ ...signerInfo, serialNumber: e.target.value })}
-                                disabled={isSigning}
-                                className="w-full"
-                            />
-                            <p className="text-xs text-gray-500">
-                                Số serial của chứng thư số điện tử
-                            </p>
-                        </div>
-                        <div className="flex justify-end gap-3 pt-4">
-                            <Button
-                                variant="outline"
-                                onClick={() => setSignDialogOpen(false)}
-                                disabled={isSigning}
-                            >
-                                Hủy
-                            </Button>
-                            <Button
-                                variant="default"
-                                onClick={handleDigitalSign}
-                                disabled={isSigning || !signerInfo.signerId || !signerInfo.serialNumber}
-                                className="bg-blue-600 hover:bg-blue-700"
-                            >
-                                {isSigning ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Đang ký...
-                                    </>
-                                ) : (
-                                    'Xác nhận ký'
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             {/* Result Template Selector Dialog */}
             <ResultTemplateSelector
