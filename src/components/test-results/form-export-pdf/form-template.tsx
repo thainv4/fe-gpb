@@ -52,7 +52,7 @@ function PageHeader({data, specificService}: {data: StoredServiceRequestResponse
 
                 {/* Patient Code Info */}
                 <div className="text-left text-sm leading-tight space-y-1 p-3 rounded">
-                    <div><span className="font-semibold text-gray-700">Mã ID:</span> <span
+                    <div><span className="font-semibold text-gray-700">Mã Y lệnh:</span> <span
                         className="font-bold">{serviceReqCode}</span></div>
                     <div><span className="font-semibold text-gray-700">Mã BN:</span> <span
                         className="font-bold">{patientCode}</span></div>

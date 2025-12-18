@@ -391,7 +391,7 @@ export default function TestResultForm() {
                     WidthRectangle: 150,
                     HeightRectangle: 100,
                     TextPosition: 0,
-                    TypeDisplay: 4,
+                    TypeDisplay: 2,
                     SizeFont: 11,
                     FormatRectangleText: "Người ký: {USERNAME}\\nThời gian: {SIGNTIME}"
                 },
@@ -409,7 +409,7 @@ export default function TestResultForm() {
                         SignerId: Number.parseInt(signerInfo.signerId, 10),
                         SerialNumber: '', // Gán serialNumber = "" như yêu cầu
                         NumOrder: pageCount,
-                        IsSigned: false
+                        // IsSigned: false
                     }
                 ]
             }

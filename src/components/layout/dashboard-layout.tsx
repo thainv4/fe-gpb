@@ -127,36 +127,36 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: Home,
                     description: 'Quản lý danh sách phường xã theo tỉnh'
                 },
-                {
-                    name: 'Nhóm dịch vụ',
-                    href: '/service-groups',
-                    icon: Package,
-                    description: 'Quản lý nhóm dịch vụ y tế'
-                },
-                {
-                    name: 'Dịch vụ',
-                    href: '/services',
-                    icon: Stethoscope,
-                    description: 'Quản lý dịch vụ y tế và giá cả'
-                },
+                // {
+                //     name: 'Nhóm dịch vụ',
+                //     href: '/service-groups',
+                //     icon: Package,
+                //     description: 'Quản lý nhóm dịch vụ y tế'
+                // },
+                // {
+                //     name: 'Dịch vụ',
+                //     href: '/services',
+                //     icon: Stethoscope,
+                //     description: 'Quản lý dịch vụ y tế và giá cả'
+                // },
                 {
                     name: 'Loại mẫu',
                     href: '/sample-types',
                     icon: TestTube,
                     description: 'Quản lý loại mẫu xét nghiệm'
                 },
-                {
-                    name: 'Đơn vị tính',
-                    href: '/unit-of-measures',
-                    icon: Ruler,
-                    description: 'Quản lý đơn vị đo lường'
-                },
-                {
-                    name: 'Danh mục chung',
-                    href: '/categories',
-                    icon: Users,
-                    description: 'Quản lý danh mục chung hệ thống'
-                },
+                // {
+                //     name: 'Đơn vị tính',
+                //     href: '/unit-of-measures',
+                //     icon: Ruler,
+                //     description: 'Quản lý đơn vị đo lường'
+                // },
+                // {
+                //     name: 'Danh mục chung',
+                //     href: '/categories',
+                //     icon: Users,
+                //     description: 'Quản lý danh mục chung hệ thống'
+                // },
                 {
                     name: 'Mẫu kết quả xét nghiệm',
                     href: '/result-templates',
@@ -167,9 +167,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         },
         {
             name: 'Người dùng',
-            href: '/users',
             icon: UserCheck,
-            description: 'Quản lý người dùng và phân quyền'
+            description: 'Quản lý người dùng và phân quyền',
+            children: [
+                {
+                    name: 'Người dùng',
+                    href: '/users',
+                    icon: UserCheck,
+                    description: 'Quản lý người dùng hệ thống'
+                },
+                {
+                    name: 'Phân quyền phòng',
+                    href: '/user-rooms',
+                    icon: Home,
+                    description: 'Quản lý phân quyền phòng cho người dùng'
+                }
+            ]
         },
         {
             name: 'Cài đặt',

@@ -940,7 +940,7 @@ export interface EmrSignSigner {
     SignerId: number;
     SerialNumber: string;
     NumOrder: number;
-    IsSigned: boolean;
+    //IsSigned: boolean;
 }
 
 export interface EmrSignOriginalVersion {
