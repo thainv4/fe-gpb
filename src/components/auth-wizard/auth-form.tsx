@@ -103,15 +103,6 @@ export function AuthForm() {
                 throw result
             }
         } catch (error) {
-            console.error('Login error:', error)
-            console.error('Error type:', typeof error)
-
-            if (error && typeof error === 'object') {
-                console.error('Error keys:', Object.keys(error))
-                console.error('Error values:', Object.values(error))
-                console.error('Full error object:', JSON.stringify(error, null, 2))
-            }
-
             let errorMessage = 'Đã xảy ra lỗi, vui lòng thử lại'
 
             if (error instanceof Error) {
@@ -145,7 +136,6 @@ export function AuthForm() {
 
 
     function handleHisLoginWithCredentials(data: HisLoginFormData) {
-        console.log('HIS Login attempt with:', { username: data.username, password: '***' })
         hisLoginWithCredentials({
             username: data.username,
             password: data.password,

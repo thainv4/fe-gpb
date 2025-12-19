@@ -199,7 +199,6 @@ export default function TestIndicationsTable() {
             saveRawJson: boolean;
         }) => apiClient.storeServiceRequest(body),
         onError: (error) => {
-            console.error('❌ Lỗi khi lưu chỉ định:', error)
             toast({
                 title: "Lỗi",
                 description: `❌ Lỗi khi lưu chỉ định: ${error instanceof Error ? error.message : 'Không xác định'}`,
@@ -260,7 +259,6 @@ export default function TestIndicationsTable() {
 
         try {
             // Bước 1: Tạo mã tiếp nhận
-            console.log("📝 Đang tạo mã tiếp nhận...");
             const receptionResponse = await createSampleReceptionMutation.mutateAsync(
                 selectedType.typeCode
             );
@@ -275,10 +273,8 @@ export default function TestIndicationsTable() {
             }
 
             const receptionCode = receptionResponse.data.receptionCode;
-            console.log("✅ Đã tạo mã tiếp nhận:", receptionCode);
 
             // Bước 2: Lưu chỉ định xét nghiệm
-            console.log("💾 Đang lưu chỉ định...");
             const body = {
                 serviceReqCode: serviceCodeToSave,
                 currentRoomId: tabRoomId,
@@ -293,7 +289,6 @@ export default function TestIndicationsTable() {
 
             // Kiểm tra response từ API
             if (!storeResponse.success) {
-                console.error("Lưu chỉ định thất bại:", storeResponse);
                 toast({
                     title: "Lỗi",
                     description: storeResponse.message || "Không thể lưu chỉ định xét nghiệm",

@@ -84,16 +84,11 @@ export function RoomTable() {
         queryFn: () => apiClient.getRooms(filters),
     })
 
-    // Debug: Log response để kiểm tra cấu trúc
-    console.log('Rooms API Response:', roomsResponse)
 
     // Extract rooms from response (API may return data.rooms or data.items)
     const responseData = roomsResponse?.data as any
     const roomsList = responseData?.items || responseData?.rooms || []
     const totalRooms = roomsResponse?.data?.total || 0
-
-    console.log('Rooms List:', roomsList)
-    console.log('Total Rooms:', totalRooms)
 
     const createMutation = useMutation({
         mutationFn: (newRoom: RoomRequest) => {
@@ -104,11 +99,9 @@ export function RoomTable() {
                 roomAddress: newRoom.roomAddress?.trim() || undefined,
                 description: newRoom.description?.trim() || undefined,
             }
-            console.log('🚀 Cleaned data being sent:', cleanedData)
             return apiClient.createRoom(cleanedData)
         },
         onSuccess: (response) => {
-            console.log('✅ Room created successfully! Response:', response)
             queryClient.invalidateQueries({ queryKey: ['rooms'] })
             toast({
                 title: 'Thành công',

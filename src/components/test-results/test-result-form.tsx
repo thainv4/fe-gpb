@@ -11,7 +11,7 @@ import {Input} from "@/components/ui/input";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import {useToast} from "@/hooks/use-toast";
-import {CheckCircle2, XCircle} from "lucide-react";
+import {CheckCircle2, XCircle, Pencil} from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -44,6 +44,12 @@ export default function TestResultForm() {
 
     // Template selector dialog state
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false)
+
+    // Edit result dialog state
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
+    const [editResultText, setEditResultText] = useState<string>('')
+    const [isUpdating, setIsUpdating] = useState(false)
 
     // Single rich text editor state with template
     const defaultTemplate = `
@@ -189,6 +195,80 @@ export default function TestResultForm() {
         setPreviewDialogOpen(true)
     }
 
+    // Handler mở dialog chỉnh sửa
+    const handleOpenEdit = (serviceId: string) => {
+        if (!storedServiceReqId) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng chọn một phiếu xét nghiệm"
+            })
+            return
+        }
+
+        const service = services.find(s => s.id === serviceId)
+        if (service && service.resultText) {
+            setEditingServiceId(serviceId)
+            setEditResultText(service.resultText)
+            setEditDialogOpen(true)
+        }
+    }
+
+    // Handler đóng dialog chỉnh sửa
+    const handleCloseEdit = () => {
+        setEditDialogOpen(false)
+        setEditingServiceId(null)
+        setEditResultText('')
+    }
+
+    // Handler lưu kết quả chỉnh sửa
+    const handleSaveEdit = async () => {
+        if (!editingServiceId || !storedServiceReqId) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Thiếu thông tin dịch vụ"
+            })
+            return
+        }
+
+        if (!editResultText.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng nhập kết quả xét nghiệm"
+            })
+            return
+        }
+
+        setIsUpdating(true)
+        try {
+            await apiClient.patchServiceResult(storedServiceReqId, editingServiceId, {
+                resultText: editResultText
+            })
+
+            // Refresh danh sách services
+            await refetchStoredServiceRequest()
+
+            toast({
+                title: "Thành công",
+                description: "Đã cập nhật kết quả thành công",
+                variant: "default"
+            })
+
+            handleCloseEdit()
+        } catch (error) {
+            console.error('Error updating result:', error)
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Có lỗi xảy ra khi cập nhật kết quả"
+            })
+        } finally {
+            setIsUpdating(false)
+        }
+    }
+
     const handleDownloadPdf = async () => {
         if (!previewRef.current || !storedServiceRequestData?.data || !previewServiceData?.data) return;
 
@@ -228,9 +308,6 @@ export default function TestResultForm() {
 
         try {
             const {base64, pageCount} = await pdfBase64FromContainer(previewRef.current);
-            console.log('=== convertPdfToBase64 ===');
-            console.log('pageCount:', pageCount);
-            console.log('==========================');
             setSignaturePageTotal(pageCount);
             return base64;
         } catch (error) {
@@ -424,16 +501,10 @@ export default function TestResultForm() {
                 // Lấy documentId từ response
                 const documentId = response.data?.Data?.DocumentId;
 
-                console.log('=== EMR Sign Response ===');
-                console.log('Document ID:', documentId);
-                console.log('Service ID:', previewServiceId);
-                console.log('========================');
-
                 // Nếu có documentId và serviceId, gọi API cập nhật
                 if (documentId && previewServiceId) {
                     try {
                         await apiClient.postServiceRequestDocumentId(previewServiceId, documentId);
-                        console.log('✅ Document ID đã được cập nhật cho service');
 
                         // Refresh danh sách services để hiển thị trạng thái "Đã ký"
                         await refetchStoredServiceRequest();
@@ -668,6 +739,9 @@ export default function TestResultForm() {
                                                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Xem phiếu
                                                         </th>
+                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Thao tác
+                                                        </th>
                                                     </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -740,6 +814,18 @@ export default function TestResultForm() {
                                                                               d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                                                     </svg>
                                                                 </button>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    <button
+                                                                        onClick={() => handleOpenEdit(service.id)}
+                                                                        disabled={!storedServiceReqId || !service.resultText}
+                                                                        className="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:text-gray-400 disabled:hover:bg-transparent"
+                                                                        title="Chỉnh sửa kết quả"
+                                                                    >
+                                                                        <Pencil className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -874,6 +960,48 @@ export default function TestResultForm() {
                 onOpenChange={setTemplateSelectorOpen}
                 onSelect={handleTemplateSelect}
             />
+
+            {/* Edit Result Dialog */}
+            <Dialog open={editDialogOpen} onOpenChange={(open) => {
+                if (!open) {
+                    handleCloseEdit()
+                }
+            }}>
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold">
+                            Chỉnh sửa kết quả xét nghiệm
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto py-4">
+                        <div className="w-full">
+                            <RichTextEditor
+                                value={editResultText}
+                                onChange={setEditResultText}
+                                placeholder="Nhập kết quả xét nghiệm..."
+                                minHeight="500px"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleCloseEdit}
+                            disabled={isUpdating}
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleSaveEdit}
+                            disabled={isUpdating || !editResultText.trim()}
+                        >
+                            {isUpdating ? 'Đang cập nhật...' : 'Lưu thay đổi'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }

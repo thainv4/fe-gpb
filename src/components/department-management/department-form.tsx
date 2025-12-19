@@ -67,40 +67,31 @@ export function DepartmentForm({ initialData, onSubmit, isLoading = false }: Dep
         async function fetchData() {
             try {
                 setIsDataLoading(true)
-                console.log('🔍 Fetching department form data...')
                 const [branchesRes, departmentTypesRes, departmentsRes] = await Promise.all([
                     apiClient.getBranches(),
                     apiClient.getDepartmentTypes(),
                     apiClient.getDepartments(),
                 ])
 
-                console.log('📦 Branches response:', branchesRes)
-                console.log('📦 Department types response:', departmentTypesRes)
-                console.log('📦 Departments response:', departmentsRes)
-
                 if (branchesRes.success && branchesRes.data) {
                     // Handle both response formats
                     const branchesData = branchesRes.data as any
                     const branchesList = branchesData.branches || branchesData.items || []
                     setBranches(branchesList)
-                    console.log('✅ Branches loaded:', branchesList.length, branchesList)
                 }
                 if (departmentTypesRes.success && departmentTypesRes.data) {
                     // Handle both response formats
                     const typesData = departmentTypesRes.data as any
                     const typesList = typesData.departmentTypes || typesData.items || []
                     setDepartmentTypes(typesList)
-                    console.log('✅ Department types loaded:', typesList.length, typesList)
                 }
                 if (departmentsRes.success && departmentsRes.data) {
                     // Handle both response formats
                     const deptsData = departmentsRes.data as any
                     const deptsList = deptsData.departments || deptsData.items || []
                     setDepartments(deptsList)
-                    console.log('✅ Departments loaded:', deptsList.length)
                 }
             } catch (error) {
-                console.error('❌ Error fetching data:', error)
                 setBranches([])
                 setDepartmentTypes([])
                 setDepartments([])

@@ -108,14 +108,12 @@ export function DepartmentTable() {
   const createMutation = useMutation({
     mutationFn: async (newDepartment: DepartmentRequest) => {
       const response = await apiClient.createDepartment(newDepartment)
-      console.log('📡 API Response:', response)
 
       // Check if response indicates failure
       if (!response.success) {
         const errorMessage = typeof response.error === 'string'
           ? response.error
           : (response.error as any)?.message || 'Không thể tạo khoa'
-        console.error('❌ API returned error:', response.error)
         throw new Error(errorMessage)
       }
 
@@ -204,7 +202,6 @@ export function DepartmentTable() {
       error: createMutation.error
     })
     createMutation.mutate(data)
-    console.log('📝 Mutation triggered')
   }
 
   const handleUpdateDepartment = (data: DepartmentRequest) => {

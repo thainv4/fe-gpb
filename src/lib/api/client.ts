@@ -2714,6 +2714,29 @@ class ApiClient {
     }
 
     /**
+     * Cập nhật kết quả dịch vụ bằng PATCH method
+     * @param storedReqId ID của stored service request
+     * @param serviceId ID của service
+     * @param data Dữ liệu kết quả cần cập nhật
+     * @returns Promise<ApiResponse>
+     */
+    async patchServiceResult(
+        storedReqId: string,
+        serviceId: string,
+        data: {
+            resultText: string;
+        }
+    ): Promise<ApiResponse> {
+        return this.request(
+            `/service-requests/stored/${storedReqId}/services/${serviceId}/result`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify(data),
+            }
+        );
+    }
+
+    /**
      * Gọi API POST /api/v1/service-requests/stored/services/{serviceId}/document-id
      * Cập nhật document ID cho service sau khi ký số
      * @param serviceId ID của service

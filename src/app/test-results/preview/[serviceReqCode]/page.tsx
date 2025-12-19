@@ -120,7 +120,6 @@ export default function PreviewPage() {
             const fileName = `Phieu_XN_${storedServiceRequestData?.data?.patientCode}_${storedServiceRequestData?.data?.serviceReqCode}.pdf`;
             pdf.save(fileName);
         } catch (error) {
-            console.error('Error downloading PDF:', error);
             alert('Có lỗi xảy ra khi tải PDF');
         }
     };
