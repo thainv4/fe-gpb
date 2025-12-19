@@ -63,7 +63,7 @@ function PageHeader({data, specificService}: {data: StoredServiceRequestResponse
 
             {/* Title */}
             <h1 className="text-center font-bold text-2xl uppercase mt-6 mb-6">
-                Phiếu xét nghiệm sinh thiết
+                {specificService?.resultName || 'Phiếu xét nghiệm sinh thiết'}
             </h1>
 
             {/* Patient Info Section */}

@@ -11,7 +11,7 @@ import {Input} from "@/components/ui/input";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import {useToast} from "@/hooks/use-toast";
-import {CheckCircle2, XCircle, Pencil} from "lucide-react";
+import {CheckCircle2, XCircle} from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -45,12 +45,6 @@ export default function TestResultForm() {
     // Template selector dialog state
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false)
 
-    // Edit result dialog state
-    const [editDialogOpen, setEditDialogOpen] = useState(false)
-    const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
-    const [editResultText, setEditResultText] = useState<string>('')
-    const [isUpdating, setIsUpdating] = useState(false)
-
     // Single rich text editor state with template
     const defaultTemplate = `
         <h2>NHẬN XÉT ĐẠI THỂ:</h2>
@@ -72,6 +66,7 @@ export default function TestResultForm() {
         <p></p>
     `
     const [testResult, setTestResult] = useState<string>(defaultTemplate)
+    const [resultName, setResultName] = useState<string>('')
     const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set())
     const [isSaving, setIsSaving] = useState(false)
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
@@ -195,8 +190,8 @@ export default function TestResultForm() {
         setPreviewDialogOpen(true)
     }
 
-    // Handler mở dialog chỉnh sửa
-    const handleOpenEdit = (serviceId: string) => {
+    // Handler khi click vào dịch vụ để load kết quả
+    const handleServiceClick = async (serviceId: string) => {
         if (!storedServiceReqId) {
             toast({
                 variant: "destructive",
@@ -206,66 +201,27 @@ export default function TestResultForm() {
             return
         }
 
-        const service = services.find(s => s.id === serviceId)
-        if (service && service.resultText) {
-            setEditingServiceId(serviceId)
-            setEditResultText(service.resultText)
-            setEditDialogOpen(true)
-        }
-    }
-
-    // Handler đóng dialog chỉnh sửa
-    const handleCloseEdit = () => {
-        setEditDialogOpen(false)
-        setEditingServiceId(null)
-        setEditResultText('')
-    }
-
-    // Handler lưu kết quả chỉnh sửa
-    const handleSaveEdit = async () => {
-        if (!editingServiceId || !storedServiceReqId) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Thiếu thông tin dịch vụ"
-            })
-            return
-        }
-
-        if (!editResultText.trim()) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Vui lòng nhập kết quả xét nghiệm"
-            })
-            return
-        }
-
-        setIsUpdating(true)
         try {
-            await apiClient.patchServiceResult(storedServiceReqId, editingServiceId, {
-                resultText: editResultText
-            })
-
-            // Refresh danh sách services
-            await refetchStoredServiceRequest()
-
-            toast({
-                title: "Thành công",
-                description: "Đã cập nhật kết quả thành công",
-                variant: "default"
-            })
-
-            handleCloseEdit()
+            const response = await apiClient.getServiceResult(storedServiceReqId, serviceId)
+            if (response.success && response.data) {
+                const serviceData = response.data
+                setTestResult(serviceData.resultText || defaultTemplate)
+                setResultName(serviceData.resultName || '')
+                // Chọn dịch vụ này
+                setSelectedServices(new Set([serviceId]))
+            } else {
+                // Nếu chưa có kết quả, reset về template mặc định
+                setTestResult(defaultTemplate)
+                setResultName('')
+                setSelectedServices(new Set([serviceId]))
+            }
         } catch (error) {
-            console.error('Error updating result:', error)
+            console.error('Error loading service result:', error)
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Có lỗi xảy ra khi cập nhật kết quả"
+                description: "Có lỗi xảy ra khi tải kết quả dịch vụ"
             })
-        } finally {
-            setIsUpdating(false)
         }
     }
 
@@ -575,7 +531,8 @@ export default function TestResultForm() {
                     resultValue: 12.5,
                     resultValueText: "12.5",
                     resultText: testResult,
-                    resultStatus: 'NORMAL'
+                    resultStatus: 'NORMAL',
+                    resultName: resultName
                 })
             )
 
@@ -739,15 +696,16 @@ export default function TestResultForm() {
                                                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Xem phiếu
                                                         </th>
-                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Thao tác
-                                                        </th>
                                                     </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-200">
                                                     {services.map((service, index) => (
-                                                        <tr key={service.id} className="hover:bg-gray-50">
-                                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                                        <tr 
+                                                            key={service.id} 
+                                                            className="hover:bg-gray-50 cursor-pointer"
+                                                            onClick={() => handleServiceClick(service.id)}
+                                                        >
+                                                            <td className="px-4 py-3 text-sm text-gray-900" onClick={(e) => e.stopPropagation()}>
                                                                 <Input
                                                                     type="checkbox"
                                                                     checked={selectedServices.has(service.id)}
@@ -797,7 +755,7 @@ export default function TestResultForm() {
                                                                     </span>
                                                                 )}
                                                             </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center" onClick={(e) => e.stopPropagation()}>
                                                                 <button
                                                                     onClick={() => handleOpenPreview(service.id)}
                                                                     disabled={!storedServiceReqId}
@@ -815,18 +773,6 @@ export default function TestResultForm() {
                                                                     </svg>
                                                                 </button>
                                                             </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                                                                <div className="flex items-center justify-center gap-2">
-                                                                    <button
-                                                                        onClick={() => handleOpenEdit(service.id)}
-                                                                        disabled={!storedServiceReqId || !service.resultText}
-                                                                        className="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:text-gray-400 disabled:hover:bg-transparent"
-                                                                        title="Chỉnh sửa kết quả"
-                                                                    >
-                                                                        <Pencil className="w-4 h-4" />
-                                                                    </button>
-                                                                </div>
-                                                            </td>
                                                         </tr>
                                                     ))}
                                                     </tbody>
@@ -842,6 +788,16 @@ export default function TestResultForm() {
                                             <Button onClick={() => setTemplateSelectorOpen(true)}>
                                                 Chọn mẫu kết quả có sẵn
                                             </Button>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
+                                            <Input 
+                                                type="text" 
+                                                value={resultName}
+                                                onChange={(e) => setResultName(e.target.value)}
+                                                placeholder="Nhập tên phiếu kết quả..." 
+                                            />
                                         </div>
 
                                         <div className="w-full">
@@ -960,48 +916,6 @@ export default function TestResultForm() {
                 onOpenChange={setTemplateSelectorOpen}
                 onSelect={handleTemplateSelect}
             />
-
-            {/* Edit Result Dialog */}
-            <Dialog open={editDialogOpen} onOpenChange={(open) => {
-                if (!open) {
-                    handleCloseEdit()
-                }
-            }}>
-                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold">
-                            Chỉnh sửa kết quả xét nghiệm
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="flex-1 overflow-y-auto py-4">
-                        <div className="w-full">
-                            <RichTextEditor
-                                value={editResultText}
-                                onChange={setEditResultText}
-                                placeholder="Nhập kết quả xét nghiệm..."
-                                minHeight="500px"
-                            />
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleCloseEdit}
-                            disabled={isUpdating}
-                        >
-                            Hủy
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={handleSaveEdit}
-                            disabled={isUpdating || !editResultText.trim()}
-                        >
-                            {isUpdating ? 'Đang cập nhật...' : 'Lưu thay đổi'}
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
         </>
     )
 }

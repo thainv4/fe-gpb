@@ -748,6 +748,7 @@ export interface StoredService {
     resultValue?: number | null;
     resultValueText?: string | null;
     resultStatus?: string | null;
+    resultName?: string | null;
     isNormal: number;
     resultEnteredAt?: string | null;
     resultReviewedAt?: string | null;
@@ -2702,29 +2703,7 @@ class ApiClient {
             resultValueText?: string;
             resultText?: string;
             resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
-        }
-    ): Promise<ApiResponse> {
-        return this.request(
-            `/service-requests/stored/${storedReqId}/services/${serviceId}/result`,
-            {
-                method: 'PUT',
-                body: JSON.stringify(data),
-            }
-        );
-    }
-
-    /**
-     * Cập nhật kết quả dịch vụ bằng PATCH method
-     * @param storedReqId ID của stored service request
-     * @param serviceId ID của service
-     * @param data Dữ liệu kết quả cần cập nhật
-     * @returns Promise<ApiResponse>
-     */
-    async patchServiceResult(
-        storedReqId: string,
-        serviceId: string,
-        data: {
-            resultText: string;
+            resultName?: string;
         }
     ): Promise<ApiResponse> {
         return this.request(
@@ -2733,6 +2712,21 @@ class ApiClient {
                 method: 'PATCH',
                 body: JSON.stringify(data),
             }
+        );
+    }
+
+    /**
+     * Lấy kết quả dịch vụ bằng GET method
+     * @param storedReqId ID của stored service request
+     * @param serviceId ID của service
+     * @returns Promise<ApiResponse<StoredService>>
+     */
+    async getServiceResult(
+        storedReqId: string,
+        serviceId: string
+    ): Promise<ApiResponse<StoredService>> {
+        return this.request<StoredService>(
+            `/service-requests/stored/${storedReqId}/services/${serviceId}/result`
         );
     }
 
