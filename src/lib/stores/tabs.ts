@@ -14,10 +14,28 @@ export type TabItem = {
   departmentName?: string // Associated department name
 }
 
+export interface TabStateData {
+  // Form states
+  formData?: Record<string, any>
+  
+  // UI states
+  scrollPosition?: number
+  selectedItems?: string[]
+  expandedSections?: string[]
+  activeSubTab?: string
+  
+  // Query cache keys (để restore React Query cache)
+  queryCacheKeys?: string[]
+  
+  // Timestamp để cleanup
+  lastAccessed?: number
+}
+
 interface TabsState {
   tabs: TabItem[]
   activeKey: string | null
-  tabData: Record<string, any> // Store data for each tab by key
+  tabData: Record<string, any> // Store data for each tab by key (legacy, kept for backward compatibility)
+  tabState: Record<string, TabStateData> // Enhanced state storage
   tabCounter: number // Counter to generate unique tab keys
   openTab: (tab: Omit<TabItem, 'key'> & { key?: string }) => string // Returns the tab key
   closeTab: (key: string) => void
@@ -26,12 +44,19 @@ interface TabsState {
   getTabData: (key: string) => any
   updateTabRoom: (key: string, roomId: string, roomCode: string, departmentCode: string) => void
   reset: () => void
+  // Enhanced state methods
+  saveTabState: (key: string, state: Partial<TabStateData>) => void
+  getTabState: (key: string) => TabStateData | undefined
+  saveScrollPosition: (key: string, position: number) => void
+  restoreScrollPosition: (key: string) => number | undefined
+  cleanupOldTabs: () => void
 }
 
 export const useTabsStore = create<TabsState>()((set, get) => ({
   tabs: [],
   activeKey: null,
   tabData: {},
+  tabState: {},
   tabCounter: 0,
   openTab: (tab) => {
     const state = get()
@@ -97,11 +122,14 @@ export const useTabsStore = create<TabsState>()((set, get) => ({
   closeTab: (key: string) => {
     set((state) => {
       const newTabData = { ...state.tabData }
+      const newTabState = { ...state.tabState }
       delete newTabData[key]
+      delete newTabState[key]
       return {
         tabs: state.tabs.filter((t) => t.key !== key),
         activeKey: state.activeKey === key ? null : state.activeKey,
         tabData: newTabData,
+        tabState: newTabState,
       }
     })
   },
@@ -133,6 +161,45 @@ export const useTabsStore = create<TabsState>()((set, get) => ({
       return { tabs }
     })
   },
-  reset: () => set({ tabs: [], activeKey: null, tabData: {}, tabCounter: 0 }),
+  reset: () => set({ tabs: [], activeKey: null, tabData: {}, tabState: {}, tabCounter: 0 }),
+  
+  // Enhanced state methods
+  saveTabState: (key: string, state: Partial<TabStateData>) => {
+    set((current) => ({
+      tabState: {
+        ...current.tabState,
+        [key]: {
+          ...current.tabState[key],
+          ...state,
+          lastAccessed: Date.now(),
+        },
+      },
+    }))
+  },
+  
+  getTabState: (key: string) => {
+    return get().tabState[key]
+  },
+  
+  saveScrollPosition: (key: string, position: number) => {
+    get().saveTabState(key, { scrollPosition: position })
+  },
+  
+  restoreScrollPosition: (key: string) => {
+    return get().tabState[key]?.scrollPosition
+  },
+  
+  cleanupOldTabs: () => {
+    const oneHourAgo = Date.now() - 60 * 60 * 1000
+    set((state) => {
+      const newTabState = { ...state.tabState }
+      Object.keys(newTabState).forEach((key) => {
+        if (newTabState[key].lastAccessed && newTabState[key].lastAccessed! < oneHourAgo) {
+          delete newTabState[key]
+        }
+      })
+      return { tabState: newTabState }
+    })
+  },
 }))
 

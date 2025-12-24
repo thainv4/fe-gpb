@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import {useTabsStore} from "@/lib/stores/tabs";
 import {usePathname} from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import {useTabPersistence} from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 
 export default function TestIndicationsTable() {
@@ -40,25 +41,29 @@ export default function TestIndicationsTable() {
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
 
-    // Restore tab state on mount
-    useEffect(() => {
-        const savedData = getTabData(tabKey)
-        if (savedData) {
-            setServiceReqCode(savedData.serviceReqCode || '')
-            setSearchCode(savedData.searchCode || '')
-            setSelectedSampleType(savedData.selectedSampleType || '')
-            setSampleCode(savedData.sampleCode || '')
-        }
-    }, [tabKey, getTabData])
-
-    useEffect(() => {
-        setTabData(tabKey, {
+    // Tab persistence hook
+    const { scrollContainerRef } = useTabPersistence(
+        {
             serviceReqCode,
             searchCode,
             selectedSampleType,
             sampleCode,
-        })
-    }, [tabKey, serviceReqCode, searchCode, selectedSampleType, sampleCode, setTabData])
+            sampleTypeSearch,
+            appliedSearch,
+        },
+        {
+            saveScroll: true,
+            debounceMs: 500,
+            onRestore: (data) => {
+                if (data.serviceReqCode) setServiceReqCode(data.serviceReqCode)
+                if (data.searchCode) setSearchCode(data.searchCode)
+                if (data.selectedSampleType) setSelectedSampleType(data.selectedSampleType)
+                if (data.sampleCode) setSampleCode(data.sampleCode)
+                if (data.sampleTypeSearch) setSampleTypeSearch(data.sampleTypeSearch)
+                if (data.appliedSearch) setAppliedSearch(data.appliedSearch)
+            },
+        }
+    )
 
     const {data: serviceRequestData, isLoading, isError, error} = useQuery({
         queryKey: ['service-request', searchCode],
@@ -142,30 +147,6 @@ export default function TestIndicationsTable() {
         item.typeName.toLowerCase().includes(appliedSearch.toLowerCase())
     )
 
-    // Helper function để format ngày hiện tại theo định dạng YYYY-MM-DD
-    function getCurrentDate(): string {
-        const now = new Date()
-        const year = now.getFullYear()
-        const month = String(now.getMonth() + 1).padStart(2, '0')
-        const day = String(now.getDate()).padStart(2, '0')
-        return `${year}-${month}-${day}`
-    }
-
-    // Mutation để generate mã bệnh phẩm
-    const generateSampleCodeMutation = useMutation({
-        mutationFn: ({ sampleTypeCode, date }: { sampleTypeCode: string; date: string }) =>
-            apiClient.generateSampleReceptionCode(sampleTypeCode, date),
-        onSuccess: (response) => {
-            const receptionCode = response.data?.receptionCode
-            if (receptionCode) {
-                setSampleCode(receptionCode)
-            }
-        },
-        onError: (error) => {
-            console.error('Error generating sample code:', error)
-            setSampleCode('')
-        }
-    })
 
     const { data: profileData } = useQuery({
         queryKey: ['profile'],
@@ -317,25 +298,9 @@ export default function TestIndicationsTable() {
         }
     }
 
-    // Tự động gọi API khi chọn sample type và có service request
-    useEffect(() => {
-        if (selectedSampleType && serviceRequest) {
-            const selectedType = sampleTypeItems.find(item => item.id === selectedSampleType)
-            if (selectedType?.typeCode) {
-                const currentDate = getCurrentDate()
-                generateSampleCodeMutation.mutate({
-                    sampleTypeCode: selectedType.typeCode,
-                    date: currentDate
-                })
-            }
-        } else {
-            setSampleCode('')
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedSampleType, serviceRequest, sampleTypeItems])
 
     return (
-        <div className="flex h-screen">
+        <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>} className="flex h-screen overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             {/* Sidebar - 1/4 màn hình với scroll */}
             <div className="w-1/4 border-r border-gray-200 bg-gray-50 overflow-hidden flex flex-col">
                 <ServiceRequestsSidebar
@@ -418,14 +383,6 @@ export default function TestIndicationsTable() {
                 <div className="w-full md:w-1/3 flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Mã bệnh phẩm</Label>
                     <Input value={sampleCode} disabled/>
-                    {generateSampleCodeMutation.isPending && (
-                        <span className="text-xs text-gray-500">Đang tạo mã bệnh phẩm...</span>
-                    )}
-                    {generateSampleCodeMutation.isError && (
-                        <span className="text-xs text-red-600">
-                            Lỗi: {generateSampleCodeMutation.error instanceof Error ? generateSampleCodeMutation.error.message : 'Không thể tạo mã bệnh phẩm'}
-                        </span>
-                    )}
                 </div>
             </div>
 
@@ -574,9 +531,9 @@ export default function TestIndicationsTable() {
                             {createSampleReceptionMutation.isPending || storeServiceRequestMutation.isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    {createSampleReceptionMutation.isPending
+                                    {/* {createSampleReceptionMutation.isPending
                                         ? 'Đang tạo mã tiếp nhận...'
-                                        : 'Đang lưu...'}
+                                        : 'Đang lưu...'} */}
                                 </>
                             ) : (
                                 'Lưu'

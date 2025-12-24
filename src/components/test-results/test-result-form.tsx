@@ -3,6 +3,7 @@
 import {useEffect, useState, useRef} from "react";
 import {useTabsStore} from "@/lib/stores/tabs";
 import {usePathname} from "next/navigation";
+import {useTabPersistence} from "@/hooks/use-tab-persistence";
 import {ServiceRequestsSidebar} from "@/components/service-requests-sidebar/service-requests-sidebar";
 import {useQuery} from "@tanstack/react-query";
 import {apiClient} from "@/lib/api/client";
@@ -71,24 +72,27 @@ export default function TestResultForm() {
     const [isSaving, setIsSaving] = useState(false)
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
 
-
-
-    // Restore tab state on mount
-    useEffect(() => {
-        const savedData = getTabData(pathname)
-        if (savedData) {
-            if (savedData.selectedServiceReqCode) setSelectedServiceReqCode(savedData.selectedServiceReqCode)
-            if (savedData.storedServiceReqId) setStoredServiceReqId(savedData.storedServiceReqId)
-        }
-    }, [pathname, getTabData])
-
-    // Save tab state whenever data changes
-    useEffect(() => {
-        setTabData(pathname, {
+    // Tab persistence hook
+    const { scrollContainerRef } = useTabPersistence(
+        {
             selectedServiceReqCode,
-            storedServiceReqId
-        })
-    }, [pathname, setTabData, selectedServiceReqCode, storedServiceReqId])
+            storedServiceReqId,
+            testResult,
+            resultName,
+            selectedServices: Array.from(selectedServices), // Convert Set to Array for serialization
+        },
+        {
+            saveScroll: true,
+            debounceMs: 500,
+            onRestore: (data) => {
+                if (data.selectedServiceReqCode) setSelectedServiceReqCode(data.selectedServiceReqCode)
+                if (data.storedServiceReqId) setStoredServiceReqId(data.storedServiceReqId)
+                if (data.testResult) setTestResult(data.testResult)
+                if (data.resultName !== undefined) setResultName(data.resultName)
+                if (data.selectedServices) setSelectedServices(new Set(data.selectedServices))
+            },
+        }
+    )
 
     // Fetch service request details when selected
     const {data: serviceRequestData, isLoading} = useQuery({
@@ -583,7 +587,7 @@ export default function TestResultForm() {
                     <CardTitle className="text-2xl font-bold">Kết quả xét nghiệm sinh thiết</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex h-full">
+                    <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>} className="flex h-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                         {/* Sidebar - 1/4 màn hình */}
                         <div className="w-1/4 border-r border-gray-200 bg-gray-50">
                             <ServiceRequestsSidebar

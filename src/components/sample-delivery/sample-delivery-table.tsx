@@ -1,5 +1,8 @@
 ﻿import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { usePathname } from "next/navigation";
+import { useTabsStore } from "@/lib/stores/tabs";
+import { useTabPersistence } from "@/hooks/use-tab-persistence";
 import { Package, Printer } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -88,6 +91,33 @@ export default function SampleDeliveryTable() {
     const [handoverNote, setHandoverNote] = useState<string>('')
     // Thêm state cho receptionCode
     const [receptionCode, setReceptionCode] = useState<string>('')
+
+    // Tab persistence
+    const pathname = usePathname()
+    const { activeKey } = useTabsStore()
+    const tabKey = activeKey ?? pathname ?? 'default'
+    const { scrollContainerRef } = useTabPersistence(
+        {
+            selectedServiceReqCode,
+            storedServiceReqId,
+            receiveDateTime,
+            selectedStateId,
+            handoverNote,
+            receptionCode,
+        },
+        {
+            saveScroll: true,
+            debounceMs: 500,
+            onRestore: (data) => {
+                if (data.selectedServiceReqCode) setSelectedServiceReqCode(data.selectedServiceReqCode)
+                if (data.storedServiceReqId) setStoredServiceReqId(data.storedServiceReqId)
+                if (data.receiveDateTime) setReceiveDateTime(data.receiveDateTime)
+                if (data.selectedStateId) setSelectedStateId(data.selectedStateId)
+                if (data.handoverNote !== undefined) setHandoverNote(data.handoverNote)
+                if (data.receptionCode) setReceptionCode(data.receptionCode)
+            },
+        }
+    )
 
     // Fetch storedServiceRequest để lấy receptionCode
     const { data: storedServiceRequestData } = useQuery({
@@ -276,7 +306,7 @@ export default function SampleDeliveryTable() {
     }, [selectedServiceReqCode])
 
     return (
-        <div className="flex h-full">
+        <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>} className="flex h-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             {/* Sidebar - 1/4 màn hình */}
             <div className="w-1/4 border-r border-gray-200 bg-gray-50">
                 <ServiceRequestsSidebar
