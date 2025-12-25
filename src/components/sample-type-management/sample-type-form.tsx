@@ -113,19 +113,7 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                             </FormItem>
                         )}
                     />
-                    <FormField
-                        control={form.control}
-                        name="shortName"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Tên viết tắt</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Nhập tên viết tắt" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+            
                 </div>
 
                 {/* Hàng 3: Mô tả (full width) */}

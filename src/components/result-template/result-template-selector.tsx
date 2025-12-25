@@ -25,7 +25,7 @@ import {apiClient, ResultTemplate} from '@/lib/api/client'
 interface ResultTemplateSelectorProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    onSelect: (template: string) => void
+    onSelect: (template: string, templateName: string) => void
 }
 
 export function ResultTemplateSelector({
@@ -64,7 +64,7 @@ export function ResultTemplateSelector({
     const handleConfirmSelection = () => {
         const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
         if (selectedTemplate) {
-            onSelect(selectedTemplate.resultTextTemplate)
+            onSelect(selectedTemplate.resultTextTemplate, selectedTemplate.templateName)
             onOpenChange(false)
             setSelectedTemplateId(null)
             setSearchTerm('')

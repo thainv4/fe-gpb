@@ -27,7 +27,7 @@ interface FilterParams {
     offset: number
     order: 'ASC' | 'DESC'
     orderBy: 'actionTimestamp' | 'createdAt' | 'startedAt'
-    serviceReqCode?: string
+    hisServiceReqCode?: string
 }
 
 // Function to get color for each workflow state
@@ -57,6 +57,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     // selectedStateId: 'all' means show all states (no state filter)
     // Default to 'all' to show all states, or use defaultStateId if provided
     const [selectedStateId, setSelectedStateId] = useState<string | undefined>(defaultStateId ?? 'all')
+    // State tạm thời cho input tìm kiếm (chỉ update filters khi nhấn Enter)
+    const [searchInput, setSearchInput] = useState<string>(serviceReqCode ?? '')
     const [filters, setFilters] = useState<FilterParams>({
         roomType: 'currentRoomId',
         stateType: '',
@@ -65,7 +67,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         offset: 0,
         order: 'DESC',
         orderBy: 'actionTimestamp',
-        serviceReqCode: serviceReqCode
+        hisServiceReqCode: serviceReqCode
     })
 
     // Query workflow states
@@ -90,6 +92,10 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
             const params: any = {roomId: currentRoomId!, ...filters}
             if (selectedStateId && selectedStateId !== 'all') {
                 params.stateId = selectedStateId
+            }
+            // Thêm hisServiceReqCode với giá trị mặc định là '' nếu không có
+            if (!params.hisServiceReqCode) {
+                params.hisServiceReqCode = ''
             }
             return apiClient.getWorkflowHistory(params)
         },
@@ -116,6 +122,13 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
     const updateFilter = <K extends keyof FilterParams>(key: K, value: FilterParams[K]) => {
         setFilters(prev => ({...prev, [key]: value, offset: 0}))
+    }
+
+    // Xử lý tìm kiếm khi nhấn Enter
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            updateFilter('hisServiceReqCode', searchInput || undefined)
+        }
     }
 
     return (
@@ -154,9 +167,10 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                 <div className="space-y-2 pt-2 border-t">
                     <Input
                         type="text"
-                        value={filters.serviceReqCode ?? ''}
-                        onChange={(e) => updateFilter('serviceReqCode', e.target.value || undefined)}
-                        placeholder="Tìm theo mã Y lệnh..."
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                        placeholder="Tìm theo mã Y lệnh (nhấn Enter)..."
                         className="text-sm"
                     />
 

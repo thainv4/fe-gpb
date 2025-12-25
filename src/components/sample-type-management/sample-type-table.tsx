@@ -222,7 +222,6 @@ export function SampleTypeTable() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Thông tin</TableHead>
-                                            <TableHead>Quy tắc sinh mã</TableHead>
                                             <TableHead>Mô tả</TableHead>
                                             <TableHead>Thao tác</TableHead>
                                         </TableRow>
@@ -246,16 +245,7 @@ export function SampleTypeTable() {
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>
-                                                    {sampleType.codeGenerationRule ? (
-                                                        <div className="flex items-center text-sm">
-                                                            <Hash className="h-3 w-3 mr-1"/>
-                                                            <span className="text-muted-foreground">Có quy tắc</span>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted-foreground text-sm">-</span>
-                                                    )}
-                                                </TableCell>
+                                            
                                                 <TableCell>
                                                     <div className="max-w-xs">
                                                         <p className="text-sm text-muted-foreground truncate">

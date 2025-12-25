@@ -160,7 +160,7 @@ export function AuthForm() {
                 </CardHeader>
                 <CardContent>
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
+                        {/* <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="jwt" className="flex items-center gap-2">
                                 <Shield className="h-4 w-4" />
                                 JWT Login
@@ -169,7 +169,7 @@ export function AuthForm() {
                                 <Building2 className="h-4 w-4" />
                                 HIS Login
                             </TabsTrigger>
-                        </TabsList>
+                        </TabsList> */}
 
                         <TabsContent value="jwt" className="space-y-4 mt-6">
                             <Form {...form}>

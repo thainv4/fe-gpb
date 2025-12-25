@@ -2799,7 +2799,7 @@ class ApiClient {
         offset?: number;
         order?: 'ASC' | 'DESC';
         orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
-        serviceReqCode?: string;
+        hisServiceReqCode?: string;
     }): Promise<ApiResponse<{
         items: Array<{
             id: string;
@@ -2839,7 +2839,8 @@ class ApiClient {
         if (params.offset) queryParams.append('offset', params.offset.toString());
         if (params.order) queryParams.append('order', params.order);
         if (params.orderBy) queryParams.append('orderBy', params.orderBy);
-        if (params.serviceReqCode) queryParams.append('serviceReqCode', params.serviceReqCode);
+        // Thêm hisServiceReqCode với giá trị mặc định là '' nếu không có
+        queryParams.append('hisServiceReqCode', params.hisServiceReqCode ?? '');
 
         return this.request(
             `/workflow-history/by-room-and-state?${queryParams.toString()}`

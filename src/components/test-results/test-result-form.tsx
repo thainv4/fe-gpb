@@ -143,8 +143,9 @@ export default function TestResultForm() {
     }
 
     // Handler khi chọn mẫu kết quả
-    const handleTemplateSelect = (templateContent: string) => {
+    const handleTemplateSelect = (templateContent: string, templateName: string) => {
         setTestResult(templateContent)
+        setResultName(templateName)
         toast({
             title: 'Thành công',
             description: 'Đã áp dụng mẫu kết quả xét nghiệm',
