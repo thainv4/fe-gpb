@@ -72,6 +72,7 @@ export default function TestResultForm() {
     const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set())
     const [isSaving, setIsSaving] = useState(false)
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     // Tab persistence hook
     const { scrollContainerRef } = useTabPersistence(
@@ -96,20 +97,29 @@ export default function TestResultForm() {
     )
 
     // Fetch service request details when selected
-    const {data: serviceRequestData, isLoading} = useQuery({
-        queryKey: ['service-request', selectedServiceReqCode],
+    const {data: serviceRequestData, isLoading, refetch: refetchServiceRequest} = useQuery({
+        queryKey: ['service-request', selectedServiceReqCode, refreshTrigger],
         queryFn: () => apiClient.getServiceRequestByCode(selectedServiceReqCode),
         enabled: !!selectedServiceReqCode,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 0, // Disable stale time để luôn fetch fresh data
     })
 
     // Fetch stored service request with services
     const {data: storedServiceRequestData, refetch: refetchStoredServiceRequest} = useQuery({
-        queryKey: ['stored-service-request', storedServiceReqId],
+        queryKey: ['stored-service-request', storedServiceReqId, refreshTrigger],
         queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId),
         enabled: !!storedServiceReqId,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 0, // Disable stale time để luôn fetch fresh data
     })
+
+    // useEffect để refresh sidebar khi refreshTrigger thay đổi
+    useEffect(() => {
+        if (refreshTrigger > 0) {
+            // Refetch các queries để cập nhật dữ liệu
+            refetchServiceRequest()
+            refetchStoredServiceRequest()
+        }
+    }, [refreshTrigger, refetchServiceRequest, refetchStoredServiceRequest])
 
     // Fetch specific service for preview
     const {data: previewServiceData} = useQuery({
@@ -564,6 +574,10 @@ export default function TestResultForm() {
                 description: `Đã lưu kết quả cho ${selectedServices.size} dịch vụ`,
                 variant: "default"
             })
+            
+            // Trigger refresh để cập nhật trạng thái dịch vụ
+            setRefreshTrigger(prev => prev + 1)
+            
             setSelectedServices(new Set())
             setTestResult(defaultTemplate)
         } catch (error) {
@@ -590,6 +604,7 @@ export default function TestResultForm() {
                         <div className="w-1/4 border-r border-gray-200 bg-gray-50">
                             <ServiceRequestsSidebar
                                 onSelect={handleSelect}
+                                refreshTrigger={refreshTrigger}
                                 selectedCode={selectedServiceReqCode}
                                 defaultStateId="426df256-bbfe-28d1-e065-9e6b783dd008"
                             />

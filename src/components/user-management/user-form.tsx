@@ -178,16 +178,16 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
                     <h3 className="text-lg font-semibold">Thông tin đăng nhập</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Tên đăng nhập</label>
+                            <label htmlFor='username' className="text-sm font-medium">Tên đăng nhập</label>
                             <Input value={initialData?.username || ''} disabled className="bg-gray-50" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Email</label>
+                            <label htmlFor='email' className="text-sm font-medium">Email</label>
                             <Input value={initialData?.email || ''} disabled className="bg-gray-50" />
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Họ tên</label>
+                        <label htmlFor='fullName' className="text-sm font-medium">Họ tên</label>
                         <Input value={initialData?.fullName || ''} disabled className="bg-gray-50" />
                     </div>
                 </div>

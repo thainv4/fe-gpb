@@ -45,33 +45,45 @@ export function UserRoomManagement() {
                     </div>
 
                     <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                        {isLoadingUsers ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                                Đang tải...
-                            </p>
-                        ) : users.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                                Không tìm thấy người dùng
-                            </p>
-                        ) : (
-                            users.map((user) => (
-                                <div
-                                    key={user.id}
-                                    onClick={() => setSelectedUser(user)}
-                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                        selectedUser?.id === user.id
-                                            ? 'border-blue-500 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <div className="font-medium text-sm">{user.fullName}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                        @{user.username}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">{user.email}</div>
-                                </div>
-                            ))
-                        )}
+                        {(() => {
+                            if (isLoadingUsers) {
+                                return (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                        Đang tải...
+                                    </p>
+                                )
+                            }
+                            
+                            if (users.length === 0) {
+                                return (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                        Không tìm thấy người dùng
+                                    </p>
+                                )
+                            }
+                            
+                            return users.map((user) => {
+                                const isSelected = selectedUser?.id === user.id
+                                const buttonClassName = isSelected
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                
+                                return (
+                                    <button
+                                        key={user.id}
+                                        type="button"
+                                        onClick={() => setSelectedUser(user)}
+                                        className={`w-full text-left p-3 rounded-lg border cursor-pointer transition-colors ${buttonClassName}`}
+                                    >
+                                        <div className="font-medium text-sm">{user.fullName}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            @{user.username}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                                    </button>
+                                )
+                            })
+                        })()}
                     </div>
                 </CardContent>
             </Card>

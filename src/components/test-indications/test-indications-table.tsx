@@ -380,10 +380,10 @@ export default function TestIndicationsTable() {
                     </Select>
                 </div>
 
-                <div className="w-full md:w-1/3 flex flex-col gap-1.5">
+                {/* <div className="w-full md:w-1/3 flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Mã bệnh phẩm</Label>
                     <Input value={sampleCode} disabled/>
-                </div>
+                </div> */}
             </div>
 
                 <h3 className="text-lg font-semibold my-2">Thông tin bệnh nhân</h3>

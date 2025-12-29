@@ -1,5 +1,5 @@
 ﻿// src/components/service-requests-sidebar/service-requests-sidebar.tsx
-import {useState, useMemo} from 'react'
+import {useState, useMemo, useEffect} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {apiClient} from '@/lib/api/client'
 import {useCurrentRoomStore} from '@/lib/stores/current-room'
@@ -14,6 +14,7 @@ interface ServiceRequestsSidebarProps {
     readonly selectedCode?: string
     readonly serviceReqCode?: string
     readonly defaultStateId?: string
+    readonly refreshTrigger?: number
 }
 
 interface FilterParams {
@@ -52,7 +53,7 @@ const getStateColor = (stateCode?: string) => {
     }
 }
 
-export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, defaultStateId}: ServiceRequestsSidebarProps) {
+export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, defaultStateId, refreshTrigger}: ServiceRequestsSidebarProps) {
     const {currentRoomId} = useCurrentRoomStore()
     // selectedStateId: 'all' means show all states (no state filter)
     // Default to 'all' to show all states, or use defaultStateId if provided
@@ -85,8 +86,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const workflowStates = useMemo(() => statesData?.data?.items ?? [], [statesData?.data?.items])
 
     // Query service requests
-    const {data, isLoading} = useQuery({
-        queryKey: ['workflow-history', currentRoomId, selectedStateId, filters],
+    const {data, isLoading, refetch} = useQuery({
+        queryKey: ['workflow-history', currentRoomId, selectedStateId, filters, refreshTrigger],
         queryFn: () => {
             // build params: include stateId only when a concrete state is selected
             const params: any = {roomId: currentRoomId!, ...filters}
@@ -110,6 +111,13 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
     const serviceRequests = data?.data?.items ?? []
     const total = data?.data?.pagination?.total ?? 0
+
+    // useEffect để refresh khi refreshTrigger thay đổi
+    useEffect(() => {
+        if (refreshTrigger && refreshTrigger > 0) {
+            refetch()
+        }
+    }, [refreshTrigger, refetch])
 
     // Pagination helpers (page-based). limit is fixed in filters (default 10)
     const currentPage = Math.floor((filters.offset || 0) / (filters.limit || 10)) + 1
