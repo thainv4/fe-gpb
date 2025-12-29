@@ -25,21 +25,20 @@ import {
 import { Loader2 } from 'lucide-react'
 import { apiClient, User, UserRequest, Province, Ward, Department } from '@/lib/api/client'
 
-// Schema cho cập nhật (đầy đủ trường)
+// Schema cho cập nhật - tương tự form đăng ký nhưng không có username, email, password
 const updateSchema = z.object({
-    username: z.string().min(1, 'Tên đăng nhập là bắt buộc').max(50, 'Tên đăng nhập tối đa 50 ký tự'),
-    email: z.string().email('Email không hợp lệ').max(100, 'Email tối đa 100 ký tự'),
-    fullName: z.string().min(1, 'Họ tên là bắt buộc').max(100, 'Họ tên tối đa 100 ký tự'),
-    phoneNumber: z.string().max(20, 'Số điện thoại tối đa 20 ký tự').optional(),
-    dateOfBirth: z.string().optional(),
-    address: z.string().max(500, 'Địa chỉ tối đa 500 ký tự').optional(),
-    role: z.string().min(1, 'Vai trò là bắt buộc'),
-    isActive: z.boolean().default(true),
-    hisUsername: z.string().max(50, 'Tên đăng nhập HIS tối đa 50 ký tự').optional(),
-    hisPassword: z.string().max(100, 'Mật khẩu HIS tối đa 100 ký tự').optional(),
+    // Profile fields (optional) - giống RegisterForm
     provinceId: z.string().optional(),
     wardId: z.string().optional(),
+    address: z.string().max(500, 'Địa chỉ tối đa 500 ký tự').optional(),
     departmentId: z.string().optional(),
+    position: z.string().max(100, 'Chức vụ tối đa 100 ký tự').optional(),
+    employeeCode: z.string().max(50, 'Mã nhân viên tối đa 50 ký tự').optional(),
+    phoneNumber: z.string().regex(/^[0-9+\-\s()]+$/, 'Số điện thoại không hợp lệ').min(10).max(20).optional().or(z.literal('')),
+    dateOfBirth: z.string().optional(),
+    gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
+    mappedUsername: z.string().min(3).max(100).optional().or(z.literal('')),
+    mappedPassword: z.string().min(6).max(100).optional().or(z.literal('')),
 })
 
 type UpdateFormData = z.infer<typeof updateSchema>
@@ -54,23 +53,22 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
     const [provinces, setProvinces] = useState<Province[]>([])
     const [wards, setWards] = useState<Ward[]>([])
     const [departments, setDepartments] = useState<Department[]>([])
+    const [profileLoading, setProfileLoading] = useState(true)
 
     const form = useForm<UpdateFormData>({
         resolver: zodResolver(updateSchema),
         defaultValues: {
-            username: initialData?.username || '',
-            email: initialData?.email || '',
-            fullName: initialData?.fullName || '',
-            phoneNumber: initialData?.phoneNumber || '',
-            dateOfBirth: initialData?.dateOfBirth || '',
-            address: initialData?.address || '',
-            role: 'user',
-            isActive: initialData?.isActive ?? true,
-            hisUsername: initialData?.profile?.mappedUsername || '',
-            hisPassword: '',
-            provinceId: initialData?.profile?.provinceId || '',
-            wardId: initialData?.profile?.wardId || '',
-            departmentId: initialData?.profile?.departmentId || '',
+            provinceId: '',
+            wardId: '',
+            address: '',
+            departmentId: '',
+            position: '',
+            employeeCode: '',
+            phoneNumber: '',
+            dateOfBirth: '',
+            gender: undefined,
+            mappedUsername: '',
+            mappedPassword: '',
         },
     })
 
@@ -100,18 +98,62 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
         fetchData()
     }, [])
 
-    function handleSubmit(data: UpdateFormData) {
-        // Map hisUsername và hisPassword sang mappedUsername và mappedPassword
-        const submitData: UserRequest = {
-            ...data,
-            mappedUsername: data.hisUsername,
-            mappedPassword: data.hisPassword,
+    // Fetch profile data khi component mount
+    useEffect(() => {
+        async function fetchProfile() {
+            if (!initialData?.id) return
+            
+            setProfileLoading(true)
+            try {
+                const profileRes = await apiClient.getProfileByUserId(initialData.id)
+                
+                if (profileRes.success && profileRes.data) {
+                    const profile = profileRes.data
+                    // Format dateOfBirth to YYYY-MM-DD for input[type="date"]
+                    let formattedDate = ''
+                    if (profile.dateOfBirth) {
+                        const date = new Date(profile.dateOfBirth)
+                        if (!isNaN(date.getTime())) {
+                            formattedDate = date.toISOString().split('T')[0]
+                        }
+                    }
+                    
+                    form.reset({
+                        provinceId: profile.provinceId || '',
+                        wardId: profile.wardId || '',
+                        address: profile.address || '',
+                        departmentId: profile.departmentId || '',
+                        position: profile.position || '',
+                        employeeCode: profile.employeeCode || '',
+                        phoneNumber: profile.phoneNumber || '',
+                        dateOfBirth: formattedDate,
+                        gender: profile.gender as 'MALE' | 'FEMALE' | 'OTHER' | undefined,
+                        mappedUsername: profile.mappedUsername || '',
+                        mappedPassword: '', // Không hiển thị password cũ
+                    })
+                }
+            } catch (error) {
+                console.error('Error fetching profile:', error)
+            } finally {
+                setProfileLoading(false)
+            }
         }
-        // Xóa các field không cần thiết
-        delete (submitData as any).hisUsername
-        delete (submitData as any).hisPassword
-        
-        onSubmit(submitData)
+
+        fetchProfile()
+    }, [initialData?.id, form])
+
+    function handleSubmit(data: UpdateFormData) {
+        // Chỉ gửi các trường có giá trị (loại bỏ empty string)
+        const submitData: Partial<UserRequest> = {}
+
+        // Thêm các trường profile nếu có giá trị
+        if (data.departmentId) submitData.departmentId = data.departmentId
+        if (data.position) submitData.position = data.position
+        if (data.employeeCode) submitData.employeeCode = data.employeeCode
+        if (data.mappedUsername) submitData.mappedUsername = data.mappedUsername
+        if (data.mappedPassword) submitData.mappedPassword = data.mappedPassword
+
+        onSubmit(submitData as UserRequest)
     }
 
     const selectedProvinceId = form.watch('provinceId')
@@ -119,256 +161,129 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
         ? wards.filter(ward => ward.provinceId === selectedProvinceId)
         : []
 
+    if (profileLoading) {
+        return (
+            <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">Đang tải thông tin profile...</span>
+            </div>
+        )
+    }
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="username"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Tên đăng nhập *</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Nhập tên đăng nhập" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email *</FormLabel>
-                                        <FormControl>
-                                            <Input type="email" placeholder="Nhập email" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                {/* Thông tin người dùng (readonly) */}
+                <div className="space-y-4 border-b pb-4">
+                    <h3 className="text-lg font-semibold">Thông tin đăng nhập</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Tên đăng nhập</label>
+                            <Input value={initialData?.username || ''} disabled className="bg-gray-50" />
                         </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Email</label>
+                            <Input value={initialData?.email || ''} disabled className="bg-gray-50" />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Họ tên</label>
+                        <Input value={initialData?.fullName || ''} disabled className="bg-gray-50" />
+                    </div>
+                </div>
 
+                {/* Profile fields - Optional - giống RegisterForm */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Thông tin công việc</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
-                            name="fullName"
+                            name="departmentId"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Họ tên *</FormLabel>
+                                    <FormLabel>Khoa</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Chọn khoa" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {departments?.map((department) => (
+                                                <SelectItem key={department.id} value={department.id}>
+                                                    {department.departmentName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="position"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Chức vụ</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Nhập họ tên" {...field} />
+                                        <Input placeholder="Nhập chức vụ" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="phoneNumber"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Số điện thoại</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Nhập số điện thoại" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="dateOfBirth"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Ngày sinh</FormLabel>
-                                        <FormControl>
-                                            <Input type="date" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                    <FormField
+                        control={form.control}
+                        name="employeeCode"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Mã nhân viên</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Nhập mã nhân viên" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                        <h4 className="col-span-2 text-md font-semibold">Thông tin tích hợp HIS</h4>
                         <FormField
                             control={form.control}
-                            name="address"
+                            name="mappedUsername"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Địa chỉ</FormLabel>
+                                    <FormLabel>Tên đăng nhập HIS</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Nhập địa chỉ" {...field} />
+                                        <Input placeholder="Nhập tên đăng nhập HIS" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="role"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Vai trò *</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Chọn vai trò" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="admin">Admin</SelectItem>
-                                                <SelectItem value="manager">Manager</SelectItem>
-                                                <SelectItem value="user">User</SelectItem>
-                                                <SelectItem value="doctor">Doctor</SelectItem>
-                                                <SelectItem value="nurse">Nurse</SelectItem>
-                                                <SelectItem value="technician">Technician</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="isActive"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Trạng thái</FormLabel>
-                                        <Select onValueChange={(value) => field.onChange(value === 'true')} value={field.value ? 'true' : 'false'}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Chọn trạng thái" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="true">Hoạt động</SelectItem>
-                                                <SelectItem value="false">Không hoạt động</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="hisUsername"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Tên đăng nhập HIS</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Nhập tên đăng nhập HIS" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="hisPassword"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Mật khẩu HIS</FormLabel>
-                                        <FormControl>
-                                            <Input type="password" placeholder="Nhập mật khẩu HIS" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="provinceId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Tỉnh/Thành phố</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Chọn tỉnh/thành phố" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {provinces?.map((province) => (
-                                                    <SelectItem key={province.id} value={province.id}>
-                                                        {province.provinceName}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="wardId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Phường/Xã</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedProvinceId}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Chọn phường/xã" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {filteredWards.map((ward) => (
-                                                    <SelectItem key={ward.id} value={ward.id}>
-                                                        {ward.wardName}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="departmentId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Khoa</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Chọn khoa" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {departments?.map((department) => (
-                                                    <SelectItem key={department.id} value={department.id}>
-                                                        {department.departmentName}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        <FormField
+                            control={form.control}
+                            name="mappedPassword"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Mật khẩu HIS (để trống nếu không đổi)</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="Nhập mật khẩu HIS mới" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                 </div>
 
                 <Button type="submit" className="w-full medical-gradient" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Cập nhật người dùng
-                </Button>
-
-                <Button type="submit" className="w-full medical-gradient" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {initialData ? 'Cập nhật người dùng' : 'Tạo người dùng'}
+                    Cập nhật thông tin
                 </Button>
             </form>
         </Form>

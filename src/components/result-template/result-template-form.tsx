@@ -138,7 +138,7 @@ function TemplateDialog({
                                 <FormItem>
                                     <FormLabel>Tên mẫu kết quả *</FormLabel>
                                     <FormControl>
-                                        <Input
+                                        <Textarea
                                             placeholder="Nhập tên mẫu kết quả..."
                                             {...field}
                                         />

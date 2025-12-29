@@ -62,9 +62,24 @@ function PageHeader({data, specificService}: {data: StoredServiceRequestResponse
             </div>
 
             {/* Title */}
-            <h1 className="text-center font-bold text-2xl uppercase mt-6 mb-6">
-                {specificService?.resultName || 'Phiếu xét nghiệm sinh thiết'}
-            </h1>
+            <div className="text-center mt-6 mb-6">
+                {(() => {
+                    const title = specificService?.resultName || 'Phiếu xét nghiệm sinh thiết';
+                    const lines = title.split('\n');
+                    return (
+                        <>
+                            {lines.map((line, index) => (
+                                <h1 
+                                    key={index}
+                                    className={`font-bold ${index === 0 ? 'text-2xl' : 'text-xl'}`}
+                                >
+                                    {line}
+                                </h1>
+                            ))}
+                        </>
+                    );
+                })()}
+            </div>
 
             {/* Patient Info Section */}
             <div className="mt-6 mb-3 p-4">

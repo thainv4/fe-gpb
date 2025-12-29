@@ -9,6 +9,7 @@ import {useQuery} from "@tanstack/react-query";
 import {apiClient} from "@/lib/api/client";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
+import {Textarea} from "@/components/ui/textarea";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import {useToast} from "@/hooks/use-toast";
@@ -146,10 +147,6 @@ export default function TestResultForm() {
     const handleTemplateSelect = (templateContent: string, templateName: string) => {
         setTestResult(templateContent)
         setResultName(templateName)
-        toast({
-            title: 'Thành công',
-            description: 'Đã áp dụng mẫu kết quả xét nghiệm',
-        })
     }
 
     // Handler cho checkbox
@@ -797,11 +794,12 @@ export default function TestResultForm() {
 
                                         <div className="mb-4">
                                             <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
-                                            <Input 
-                                                type="text" 
+                                            <Textarea 
                                                 value={resultName}
                                                 onChange={(e) => setResultName(e.target.value)}
                                                 placeholder="Nhập tên phiếu kết quả..." 
+                                                rows={3}
+                                                className="resize-none"
                                             />
                                         </div>
 

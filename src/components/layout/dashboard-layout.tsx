@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { useAuthStore } from '@/lib/stores/auth'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -19,7 +20,6 @@ import {
     LogOut,
     Menu,
     X,
-    Shield,
     User,
     Building2,
     ChevronDown,
@@ -319,8 +319,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="flex h-16 items-center px-4 sm:px-6 lg:px-8">
                     {/* Logo and Brand */}
                     <div className="flex items-center">
-                        <Shield className="h-8 w-8 text-medical-500" />
-                        <span className="ml-2 text-lg font-semibold text-gray-900">
+                        <Image 
+                            src="/logo-bvbm-wh.png" 
+                            alt="Bạch Mai Hospital Logo" 
+                            width={32} 
+                            height={32} 
+                            className="h-8 w-8"
+                        />
+                        <span className="ml-2 text-lg font-semibold text-gray-900 text-green-700">
                             Bạch Mai LIS
                         </span>
                     </div>
@@ -520,7 +526,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="fixed inset-x-0 top-0 bg-white shadow-lg">
                     <div className="flex h-16 items-center justify-between px-4">
                         <div className="flex items-center">
-                            <Shield className="h-8 w-8 text-medical-500" />
+                            <Image 
+                                src="/logo-bvbm-wh.png" 
+                                alt="Bạch Mai Hospital Logo" 
+                                width={32} 
+                                height={32} 
+                                className="h-8 w-8"
+                            />
                             <span className="ml-2 text-lg font-semibold text-gray-900">
                                 Bạch Mai LIS
                             </span>

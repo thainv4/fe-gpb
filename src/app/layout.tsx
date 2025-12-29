@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     title: 'Bạch Mai LIS GPB',
     description: 'Hệ thống quản lý thông tin phòng xét nghiệm Bạch Mai',
     keywords: ['LIS', 'Laboratory Information System', 'Bạch Mai', 'Xét nghiệm'],
+    icons: {
+        icon: '/logo-bvbm-wh.png',
+        shortcut: '/logo-bvbm-wh.png',
+        apple: '/logo-bvbm-wh.png',
+    },
 }
 
 export default function RootLayout({

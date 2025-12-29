@@ -1531,6 +1531,36 @@ class ApiClient {
         });
     }
 
+    async getProfileByUserId(userId: string): Promise<ApiResponse<{
+        id: string;
+        userId: string;
+        provinceId?: string;
+        provinceName?: string;
+        wardId?: string;
+        wardName?: string;
+        address?: string;
+        fullAddress?: string;
+        departmentId?: string;
+        departmentName?: string;
+        position?: string;
+        employeeCode?: string;
+        workInfo?: string;
+        phoneNumber?: string;
+        dateOfBirth?: Date;
+        age?: number;
+        gender?: string;
+        avatar?: string;
+        mappedUsername?: string;
+        hasMappedPassword?: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        createdBy?: string;
+        updatedBy?: string;
+        version: number;
+    }>> {
+        return this.request(`/profiles/user/${userId}`);
+    }
+
     async updateProfile(userId: string, profileData: {
         provinceId?: string;
         wardId?: string;
