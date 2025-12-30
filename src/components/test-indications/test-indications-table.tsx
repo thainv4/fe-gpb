@@ -1,4 +1,4 @@
-﻿import React, {useEffect, useRef, useState} from "react";
+﻿import React, {useEffect, useRef, useState, useMemo} from "react";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
@@ -37,6 +37,7 @@ export default function TestIndicationsTable() {
     const [sampleCode, setSampleCode] = useState<string>('') // Mã bệnh phẩm từ API response
     const [sampleTypeSearch, setSampleTypeSearch] = useState<string>('') // Từ khóa đang gõ
     const [appliedSearch, setAppliedSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
+    const [storedServiceReqId, setStoredServiceReqId] = useState<string | undefined>()
 
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
@@ -105,6 +106,7 @@ export default function TestIndicationsTable() {
     const triggerSearch = () => {
         if (!serviceReqCode?.trim()) return
         setSearchCode(serviceReqCode.trim()) // Trigger API call
+        setStoredServiceReqId(undefined) // Reset storedServiceReqId khi user nhập mã mới
         // After triggering, open and focus the sample type select for quick flow
         setTimeout(() => {
             setSelectOpen(true)
@@ -125,9 +127,10 @@ export default function TestIndicationsTable() {
         }
     }
 
-    const handleSelectFromList = (code: string) => {
+    const handleSelectFromList = (code: string, storedId?: string, receptionCode?: string) => {
         setServiceReqCode(code)
         setSearchCode(code)
+        setStoredServiceReqId(storedId) // Lưu storedServiceReqId
     }
 
     const clearAll = () => {
@@ -135,6 +138,7 @@ export default function TestIndicationsTable() {
         setSearchCode('')
         setSelectedSampleType('')
         setSampleCode('')
+        setStoredServiceReqId(undefined) // Reset storedServiceReqId
         sidInputRef.current?.focus()
     }
 
@@ -154,6 +158,23 @@ export default function TestIndicationsTable() {
         staleTime: 5 * 60 * 1000,
     })
     const currentUserId = profileData?.data?.id
+
+    // Query stored service request nếu có storedServiceReqId
+    const { data: storedServiceRequestData } = useQuery({
+        queryKey: ['stored-service-request', storedServiceReqId],
+        queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId!),
+        enabled: !!storedServiceReqId,
+        staleTime: 0,
+    })
+
+    // Lấy receptionCode từ storedServiceRequest (chỉ khi có storedServiceReqId)
+    const currentReceptionCode = useMemo(() => {
+        if (!storedServiceReqId || !storedServiceRequestData?.data?.services || storedServiceRequestData.data.services.length === 0) {
+            return ''
+        }
+        // Lấy receptionCode từ service đầu tiên
+        return storedServiceRequestData.data.services[0]?.receptionCode || ''
+    }, [storedServiceReqId, storedServiceRequestData])
 
     // Mutation để tạo mã tiếp nhận
     const createSampleReceptionMutation = useMutation({
@@ -183,6 +204,19 @@ export default function TestIndicationsTable() {
             toast({
                 title: "Lỗi",
                 description: `❌ Lỗi khi lưu chỉ định: ${error instanceof Error ? error.message : 'Không xác định'}`,
+                variant: "destructive",
+            })
+        }
+    })
+
+    // Mutation để update receptionCode
+    const updateReceptionCodeMutation = useMutation({
+        mutationFn: ({ serviceId, receptionCode }: { serviceId: string; receptionCode: string }) =>
+            apiClient.updateServiceReceptionCode(serviceId, receptionCode),
+        onError: (error) => {
+            toast({
+                title: "Lỗi",
+                description: `❌ Lỗi khi cập nhật mã tiếp nhận: ${error instanceof Error ? error.message : 'Không xác định'}`,
                 variant: "destructive",
             })
         }
@@ -255,7 +289,41 @@ export default function TestIndicationsTable() {
 
             const receptionCode = receptionResponse.data.receptionCode;
 
-            // Bước 2: Lưu chỉ định xét nghiệm
+            // Bước 2: Kiểm tra xem đã có stored service request chưa
+            if (storedServiceReqId && storedServiceRequestData?.data) {
+                // Đã có stored service request -> Update receptionCode cho tất cả services
+                const services = storedServiceRequestData.data.services || []
+                
+                if (services.length === 0) {
+                    toast({
+                        title: "Lỗi",
+                        description: "❌ Không tìm thấy dịch vụ để cập nhật",
+                        variant: "destructive",
+                    })
+                    return
+                }
+
+                // Update receptionCode cho tất cả services
+                const updatePromises = services.map(service => 
+                    updateReceptionCodeMutation.mutateAsync({
+                        serviceId: service.id,
+                        receptionCode: receptionCode
+                    })
+                )
+
+                await Promise.all(updatePromises)
+
+                toast({
+                    title: "Thành công",
+                    description: `✅ Đã cập nhật mã tiếp nhận cho ${services.length} dịch vụ!`,
+                })
+
+                // Reset form
+                clearAll()
+                return
+            }
+
+            // Bước 3: Chưa có stored service request -> Tạo mới như cũ
             const body = {
                 serviceReqCode: serviceCodeToSave,
                 currentRoomId: tabRoomId,
@@ -286,7 +354,7 @@ export default function TestIndicationsTable() {
                 description: "✅ Đã lưu chỉ định xét nghiệm thành công!",
             });
 
-            // Bước 3: Reset form
+            // Bước 4: Reset form
             clearAll();
         } catch (error) {
             console.error("Lỗi:", error);
@@ -380,10 +448,12 @@ export default function TestIndicationsTable() {
                     </Select>
                 </div>
 
-                {/* <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                    <Label className="text-sm font-medium">Mã bệnh phẩm</Label>
-                    <Input value={sampleCode} disabled/>
-                </div> */}
+                {storedServiceReqId && currentReceptionCode && (
+                    <div className="w-full md:w-1/3 flex flex-col gap-1.5">
+                        <Label className="text-sm font-medium">Mã bệnh phẩm</Label>
+                        <Input value={currentReceptionCode} disabled/>
+                    </div>
+                )}
             </div>
 
                 <h3 className="text-lg font-semibold my-2">Thông tin bệnh nhân</h3>
@@ -525,15 +595,15 @@ export default function TestIndicationsTable() {
                                 !(searchCode || serviceReqCode) ||
                                 !currentUserId ||
                                 createSampleReceptionMutation.isPending ||
-                                storeServiceRequestMutation.isPending
+                                storeServiceRequestMutation.isPending ||
+                                updateReceptionCodeMutation.isPending
                             }
                         >
-                            {createSampleReceptionMutation.isPending || storeServiceRequestMutation.isPending ? (
+                            {(createSampleReceptionMutation.isPending || 
+                              storeServiceRequestMutation.isPending || 
+                              updateReceptionCodeMutation.isPending) ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    {/* {createSampleReceptionMutation.isPending
-                                        ? 'Đang tạo mã tiếp nhận...'
-                                        : 'Đang lưu...'} */}
                                 </>
                             ) : (
                                 'Lưu'

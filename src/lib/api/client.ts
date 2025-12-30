@@ -2725,6 +2725,22 @@ class ApiClient {
         );
     }
 
+    /**
+     * Update reception code for a stored service
+     */
+    async updateServiceReceptionCode(
+        serviceId: string,
+        receptionCode: string
+    ): Promise<ApiResponse<StoredService>> {
+        return this.request<StoredService>(
+            `/service-requests/stored/services/${serviceId}/reception-code`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify({ receptionCode }),
+            }
+        );
+    }
+
     async saveServiceResult(
         storedReqId: string,
         serviceId: string,
