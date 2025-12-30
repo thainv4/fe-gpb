@@ -83,7 +83,6 @@ export function AuthForm() {
                     fullName: result.data.user.fullName,
                     role: result.data.user.role,
                     isActive: result.data.user.isActive,
-                    lastLoginAt: result.data.user.lastLoginAt,
                 })
 
                 // Save hisTokenCode to sessionStorage if available

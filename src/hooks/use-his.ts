@@ -65,7 +65,6 @@ export function useHisIntegration() {
                         fullName: response.data.hisToken.userName,
                         role: 'his_user',
                         isActive: 1,
-                        lastLoginAt: new Date().toISOString()
                     }
                 )
 

@@ -8,7 +8,6 @@ export interface User {
     fullName: string
     role: string
     isActive: number
-    lastLoginAt: string
 }
 
 interface AuthState {
