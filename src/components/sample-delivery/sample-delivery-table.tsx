@@ -46,10 +46,44 @@ export default function SampleDeliveryTable() {
         enabled: !!currentUserId,
     })
 
-    // Map user rooms to available rooms format
-    const availableRooms = useMemo(() => {
-        if (!userRoomsData?.data) return []
+    // State để control việc mở Select "Đơn vị thực hiện"
+    const [executeRoomSelectOpen, setExecuteRoomSelectOpen] = useState(false)
 
+    // Query rooms từ API /api/v1/rooms khi mở Select "Đơn vị thực hiện"
+    const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
+        queryKey: ['rooms', { isActive: true, limit: 100 }],
+        queryFn: () => apiClient.getRooms({
+            isActive: true,
+            limit: 100,
+            offset: 0,
+        }),
+        enabled: executeRoomSelectOpen, // Chỉ gọi API khi mở Select
+        staleTime: 5 * 60 * 1000,
+    })
+
+    // Map rooms từ API response thành format availableRooms
+    const availableRoomsFromAPI = useMemo(() => {
+        if (!roomsData?.data?.rooms) return []
+        
+        return roomsData.data.rooms.map((room: any) => ({
+            key: room.id,
+            roomId: room.id,
+            departmentId: room.departmentId,
+            roomName: room.roomName,
+            departmentName: room.department?.departmentName || '',
+            roomCode: room.roomCode,
+            departmentCode: room.department?.departmentCode || '',
+        }))
+    }, [roomsData])
+
+    // Kết hợp availableRooms từ user-rooms và rooms từ API
+    // Ưu tiên rooms từ API nếu có
+    const availableRooms = useMemo(() => {
+        if (availableRoomsFromAPI.length > 0) {
+            return availableRoomsFromAPI
+        }
+        // Fallback về user rooms nếu API chưa load
+        if (!userRoomsData?.data) return []
         return userRoomsData.data
             .filter((ur: any) => ur.isActive === 1 || ur.isActive === true)
             .map((ur: any) => ({
@@ -61,7 +95,7 @@ export default function SampleDeliveryTable() {
                 roomCode: ur.roomCode,
                 departmentCode: ur.departmentCode,
             }))
-    }, [userRoomsData])
+    }, [availableRoomsFromAPI, userRoomsData])
 
     // Query workflow states to get "Bàn giao mẫu" state ID
     const { data: statesData } = useQuery({
@@ -377,16 +411,36 @@ export default function SampleDeliveryTable() {
                                     <Select
                                         value={selectedReceiverRoomKey ?? ''}
                                         onValueChange={(v) => setSelectedReceiverRoomKey(v)}
+                                        open={executeRoomSelectOpen}
+                                        onOpenChange={setExecuteRoomSelectOpen}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder={receiverRoomName && receiverDepartmentName ? `${receiverRoomName} - ${receiverDepartmentName}` : 'Chọn phòng nhận mẫu'} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {availableRooms.map(room => (
-                                                <SelectItem key={room.key} value={room.key}>
-                                                    {(room.roomName || 'Phòng') + ' - ' + (room.departmentName || 'Khoa')}
-                                                </SelectItem>
-                                            ))}
+                                            {(() => {
+                                                if (isLoadingRooms) {
+                                                    return (
+                                                        <SelectItem value="_loading" disabled>
+                                                            Đang tải danh sách phòng...
+                                                        </SelectItem>
+                                                    )
+                                                }
+                                                
+                                                if (availableRooms.length === 0) {
+                                                    return (
+                                                        <SelectItem value="_empty" disabled>
+                                                            Không có phòng nào
+                                                        </SelectItem>
+                                                    )
+                                                }
+                                                
+                                                return availableRooms.map(room => (
+                                                    <SelectItem key={room.key} value={room.key}>
+                                                        {(room.roomName || 'Phòng') + ' - ' + (room.departmentName || 'Khoa')}
+                                                    </SelectItem>
+                                                ))
+                                            })()}
                                         </SelectContent>
                                     </Select>
                                 </div>

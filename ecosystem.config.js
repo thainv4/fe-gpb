@@ -12,7 +12,7 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 3030,
-        NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:30330',
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3030',
         NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
         NEXT_PUBLIC_BACKEND_API_URL: process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8000/api/v1',
       },

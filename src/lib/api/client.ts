@@ -2390,9 +2390,15 @@ class ApiClient {
     }
 
     // Room management methods
-    async getRooms(filters?: RoomFilters): Promise<
+    async getRooms(filters?: {
+        limit?: number;
+        offset?: number;
+        isActive?: boolean;
+        departmentId?: string;
+        roomGroupId?: string;
+    }): Promise<
         ApiResponse<{
-            items: Room[];
+            rooms: Room[];
             total: number;
             limit: number;
             offset: number;
@@ -2408,7 +2414,7 @@ class ApiClient {
         }
         const queryString = params.toString();
         return this.request<{
-            items: Room[];
+            rooms: Room[];
             total: number;
             limit: number;
             offset: number;
