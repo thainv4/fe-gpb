@@ -18,7 +18,7 @@ const roboto = Roboto({
 })
 
 export const metadata: Metadata = {
-    title: 'Bạch Mai LIS GPB',
+    title: 'Bạch Mai LIS',
     description: 'Hệ thống quản lý thông tin phòng xét nghiệm Bạch Mai',
     keywords: ['LIS', 'Laboratory Information System', 'Bạch Mai', 'Xét nghiệm'],
     icons: {

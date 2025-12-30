@@ -97,7 +97,7 @@ export function AuthForm() {
                 })
 
                 // Use window.location.href to ensure fresh page load
-                window.location.href = '/dashboard'
+                window.location.href = '/test-indications'
             } else {
                 // Don't throw error, let catch block handle it
                 throw result

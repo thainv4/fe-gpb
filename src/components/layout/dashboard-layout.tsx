@@ -399,14 +399,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     <div className="flex items-center space-x-4">
                         {/* Current Room Display */}
                         {currentRoomName && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-md">
-                                <MapPin className="h-4 w-4 text-blue-600" />
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-blue-200 rounded-md">
+                                <MapPin className="h-4 w-4 text-green-600" />
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-semibold text-blue-900">
+                                    <span className="text-sm font-semibold ">
                                         {currentRoomName}
                                     </span>
                                     {currentDepartmentName && (
-                                        <span className="text-xs text-blue-700">
+                                        <span className="text-xs ">
                                             {currentDepartmentName}
                                         </span>
                                     )}
