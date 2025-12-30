@@ -380,9 +380,9 @@ export default function SampleDeliveryTable() {
                                                     value={receptionCodeFromStored}
                                                     format="CODE128"
                                                     width={2}
-                                                    height={60}
+                                                    height={40}
                                                     displayValue={true}
-                                                    fontSize={14}
+                                                    fontSize={15}
                                                     margin={0}
                                                 />
                                             </div>

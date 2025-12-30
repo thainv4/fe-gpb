@@ -7,12 +7,13 @@ import {useQuery, useMutation} from "@tanstack/react-query";
 import {apiClient, ServiceRequestService, SampleType} from "@/lib/api/client";
 import {formatDobFromHis} from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import {useTabsStore} from "@/lib/stores/tabs";
 import {usePathname} from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import {useTabPersistence} from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
+import Barcode from 'react-barcode';
 
 export default function TestIndicationsTable() {
 
@@ -41,6 +42,7 @@ export default function TestIndicationsTable() {
 
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
+    const barcodeRef = useRef<HTMLDivElement>(null)
 
     // Tab persistence hook
     const { scrollContainerRef } = useTabPersistence(
@@ -175,6 +177,68 @@ export default function TestIndicationsTable() {
         // Lấy receptionCode từ service đầu tiên
         return storedServiceRequestData.data.services[0]?.receptionCode || ''
     }, [storedServiceReqId, storedServiceRequestData])
+
+    // Function để in barcode - chỉ in barcode và ngày giờ
+    const handlePrintBarcode = () => {
+        if (!barcodeRef.current || !currentReceptionCode) return
+
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) return
+
+        const barcodeHtml = barcodeRef.current.innerHTML
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>In mã vạch - ${currentReceptionCode}</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <style>
+                    @page {
+                        size: auto;
+                        margin: 5mm;
+                    }
+                    @media print {
+                        html, body {
+                            width: 100%;
+                            height: 100%;
+                            margin: 0;
+                            padding: 0;
+                            overflow: hidden;
+                        }
+                        .print-container {
+                            page-break-after: avoid;
+                            page-break-inside: avoid;
+                        }
+                    }
+                </style>
+            </head>
+            <body class="min-h-screen flex items-center justify-center bg-white p-4">
+                <div class="print-container text-center">
+                    <div class="flex justify-center items-center mb-2">
+                        ${barcodeHtml}
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        <p>Ngày in: ${new Date().toLocaleString('vi-VN')}</p>
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.print();
+                        }, 500);
+                        window.onafterprint = function() {
+                            window.close();
+                        }
+                    }
+                </script>
+            </body>
+            </html>
+        `)
+        printWindow.document.close()
+    }
 
     // Mutation để tạo mã tiếp nhận
     const createSampleReceptionMutation = useMutation({
@@ -450,8 +514,29 @@ export default function TestIndicationsTable() {
 
                 {storedServiceReqId && currentReceptionCode && (
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                        <Label className="text-sm font-medium">Mã bệnh phẩm</Label>
-                        <Input value={currentReceptionCode} disabled/>
+                        <div className="flex items-center gap-6 mb-2">
+                            <Label className="text-sm font-medium text-blue-600">Mã bệnh phẩm</Label>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handlePrintBarcode}
+                                className="h-7"
+                            >
+                                <Printer className="h-4 w-4 mr-1" />
+                                In mã vạch
+                            </Button>
+                        </div>
+                        <div ref={barcodeRef}>
+                            <Barcode
+                                value={currentReceptionCode}
+                                format="CODE128"
+                                width={2}
+                                height={40}
+                                displayValue={true}
+                                fontSize={15}
+                                margin={0}
+                            />
+                        </div>
                     </div>
                 )}
             </div>
