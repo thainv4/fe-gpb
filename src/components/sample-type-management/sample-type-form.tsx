@@ -18,7 +18,6 @@ import { Loader2 } from 'lucide-react'
 import { SampleType, SampleTypeRequest } from '@/lib/api/client'
 
 const sampleTypeSchema = z.object({
-    typeCode: z.string().min(2, 'Mã loại mẫu tối thiểu 2 ký tự').max(50, 'Mã loại mẫu tối đa 50 ký tự'),
     typeName: z.string().min(2, 'Tên loại mẫu tối thiểu 2 ký tự').max(200, 'Tên loại mẫu tối đa 200 ký tự'),
     shortName: z.string().max(100, 'Tên viết tắt tối đa 100 ký tự').optional(),
     description: z.string().max(2000, 'Mô tả tối đa 2000 ký tự').optional(),
@@ -41,7 +40,6 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
     const form = useForm<SampleTypeFormData>({
         resolver: zodResolver(sampleTypeSchema),
         defaultValues: {
-            typeCode: initialData?.typeCode ?? '',
             typeName: initialData?.typeName ?? '',
             shortName: initialData?.shortName ?? '',
             description: initialData?.description ?? '',
@@ -68,16 +66,16 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                {/* Hàng 1: Mã loại mẫu + Tiền tố mã tiếp nhận */}
+                {/* Hàng 1: Tên loại mẫu + Tiền tố mã tiếp nhận */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
-                        name="typeCode"
+                        name="typeName"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Mã loại mẫu *</FormLabel>
+                                <FormLabel>Tên loại mẫu *</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Nhập mã loại mẫu" {...field} />
+                                    <Input placeholder="Nhập tên loại mẫu" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -98,25 +96,7 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                     />
                 </div>
 
-                {/* Hàng 2: Tên loại mẫu + Tên viết tắt */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="typeName"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Tên loại mẫu *</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Nhập tên loại mẫu" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-            
-                </div>
-
-                {/* Hàng 3: Mô tả (full width) */}
+                {/* Hàng 2: Mô tả (full width) */}
                 <FormField
                     control={form.control}
                     name="description"

@@ -64,7 +64,6 @@ export interface LoginResponse {
         fullName: string;
         role: string;
         isActive: number;
-        lastLoginAt: string;
     };
     accessToken: string;
     refreshToken: string;
@@ -536,7 +535,6 @@ export interface SampleType {
 }
 
 export interface SampleTypeRequest {
-    typeCode: string;
     typeName: string;
     shortName?: string;
     description?: string;
