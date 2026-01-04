@@ -452,7 +452,7 @@ export default function TestIndicationsTable() {
                 )}
 
                 {/* Controls area: keep SID and specimen select isolated from patient inputs */}
-                <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-end gap-3 md:gap-4 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">
+                <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-end gap-3 md:gap-6 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Bước 1: Mã y lệnh</Label>
                     <div className="flex gap-2">
@@ -503,7 +503,7 @@ export default function TestIndicationsTable() {
                             {filteredSampleTypeItems.length
                                 ? filteredSampleTypeItems.map((sampleType) => (
                                     <SelectItem key={sampleType.id} value={sampleType.id}>
-                                        {sampleType.typeName}
+                                        {sampleType.codePrefix} - {sampleType.typeName}
                                     </SelectItem>
                                   ))
                                 : <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>

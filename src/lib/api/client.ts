@@ -37,7 +37,6 @@ export interface RegisterResponse {
 export interface RegisterWithProfileRequest {
     // User fields (required)
     username: string;
-    email: string;
     password: string;
     fullName: string;
     
@@ -275,7 +274,7 @@ export interface User {
 
 export interface UserRequest {
     username: string;
-    email: string;
+    email?: string;
     password?: string;
     fullName: string;
     isActive?: boolean;

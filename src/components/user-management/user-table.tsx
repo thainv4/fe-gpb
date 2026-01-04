@@ -110,8 +110,13 @@ export function UserTable() {
     const displayLoading = searchEmail ? isSearchingEmail : isLoading
 
     const createMutation = useMutation({
-        mutationFn: (newUser: RegisterWithProfileRequest) => {
-            return apiClient.registerWithProfile(newUser)
+        mutationFn: async (newUser: RegisterWithProfileRequest) => {
+            const response = await apiClient.registerWithProfile(newUser)
+            // Nếu API trả về success: false, throw error để trigger onError
+            if (!response.success) {
+                throw new Error(response.error || response.message || 'Không thể tạo người dùng')
+            }
+            return response
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -131,7 +136,7 @@ export function UserTable() {
     })
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: Partial<UserRequest> }) => {
+        mutationFn: async ({ id, data }: { id: string; data: Partial<UserRequest> }) => {
             // Chỉ gửi các trường có giá trị thực sự (không phải empty string hoặc undefined)
             const profileData: {
                 provinceId?: string;
@@ -160,7 +165,12 @@ export function UserTable() {
             if (data.mappedPassword) profileData.mappedPassword = data.mappedPassword;
             
             // Gọi API updateProfile thay vì updateUser
-            return apiClient.updateProfile(id, profileData);
+            const response = await apiClient.updateProfile(id, profileData);
+            // Nếu API trả về success: false, throw error để trigger onError
+            if (!response.success) {
+                throw new Error(response.error || response.message || 'Không thể cập nhật profile')
+            }
+            return response;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] })
@@ -181,7 +191,14 @@ export function UserTable() {
     })
 
     const deleteMutation = useMutation({
-        mutationFn: (id: string) => apiClient.deleteUser(id),
+        mutationFn: async (id: string) => {
+            const response = await apiClient.deleteUser(id)
+            // Nếu API trả về success: false, throw error để trigger onError
+            if (!response.success) {
+                throw new Error(response.error || response.message || 'Không thể xóa người dùng')
+            }
+            return response
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] })
             toast({

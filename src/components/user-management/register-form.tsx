@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import {
     Form,
     FormControl,
@@ -29,22 +28,30 @@ import { apiClient, RegisterWithProfileRequest, Province, Ward, Department } fro
 const registerWithProfileSchema = z.object({
     // User fields (required)
     username: z.string().min(3, 'Tên đăng nhập tối thiểu 3 ký tự').max(50, 'Tên đăng nhập tối đa 50 ký tự'),
-    email: z.string().email('Email không hợp lệ'),
     password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
     fullName: z.string().min(2, 'Họ tên tối thiểu 2 ký tự').max(100, 'Họ tên tối đa 100 ký tự'),
     
-    // Profile fields (optional)
-    provinceId: z.string().optional(),
-    wardId: z.string().optional(),
-    address: z.string().max(500, 'Địa chỉ tối đa 500 ký tự').optional(),
-    departmentId: z.string().optional(),
-    position: z.string().max(100, 'Chức vụ tối đa 100 ký tự').optional(),
-    employeeCode: z.string().max(50, 'Mã nhân viên tối đa 50 ký tự').optional(),
-    phoneNumber: z.string().regex(/^[0-9+\-\s()]+$/, 'Số điện thoại không hợp lệ').min(10).max(20).optional(),
-    dateOfBirth: z.string().optional(),
+    // Profile fields (optional) - cho phép empty string hoặc giá trị hợp lệ
+    provinceId: z.string().optional().or(z.literal('')),
+    wardId: z.string().optional().or(z.literal('')),
+    address: z.string().max(500, 'Địa chỉ tối đa 500 ký tự').optional().or(z.literal('')),
+    departmentId: z.string().optional().or(z.literal('')),
+    position: z.string().max(100, 'Chức vụ tối đa 100 ký tự').optional().or(z.literal('')),
+    employeeCode: z.string().max(50, 'Mã nhân viên tối đa 50 ký tự').optional().or(z.literal('')),
+    phoneNumber: z.union([
+        z.string().regex(/^[0-9+\-\s()]+$/, 'Số điện thoại không hợp lệ').min(10, 'Số điện thoại tối thiểu 10 số').max(20, 'Số điện thoại tối đa 20 số'),
+        z.literal('')
+    ]).optional(),
+    dateOfBirth: z.string().optional().or(z.literal('')),
     gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-    mappedUsername: z.string().min(3).max(100).optional(),
-    mappedPassword: z.string().min(6).max(100).optional(),
+    mappedUsername: z.union([
+        z.string().min(3, 'Tên đăng nhập HIS tối thiểu 3 ký tự').max(100, 'Tên đăng nhập HIS tối đa 100 ký tự'),
+        z.literal('')
+    ]).optional(),
+    mappedPassword: z.union([
+        z.string().min(6, 'Mật khẩu HIS tối thiểu 6 ký tự').max(100, 'Mật khẩu HIS tối đa 100 ký tự'),
+        z.literal('')
+    ]).optional(),
 })
 
 type RegisterWithProfileFormData = z.infer<typeof registerWithProfileSchema>
@@ -63,7 +70,6 @@ export function RegisterForm({ onSubmit, isLoading = false }: RegisterFormProps)
         resolver: zodResolver(registerWithProfileSchema),
         defaultValues: {
             username: '',
-            email: '',
             password: '',
             fullName: '',
             provinceId: '',
@@ -110,7 +116,6 @@ export function RegisterForm({ onSubmit, isLoading = false }: RegisterFormProps)
         // Chỉ gửi các trường có giá trị (loại bỏ empty string)
         const submitData: RegisterWithProfileRequest = {
             username: data.username,
-            email: data.email,
             password: data.password,
             fullName: data.fullName,
         }
@@ -150,19 +155,6 @@ export function RegisterForm({ onSubmit, isLoading = false }: RegisterFormProps)
                                 <FormLabel>Tên đăng nhập *</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Nhập tên đăng nhập (tối thiểu 3 ký tự)" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Email *</FormLabel>
-                                <FormControl>
-                                    <Input type="email" placeholder="Nhập email" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

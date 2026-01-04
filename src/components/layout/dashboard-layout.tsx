@@ -91,18 +91,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: Building2,
             description: 'Quản lý danh mục và cấu hình hệ thống',
             children: [
-                {
-                    name: 'Chi nhánh',
-                    href: '/branches',
-                    icon: Building2,
-                    description: 'Quản lý các chi nhánh bệnh viện'
-                },
-                {
-                    name: 'Loại khoa',
-                    href: '/department-types',
-                    icon: Building,
-                    description: 'Quản lý các loại khoa phòng'
-                },
+                // {
+                //     name: 'Chi nhánh',
+                //     href: '/branches',
+                //     icon: Building2,
+                //     description: 'Quản lý các chi nhánh bệnh viện'
+                // },
+                // {
+                //     name: 'Loại khoa',
+                //     href: '/department-types',
+                //     icon: Building,
+                //     description: 'Quản lý các loại khoa phòng'
+                // },
                 {
                     name: 'Khoa',
                     href: '/departments',
@@ -115,18 +115,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: Home,
                     description: 'Quản lý phòng theo khoa'
                 },
-                {
-                    name: 'Tỉnh/Thành phố',
-                    href: '/provinces',
-                    icon: MapPin,
-                    description: 'Quản lý danh sách tỉnh thành phố'
-                },
-                {
-                    name: 'Phường/Xã',
-                    href: '/wards',
-                    icon: Home,
-                    description: 'Quản lý danh sách phường xã theo tỉnh'
-                },
+                // {
+                //     name: 'Tỉnh/Thành phố',
+                //     href: '/provinces',
+                //     icon: MapPin,
+                //     description: 'Quản lý danh sách tỉnh thành phố'
+                // },
+                // {
+                //     name: 'Phường/Xã',
+                //     href: '/wards',
+                //     icon: Home,
+                //     description: 'Quản lý danh sách phường xã theo tỉnh'
+                // },
                 // {
                 //     name: 'Nhóm dịch vụ',
                 //     href: '/service-groups',
