@@ -48,7 +48,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const pathname = usePathname()
 
     const [roomDialogOpen, setRoomDialogOpen] = useState(false)
-    const { currentRoomId, currentRoomCode, currentDepartmentCode, currentRoomName, currentDepartmentName, currentDepartmentId } = useCurrentRoomStore()
+    const { currentRoomId, currentRoomCode, currentDepartmentCode, currentRoomName, currentDepartmentName, currentDepartmentId, clear: clearCurrentRoom } = useCurrentRoomStore()
 
     // Tabs store
     const { tabs, activeKey, openTab, closeTab, setActive, reset: resetTabs } = useTabsStore()
@@ -296,6 +296,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             logout()
             // Reset tabs store
             resetTabs()
+            // Clear current room store
+            clearCurrentRoom()
 
             // Clear all localStorage items related to auth
             if (typeof window !== 'undefined') {

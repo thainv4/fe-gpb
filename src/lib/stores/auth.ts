@@ -66,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
                     localStorage.removeItem('auth-refresh-token')
                     localStorage.removeItem('auth-user')
                     localStorage.removeItem('auth-storage')
+                    localStorage.removeItem('current-room-storage')
                     sessionStorage.clear()
                 }
             },
