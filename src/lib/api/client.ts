@@ -502,9 +502,9 @@ export interface RoomRequest {
     roomName: string;
     roomAddress?: string;
     departmentId: string;
-    roomGroupId?: string;
     description?: string;
     isActive?: boolean;
+    sortOrder?: number;
 }
 
 export interface RoomFilters {

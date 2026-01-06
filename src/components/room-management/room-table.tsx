@@ -91,7 +91,7 @@ export function RoomTable() {
     const totalRooms = roomsResponse?.data?.total || 0
 
     const createMutation = useMutation({
-        mutationFn: (newRoom: RoomRequest) => {
+        mutationFn: async (newRoom: RoomRequest) => {
             console.log('🚀 Creating room with data:', newRoom)
             // Clean up optional fields - convert empty strings to undefined
             const cleanedData = {
@@ -99,65 +99,75 @@ export function RoomTable() {
                 roomAddress: newRoom.roomAddress?.trim() || undefined,
                 description: newRoom.description?.trim() || undefined,
             }
-            return apiClient.createRoom(cleanedData)
+            const response = await apiClient.createRoom(cleanedData)
+            if (!response.success) {
+                throw new Error(response.error || response.message || 'Không thể tạo phòng')
+            }
+            return response
         },
         onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ['rooms'] })
             toast({
-                title: 'Thành công',
-                description: 'Phòng đã được tạo thành công',
+                title: '✅ Tạo phòng thành công',
+                description: response.message || 'Phòng đã được tạo thành công',
             })
             setIsCreateDialogOpen(false)
         },
         onError: (error: Error) => {
             console.error('❌ Error creating room:', error)
-            console.error('❌ Error details:', {
-                message: error.message,
-                name: error.name,
-                stack: error.stack,
-            })
             toast({
-                title: 'Lỗi',
-                description: error.message || 'Không thể tạo phòng',
+                title: '❌ Lỗi tạo phòng',
+                description: error.message || 'Không thể tạo phòng. Vui lòng thử lại.',
                 variant: 'destructive',
             })
         },
     })
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: Partial<RoomRequest> }) =>
-            apiClient.updateRoom(id, data),
-        onSuccess: () => {
+        mutationFn: async ({ id, data }: { id: string; data: Partial<RoomRequest> }) => {
+            const response = await apiClient.updateRoom(id, data)
+            if (!response.success) {
+                throw new Error(response.error || response.message || 'Không thể cập nhật phòng')
+            }
+            return response
+        },
+        onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ['rooms'] })
             toast({
-                title: 'Thành công',
-                description: 'Phòng đã được cập nhật thành công',
+                title: '✅ Cập nhật phòng thành công',
+                description: response.message || 'Phòng đã được cập nhật thành công',
             })
             setIsCreateDialogOpen(false)
             setEditingRoom(null)
         },
         onError: (error: Error) => {
             toast({
-                title: 'Lỗi',
-                description: error.message || 'Không thể cập nhật phòng',
+                title: '❌ Lỗi cập nhật phòng',
+                description: error.message || 'Không thể cập nhật phòng. Vui lòng thử lại.',
                 variant: 'destructive',
             })
         },
     })
 
     const deleteMutation = useMutation({
-        mutationFn: (id: string) => apiClient.deleteRoom(id),
-        onSuccess: () => {
+        mutationFn: async (id: string) => {
+            const response = await apiClient.deleteRoom(id)
+            if (!response.success) {
+                throw new Error(response.error || response.message || 'Không thể xóa phòng')
+            }
+            return response
+        },
+        onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ['rooms'] })
             toast({
-                title: 'Thành công',
-                description: 'Phòng đã được xóa thành công',
+                title: '✅ Xóa phòng thành công',
+                description: response.message || 'Phòng đã được xóa thành công',
             })
         },
         onError: (error: Error) => {
             toast({
-                title: 'Lỗi',
-                description: error.message || 'Không thể xóa phòng',
+                title: '❌ Lỗi xóa phòng',
+                description: error.message || 'Không thể xóa phòng. Vui lòng thử lại.',
                 variant: 'destructive',
             })
         },

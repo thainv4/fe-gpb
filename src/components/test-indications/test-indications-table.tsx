@@ -605,7 +605,7 @@ export default function TestIndicationsTable() {
                 </div>
 
                 <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                    <Label className="text-sm font-medium">Prefix</Label>
+                    <Label className="text-sm font-medium">Chọn tiền tố sinh barcode</Label>
                     <Select value={selectedPrefix} onValueChange={setSelectedPrefix}>
                         <SelectTrigger>
                             <SelectValue placeholder="Chọn tiền tố" />
