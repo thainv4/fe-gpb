@@ -3,10 +3,18 @@ import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {useQuery, useMutation} from "@tanstack/react-query";
-import {apiClient, ServiceRequestService, SampleType} from "@/lib/api/client";
+import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
+import {apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest} from "@/lib/api/client";
 import {formatDobFromHis} from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Loader2, Printer } from "lucide-react";
 import {useTabsStore} from "@/lib/stores/tabs";
 import {usePathname} from "next/navigation";
@@ -18,6 +26,7 @@ import Barcode from 'react-barcode';
 export default function TestIndicationsTable() {
 
     const { toast } = useToast()
+    const queryClient = useQueryClient()
     const { activeKey, tabs } = useTabsStore()
     const pathname = usePathname()
     const tabKey = activeKey ?? pathname ?? 'default' // Use pathname as fallback
@@ -39,6 +48,8 @@ export default function TestIndicationsTable() {
     const [sampleTypeSearch, setSampleTypeSearch] = useState<string>('') // Từ khóa đang gõ
     const [appliedSearch, setAppliedSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
     const [storedServiceReqId, setStoredServiceReqId] = useState<string | undefined>()
+    const [selectedPrefix, setSelectedPrefix] = useState<string>('') // Prefix chưa được chọn
+    const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false)
 
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
@@ -53,6 +64,7 @@ export default function TestIndicationsTable() {
             sampleCode,
             sampleTypeSearch,
             appliedSearch,
+            selectedPrefix,
         },
         {
             saveScroll: true,
@@ -64,6 +76,7 @@ export default function TestIndicationsTable() {
                 if (data.sampleCode) setSampleCode(data.sampleCode)
                 if (data.sampleTypeSearch) setSampleTypeSearch(data.sampleTypeSearch)
                 if (data.appliedSearch) setAppliedSearch(data.appliedSearch)
+                if (data.selectedPrefix) setSelectedPrefix(data.selectedPrefix)
             },
         }
     )
@@ -133,12 +146,20 @@ export default function TestIndicationsTable() {
         setServiceReqCode(code)
         setSearchCode(code)
         setStoredServiceReqId(storedId) // Lưu storedServiceReqId
+        setSelectedPrefix('') // Reset prefix về giá trị mặc định
+    }
+
+    const clearSampleFields = () => {
+        setSelectedSampleType('')
+        setSelectedPrefix('')
+        setSampleCode('')
     }
 
     const clearAll = () => {
         setServiceReqCode('')
         setSearchCode('')
         setSelectedSampleType('')
+        setSelectedPrefix('')
         setSampleCode('')
         setStoredServiceReqId(undefined) // Reset storedServiceReqId
         sidInputRef.current?.focus()
@@ -177,6 +198,16 @@ export default function TestIndicationsTable() {
         // Lấy receptionCode từ service đầu tiên
         return storedServiceRequestData.data.services[0]?.receptionCode || ''
     }, [storedServiceReqId, storedServiceRequestData])
+
+    // Tự động set selectedSampleType từ sampleTypeId khi có storedServiceRequestData
+    useEffect(() => {
+        if (storedServiceRequestData?.data?.services && storedServiceRequestData.data.services.length > 0) {
+            const firstService = storedServiceRequestData.data.services[0]
+            if (firstService?.sampleTypeId) {
+                setSelectedSampleType(firstService.sampleTypeId)
+            }
+        }
+    }, [storedServiceRequestData])
 
     // Function để in barcode - chỉ in barcode và ngày giờ
     const handlePrintBarcode = () => {
@@ -242,8 +273,24 @@ export default function TestIndicationsTable() {
 
     // Mutation để tạo mã tiếp nhận
     const createSampleReceptionMutation = useMutation({
-        mutationFn: (sampleTypeCode: string) =>
-            apiClient.createSampleReception({ sampleTypeCode }),
+        mutationFn: async ({ prefix, sampleTypeId }: { prefix: string; sampleTypeId?: string }) => {
+            const requestBody: CreateSampleReceptionByPrefixRequest = {
+                prefix: prefix,
+                codeWidth: 4,
+                resetPeriod: 'MONTHLY',
+                allowDuplicate: false,
+            }
+            // Chỉ thêm sampleTypeId nếu có giá trị (lấy từ dropdown chọn bệnh phẩm)
+            if (sampleTypeId) {
+                requestBody.sampleTypeId = sampleTypeId
+            }
+            const response = await apiClient.createSampleReceptionByPrefix(requestBody)
+            // Kiểm tra response.success và throw error nếu không thành công
+            if (!response.success) {
+                throw new Error(response.error || response.message || 'Không thể tạo mã tiếp nhận')
+            }
+            return response
+        },
         onError: (error) => {
             toast({
                 title: "Lỗi",
@@ -260,6 +307,7 @@ export default function TestIndicationsTable() {
             currentRoomId: string;
             currentDepartmentId: string;
             receptionCode: string;
+            sampleTypeName?: string;
             sampleCollectionTime: string;
             collectedByUserId: string;
             saveRawJson: boolean;
@@ -275,8 +323,12 @@ export default function TestIndicationsTable() {
 
     // Mutation để update receptionCode
     const updateReceptionCodeMutation = useMutation({
-        mutationFn: ({ serviceId, receptionCode }: { serviceId: string; receptionCode: string }) =>
-            apiClient.updateServiceReceptionCode(serviceId, receptionCode),
+        mutationFn: ({ serviceId, receptionCode, sampleTypeName }: { 
+            serviceId: string; 
+            receptionCode?: string;
+            sampleTypeName?: string;
+        }) =>
+            apiClient.updateServiceReceptionCode(serviceId, receptionCode, sampleTypeName),
         onError: (error) => {
             toast({
                 title: "Lỗi",
@@ -285,6 +337,10 @@ export default function TestIndicationsTable() {
             })
         }
     })
+
+    const handleConfirmSave = () => {
+        setConfirmDialogOpen(true)
+    }
 
     async function handleSave() {
         // Validation
@@ -337,10 +393,79 @@ export default function TestIndicationsTable() {
         }
 
         try {
-            // Bước 1: Tạo mã tiếp nhận
-            const receptionResponse = await createSampleReceptionMutation.mutateAsync(
-                selectedType.typeCode
-            );
+            // Bước 1: Kiểm tra xem đã có stored service request chưa
+            if (storedServiceReqId && storedServiceRequestData?.data) {
+                const services = storedServiceRequestData.data.services || []
+                
+                if (services.length === 0) {
+                    toast({
+                        title: "Lỗi",
+                        description: "❌ Không tìm thấy dịch vụ để cập nhật",
+                        variant: "destructive",
+                    })
+                    return
+                }
+
+                // Khi update yêu cầu đã có sẵn, cần chọn cả bệnh phẩm và prefix
+                if (!selectedSampleType || !selectedPrefix) {
+                    toast({
+                        title: "Lỗi",
+                        description: "❌ Vui lòng chọn cả bệnh phẩm và prefix để cập nhật",
+                        variant: "destructive",
+                    })
+                    return
+                }
+
+                // Tạo receptionCode mới và update cả receptionCode và sampleTypeName
+                if (selectedSampleType && selectedPrefix) {
+                    // Tạo receptionCode mới và update cả receptionCode và sampleTypeName
+                    const receptionResponse = await createSampleReceptionMutation.mutateAsync({
+                        prefix: selectedPrefix,
+                        sampleTypeId: selectedSampleType
+                    });
+                    if (!receptionResponse.success || !receptionResponse.data?.receptionCode) {
+                        toast({
+                            title: "Lỗi",
+                            description: "❌ Không tạo được mã tiếp nhận",
+                            variant: "destructive",
+                        })
+                        return;
+                    }
+                    const receptionCode = receptionResponse.data.receptionCode;
+                    const updatePromises = services.map(service => 
+                        updateReceptionCodeMutation.mutateAsync({
+                            serviceId: service.id,
+                            receptionCode: receptionCode,
+                            sampleTypeName: selectedType?.typeName
+                        })
+                    )
+                    await Promise.all(updatePromises)
+                    // Refetch lại nội dung của yêu cầu
+                    queryClient.invalidateQueries({ queryKey: ['stored-service-request', storedServiceReqId] })
+                    toast({
+                        title: "Thành công",
+                        description: `✅ Đã cập nhật mã tiếp nhận và bệnh phẩm cho ${services.length} dịch vụ!`,
+                    })
+                    clearSampleFields()
+                    return
+                }
+            }
+
+            // Bước 2: Chưa có stored service request -> Tạo mới (cần cả prefix và bệnh phẩm)
+            if (!selectedPrefix) {
+                toast({
+                    title: "Lỗi",
+                    description: "❌ Vui lòng chọn prefix để tạo mã tiếp nhận mới",
+                    variant: "destructive",
+                })
+                return;
+            }
+
+            // Tạo mã tiếp nhận mới
+            const receptionResponse = await createSampleReceptionMutation.mutateAsync({
+                prefix: selectedPrefix,
+                sampleTypeId: selectedSampleType || undefined
+            });
 
             if (!receptionResponse.success || !receptionResponse.data?.receptionCode) {
                 toast({
@@ -353,46 +478,13 @@ export default function TestIndicationsTable() {
 
             const receptionCode = receptionResponse.data.receptionCode;
 
-            // Bước 2: Kiểm tra xem đã có stored service request chưa
-            if (storedServiceReqId && storedServiceRequestData?.data) {
-                // Đã có stored service request -> Update receptionCode cho tất cả services
-                const services = storedServiceRequestData.data.services || []
-                
-                if (services.length === 0) {
-                    toast({
-                        title: "Lỗi",
-                        description: "❌ Không tìm thấy dịch vụ để cập nhật",
-                        variant: "destructive",
-                    })
-                    return
-                }
-
-                // Update receptionCode cho tất cả services
-                const updatePromises = services.map(service => 
-                    updateReceptionCodeMutation.mutateAsync({
-                        serviceId: service.id,
-                        receptionCode: receptionCode
-                    })
-                )
-
-                await Promise.all(updatePromises)
-
-                toast({
-                    title: "Thành công",
-                    description: `✅ Đã cập nhật mã tiếp nhận cho ${services.length} dịch vụ!`,
-                })
-
-                // Reset form
-                clearAll()
-                return
-            }
-
             // Bước 3: Chưa có stored service request -> Tạo mới như cũ
             const body = {
                 serviceReqCode: serviceCodeToSave,
                 currentRoomId: tabRoomId,
                 currentDepartmentId: tabDepartmentId,
                 receptionCode: receptionCode,
+                sampleTypeName: selectedType?.typeName,
                 sampleCollectionTime: new Date().toISOString(),
                 collectedByUserId: currentUserId,
                 saveRawJson: false,
@@ -418,8 +510,8 @@ export default function TestIndicationsTable() {
                 description: "✅ Đã lưu chỉ định xét nghiệm thành công!",
             });
 
-            // Bước 4: Reset form
-            clearAll();
+            // Bước 4: Reset các trường liên quan đến bệnh phẩm
+            clearSampleFields();
         } catch (error) {
             console.error("Lỗi:", error);
             toast({
@@ -503,11 +595,25 @@ export default function TestIndicationsTable() {
                             {filteredSampleTypeItems.length
                                 ? filteredSampleTypeItems.map((sampleType) => (
                                     <SelectItem key={sampleType.id} value={sampleType.id}>
-                                        {sampleType.codePrefix} - {sampleType.typeName}
+                                        {sampleType.typeName}
                                     </SelectItem>
                                   ))
                                 : <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>
                             }
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="w-full md:w-1/3 flex flex-col gap-1.5">
+                    <Label className="text-sm font-medium">Prefix</Label>
+                    <Select value={selectedPrefix} onValueChange={setSelectedPrefix}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Chọn tiền tố" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="T">T</SelectItem>
+                            <SelectItem value="C">C</SelectItem>
+                            <SelectItem value="F">F</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -672,9 +778,10 @@ export default function TestIndicationsTable() {
                 <div className={'flex flex-col items-center gap-3 mt-6'}>
                     <div className="flex gap-3">
                         <Button
-                            onClick={handleSave}
+                            onClick={handleConfirmSave}
                             disabled={
-                                !selectedSampleType ||
+                                // Cần cả bệnh phẩm và prefix (cho cả update và tạo mới)
+                                !selectedSampleType || !selectedPrefix ||
                                 !tabRoomId ||
                                 !tabDepartmentId ||
                                 !(searchCode || serviceReqCode) ||
@@ -698,6 +805,48 @@ export default function TestIndicationsTable() {
                     </div>
                 </div>
             </div>
+
+            {/* Dialog xác nhận lưu */}
+            <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận lưu</DialogTitle>
+                        <DialogDescription>
+                            {storedServiceReqId 
+                                ? 'Bạn có chắc chắn muốn cập nhật chỉ định xét nghiệm này?'
+                                : 'Bạn có chắc chắn muốn lưu chỉ định xét nghiệm này?'
+                            }
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setConfirmDialogOpen(false)
+                                handleSave()
+                            }}
+                            disabled={
+                                createSampleReceptionMutation.isPending ||
+                                storeServiceRequestMutation.isPending ||
+                                updateReceptionCodeMutation.isPending
+                            }
+                        >
+                            {(createSampleReceptionMutation.isPending || 
+                              storeServiceRequestMutation.isPending || 
+                              updateReceptionCodeMutation.isPending) ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang xử lý...
+                                </>
+                            ) : (
+                                'Xác nhận'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

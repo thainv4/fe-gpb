@@ -585,6 +585,14 @@ export interface SampleReceptionResponse {
     [key: string]: unknown;
 }
 
+export interface CreateSampleReceptionByPrefixRequest {
+    prefix: string;
+    sampleTypeId?: string;
+    codeWidth: number;
+    resetPeriod: 'MONTHLY' | 'DAILY' | 'YEARLY';
+    allowDuplicate: boolean;
+}
+
 export interface Branch {
     id: string;
     branchCode: string;
@@ -751,6 +759,7 @@ export interface StoredService {
     resultReviewedAt?: string | null;
     resultApprovedAt?: string | null;
     resultCompletedAt?: string | null;
+    sampleTypeId?: string | null;
     resultEnteredByUserId?: string | null;
     resultReviewedByUserId?: string | null;
     resultApprovedByUserId?: string | null;
@@ -772,6 +781,7 @@ export interface StoreServiceRequestBody {
     currentRoomId: string;
     currentDepartmentId: string;
     receptionCode: string;
+    sampleTypeName?: string;
     sampleCollectionTime: string;
     collectedByUserId: string;
     saveRawJson: boolean;
@@ -2686,6 +2696,15 @@ class ApiClient {
         });
     }
 
+    async createSampleReceptionByPrefix(
+        request: CreateSampleReceptionByPrefixRequest
+    ): Promise<ApiResponse<SampleReceptionResponse>> {
+        return this.request<SampleReceptionResponse>("/sample-receptions/by-prefix", {
+            method: "POST",
+            body: JSON.stringify(request),
+        });
+    }
+
     async generateSampleReceptionCode(
         sampleTypeCode: string,
         date: string
@@ -2733,13 +2752,21 @@ class ApiClient {
      */
     async updateServiceReceptionCode(
         serviceId: string,
-        receptionCode: string
+        receptionCode?: string,
+        sampleTypeName?: string
     ): Promise<ApiResponse<StoredService>> {
+        const body: { receptionCode?: string; sampleTypeName?: string } = {};
+        if (receptionCode) {
+            body.receptionCode = receptionCode;
+        }
+        if (sampleTypeName) {
+            body.sampleTypeName = sampleTypeName;
+        }
         return this.request<StoredService>(
             `/service-requests/stored/services/${serviceId}/reception-code`,
             {
                 method: 'PATCH',
-                body: JSON.stringify({ receptionCode }),
+                body: JSON.stringify(body),
             }
         );
     }

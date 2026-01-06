@@ -256,21 +256,28 @@ export default function SampleDeliveryTable() {
 
     // Mutation for workflow transition
     const transitionMutation = useMutation({
-        mutationFn: (params: {
+        mutationFn: async (params: {
             storedServiceReqId: string;
             toStateId: string;
             currentUserId: string;
             currentDepartmentId: string;
             currentRoomId: string;
-        }) => apiClient.transitionWorkflow({
-            storedServiceReqId: params.storedServiceReqId,
-            toStateId: params.toStateId,
-            actionType: 'COMPLETE',
-            currentUserId: params.currentUserId,
-            currentDepartmentId: params.currentDepartmentId,
-            currentRoomId: params.currentRoomId,
-            notes: handoverNote || undefined,
-        }),
+        }) => {
+            const response = await apiClient.transitionWorkflow({
+                storedServiceReqId: params.storedServiceReqId,
+                toStateId: params.toStateId,
+                actionType: 'COMPLETE',
+                currentUserId: params.currentUserId,
+                currentDepartmentId: params.currentDepartmentId,
+                currentRoomId: params.currentRoomId,
+                notes: handoverNote || undefined,
+            })
+            // Nếu API trả về success: false, throw error để trigger onError
+            if (!response.success) {
+                throw new Error(response.error || response.message || 'Không thể xác nhận bàn giao mẫu')
+            }
+            return response
+        },
         onSuccess: () => {
             toast({
                 title: 'Thành công',
