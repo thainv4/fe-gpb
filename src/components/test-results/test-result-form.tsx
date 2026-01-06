@@ -13,7 +13,7 @@ import {Textarea} from "@/components/ui/textarea";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import {useToast} from "@/hooks/use-toast";
-import {CheckCircle2, XCircle} from "lucide-react";
+import {CheckCircle2, XCircle, Loader2} from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -321,14 +321,16 @@ export default function TestResultForm() {
 
             if (response.success && response.data?.Data && response.data.Data.length > 0) {
                 const signerData = response.data.Data[0]
-                // Set signerId từ ID của signer và serialNumber = ""
+                const signerId = signerData.ID.toString()
+                
+                // Set state để hiển thị (nếu cần)
                 setSignerInfo({
-                    signerId: signerData.ID.toString(),
+                    signerId: signerId,
                     serialNumber: ''
                 })
                 
-                // Gọi hàm ký số ngay sau khi lấy được signerId
-                await handleDigitalSign()
+                // Truyền signerId trực tiếp vào hàm ký số
+                await handleDigitalSign(signerId)
             } else {
                 toast({
                     variant: "destructive",
@@ -346,9 +348,12 @@ export default function TestResultForm() {
         }
     }
 
-    // Handler ký số
-    const handleDigitalSign = async () => {
-        if (!signerInfo.signerId) {
+    // Handler ký số - nhận signerId như parameter
+    const handleDigitalSign = async (signerIdParam?: string) => {
+        // Sử dụng parameter nếu có, nếu không thì dùng state
+        const signerIdToUse = signerIdParam || signerInfo.signerId
+        
+        if (!signerIdToUse) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -442,7 +447,7 @@ export default function TestResultForm() {
                 },
                 DocumentName: `Phiếu XN ${storedServiceRequestData.data.serviceReqCode}`,
                 TreatmentCode: storedServiceRequestData.data.treatmentCode || storedServiceRequestData.data.patientCode,
-                DocumentTypeId: 1,
+                DocumentTypeId: 22,
                 DocumentGroupId: 1,
                 HisCode: `HIS_${storedServiceRequestData.data.serviceReqCode}_${Date.now()}`,
                 FileType: 0,
@@ -451,7 +456,7 @@ export default function TestResultForm() {
                 },
                 Signs: [
                     {
-                        SignerId: Number.parseInt(signerInfo.signerId, 10),
+                        SignerId: Number.parseInt(signerIdToUse, 10), // Sử dụng signerIdToUse thay vì signerInfo.signerId
                         SerialNumber: '', // Gán serialNumber = "" như yêu cầu
                         NumOrder: pageCount,
                         // IsSigned: false
@@ -472,7 +477,7 @@ export default function TestResultForm() {
                 // Nếu có documentId và serviceId, gọi API cập nhật
                 if (documentId && previewServiceId) {
                     try {
-                        await apiClient.postServiceRequestDocumentId(previewServiceId, documentId);
+                        await apiClient.patchServiceRequestDocumentId(previewServiceId, documentId);
 
                         // Refresh danh sách services để hiển thị trạng thái "Đã ký"
                         await refetchStoredServiceRequest();
@@ -501,6 +506,83 @@ export default function TestResultForm() {
                 variant: "destructive",
                 title: "Lỗi",
                 description: error?.message || "Có lỗi xảy ra khi ký số tài liệu"
+            })
+        } finally {
+            setIsSigning(false)
+        }
+    }
+
+    // Handler hủy chữ ký số
+    const handleCancelDigitalSign = async () => {
+        // Lọc các service đã chọn có documentId
+        const selectedServicesWithDocumentId = services.filter(
+            service => selectedServices.has(service.id) && service.documentId
+        )
+
+        if (selectedServicesWithDocumentId.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng chọn ít nhất một dịch vụ đã ký số để hủy"
+            })
+            return
+        }
+
+        // Lấy HIS token code
+        let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
+        if (!tokenCode) {
+            tokenCode = hisToken?.tokenCode || null;
+        }
+        if (!tokenCode) {
+            const hisStorage = localStorage.getItem('his-storage');
+            if (hisStorage) {
+                try {
+                    const parsed = JSON.parse(hisStorage);
+                    tokenCode = parsed.state?.token?.tokenCode || null;
+                } catch (e) {
+                    console.error('Error parsing HIS storage:', e);
+                }
+            }
+        }
+
+        if (!tokenCode) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng đăng nhập để sử dụng tính năng ký điện tử"
+            })
+            return
+        }
+
+        setIsSigning(true)
+        try {
+            // Gọi API delete-document cho từng service có documentId
+            const deletePromises = selectedServicesWithDocumentId.map(async (service) => {
+                if (service.documentId) {
+                    // Gọi API hủy chữ ký số
+                    await apiClient.deleteEmrDocument(service.documentId, tokenCode!, 'EMR')
+                    
+                    // Cập nhật documentId = null cho service
+                    await apiClient.patchServiceRequestDocumentId(service.id, null)
+                }
+            })
+
+            await Promise.all(deletePromises)
+
+            // Refresh danh sách services
+            await refetchStoredServiceRequest()
+
+            toast({
+                title: "Thành công",
+                description: `Đã hủy chữ ký số cho ${selectedServicesWithDocumentId.length} dịch vụ`,
+                variant: "default"
+            })
+        } catch (error: any) {
+            console.error('Error canceling digital sign:', error)
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: error?.message || "Có lỗi xảy ra khi hủy chữ ký số"
             })
         } finally {
             setIsSigning(false)
@@ -677,6 +759,21 @@ export default function TestResultForm() {
                                             <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
                                                 Chọn danh sách dịch vụ để trả kết quả
                                             </h3>
+                                            <Button 
+                                                onClick={handleCancelDigitalSign}
+                                                disabled={isSigning || selectedServices.size === 0}
+                                                variant="destructive"
+                                                className="mb-4"
+                                            >
+                                                {isSigning ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Đang xử lý...
+                                                    </>
+                                                ) : (
+                                                    'Hủy chữ ký số'
+                                                )}
+                                            </Button>
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-gray-200">
                                                     <thead className="bg-gray-50">

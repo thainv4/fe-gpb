@@ -1987,6 +1987,25 @@ class ApiClient {
         });
     }
 
+    async deleteEmrDocument(
+        documentId: number | string,
+        tokenCode: string,
+        applicationCode: string = 'EMR'
+    ): Promise<ApiResponse> {
+        if (!tokenCode) {
+            throw new Error('TokenCode header is required');
+        }
+
+        return this.request("/emr/delete-document", {
+            method: "POST",
+            body: JSON.stringify({ documentId }),
+            headers: {
+                'TokenCode': tokenCode,
+                'ApplicationCode': applicationCode,
+            },
+        });
+    }
+
     async getEmrSigner(
         tokenCode: string,
         applicationCode: string = 'EMR',
@@ -2813,9 +2832,9 @@ class ApiClient {
      * @param documentId ID của document từ EMR Sign
      * @returns Promise<ApiResponse>
      */
-    async postServiceRequestDocumentId(
+    async patchServiceRequestDocumentId(
         serviceId: number | string,
-        documentId: number | string
+        documentId: number | string | null
     ): Promise<ApiResponse> {
         return this.request(
             `/service-requests/stored/services/${serviceId}/document-id`,
