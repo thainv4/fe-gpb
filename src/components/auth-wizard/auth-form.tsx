@@ -12,7 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { useHisIntegration } from '@/hooks/use-his'
-import { Loader2, Shield, Building2, CheckCircle } from 'lucide-react'
+import { Loader2, Shield, Building2, CheckCircle, UserPlus } from 'lucide-react'
+import Link from 'next/link'
 
 const loginSchema = z.object({
     username: z.string().min(1, 'Tên đăng nhập hoặc email là bắt buộc'),
@@ -178,10 +179,10 @@ export function AuthForm() {
                                         name="username"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Tên đăng nhập hoặc Email</FormLabel>
+                                                <FormLabel>Tên đăng nhập</FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        placeholder="Nhập tên đăng nhập hoặc email"
+                                                        placeholder="Nhập tên đăng nhập"
                                                         {...field}
                                                         disabled={isLoading}
                                                     />
@@ -219,11 +220,23 @@ export function AuthForm() {
                                                 Đang đăng nhập...
                                             </>
                                         ) : (
-                                            'Đăng nhập JWT'
+                                            'Đăng nhập'
                                         )}
                                     </Button>
                                 </form>
                             </Form>
+                            <div className="mt-4">
+                                <Link href="/auth/register">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full"
+                                    >
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        Đăng ký tài khoản
+                                    </Button>
+                                </Link>
+                            </div>
                         </TabsContent>
 
                         <TabsContent value="his" className="space-y-4 mt-6">

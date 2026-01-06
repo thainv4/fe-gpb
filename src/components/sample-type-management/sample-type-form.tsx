@@ -22,7 +22,6 @@ const sampleTypeSchema = z.object({
     shortName: z.string().max(100, 'Tên viết tắt tối đa 100 ký tự').optional(),
     description: z.string().max(2000, 'Mô tả tối đa 2000 ký tự').optional(),
     sortOrder: z.coerce.number().optional(),
-    codePrefix: z.string().min(1, 'Tiền tố mã là bắt buộc').max(5, 'Tiền tố mã tối đa 5 ký tự'),
     codeWidth: z.coerce.number().min(1).max(5).optional(),
     allowDuplicate: z.boolean().optional(),
     resetPeriod: z.enum(['DAILY', 'MONTHLY', 'YEARLY', 'NEVER']).optional(),
@@ -44,7 +43,6 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
             shortName: initialData?.shortName ?? '',
             description: initialData?.description ?? '',
             sortOrder: initialData?.sortOrder ?? 1,
-            codePrefix: initialData?.codePrefix ?? '',
             codeWidth: initialData?.codeWidth ?? 4,
             allowDuplicate: initialData?.allowDuplicate ?? false,
             resetPeriod: initialData?.resetPeriod ?? 'MONTHLY',
@@ -55,6 +53,7 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
         // Đảm bảo các giá trị mặc định luôn được gửi lên
         const submitData: SampleTypeRequest = {
             ...data,
+            codePrefix: '', // Set giá trị mặc định cho codePrefix
             allowDuplicate: false,
             resetPeriod: 'MONTHLY' as const,
             codeWidth: 4,
@@ -66,35 +65,20 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                {/* Hàng 1: Tên loại mẫu + Tiền tố mã tiếp nhận */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="typeName"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Tên loại mẫu *</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Nhập tên loại mẫu" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="codePrefix"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Tiền tố mã tiếp nhận *</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Nhập tiền tố mã (1-5 ký tự)" maxLength={5} {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
+                {/* Hàng 1: Tên loại mẫu */}
+                <FormField
+                    control={form.control}
+                    name="typeName"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Tên loại mẫu *</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Nhập tên loại mẫu" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 {/* Hàng 2: Mô tả (full width) */}
                 <FormField
