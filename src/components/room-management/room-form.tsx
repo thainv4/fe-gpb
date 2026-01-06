@@ -97,7 +97,11 @@ export function RoomForm({ initialData, onSubmit, isLoading = false }: RoomFormP
                             <FormItem>
                                 <FormLabel>Mã phòng *</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Nhập mã phòng" {...field} />
+                                    <Input 
+                                        placeholder="Nhập mã phòng" 
+                                        {...field} 
+                                        disabled={!!initialData}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

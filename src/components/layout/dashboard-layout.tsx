@@ -190,7 +190,54 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: Settings,
             description: 'Cấu hình hệ thống và tài khoản'
         }
-    ]
+    ] 
+
+    // Filter navigation based on role
+    const filteredNavigation = useMemo(() => {
+        if (!user) return []
+        
+        const userRole = user.role?.toLowerCase()
+        
+        // User chỉ thấy tab "Xét nghiệm"
+        if (userRole === 'user') {
+            return [
+                {
+                    name: 'Dashboard',
+                    href: '/dashboard',
+                    icon: LayoutDashboard,
+                    description: 'Tổng quan hệ thống và thống kê'
+                },
+                {
+                    name: 'Xét nghiệm',
+                    icon: TestTube,
+                    description: 'Quy trình xét nghiệm và quản lý mẫu',
+                    children: [
+                        {
+                            name: 'Chỉ định xét nghiệm',
+                            href: '/test-indications',
+                            icon: Stethoscope,
+                            description: 'Tiếp nhận và chỉ định xét nghiệm'
+                        },
+                        {
+                            name: 'Bàn giao mẫu',
+                            href: '/sample-delivery',
+                            icon: Package,
+                            description: 'Quản lý trạng thái và bàn giao mẫu'
+                        },
+                        {
+                            name: 'Kết quả xét nghiệm',
+                            href: '/test-results',
+                            icon: NewspaperIcon,
+                            description: 'Nhập và quản lý kết quả xét nghiệm'
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        // Admin thấy tất cả
+        return navigation
+    }, [user])
 
     // Build a map path -> label for tab naming
     const pathLabelMap = useMemo(() => {
@@ -199,9 +246,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             if (item.href) map.set(item.href, item.name)
             if (item.children) item.children.forEach(addItem)
         }
-        navigation.forEach(addItem)
+        filteredNavigation.forEach(addItem)
         return map
-    }, [])
+    }, [filteredNavigation])
 
     const prettifyPath = (p: string) => {
         if (!p) return 'Trang'
@@ -335,7 +382,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
                     {/* Desktop Navigation */}
                     <nav className="hidden md:flex items-center space-x-1 ml-8">
-                        {navigation.map((item) => {
+                        {filteredNavigation.map((item) => {
                             const Icon = item.icon
 
                             if (item.children) {
@@ -549,7 +596,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     </div>
                     <nav className="border-t border-gray-200 px-4 py-4">
                         <div className="space-y-1">
-                            {navigation.map((item) => {
+                            {filteredNavigation.map((item) => {
                                 const Icon = item.icon
 
                                 if (item.children) {

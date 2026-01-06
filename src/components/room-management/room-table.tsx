@@ -188,7 +188,9 @@ export function RoomTable() {
 
     const handleUpdateRoom = (data: RoomRequest) => {
         if (editingRoom) {
-            updateMutation.mutate({ id: editingRoom.id, data })
+            // Loại bỏ roomCode khỏi request body khi update
+            const { roomCode, ...updateData } = data
+            updateMutation.mutate({ id: editingRoom.id, data: updateData })
         }
     }
 
