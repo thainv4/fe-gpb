@@ -147,7 +147,6 @@ export function UserTable() {
                 employeeCode?: string;
                 phoneNumber?: string;
                 dateOfBirth?: string;
-                gender?: 'MALE' | 'FEMALE' | 'OTHER';
                 mappedUsername?: string;
                 mappedPassword?: string;
             } = {};
@@ -160,7 +159,6 @@ export function UserTable() {
             if (data.employeeCode) profileData.employeeCode = data.employeeCode;
             if (data.phoneNumber) profileData.phoneNumber = data.phoneNumber;
             if (data.dateOfBirth) profileData.dateOfBirth = data.dateOfBirth;
-            if (data.gender) profileData.gender = data.gender as 'MALE' | 'FEMALE' | 'OTHER';
             if (data.mappedUsername) profileData.mappedUsername = data.mappedUsername;
             if (data.mappedPassword) profileData.mappedPassword = data.mappedPassword;
             

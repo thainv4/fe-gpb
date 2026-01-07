@@ -1578,7 +1578,6 @@ class ApiClient {
         employeeCode?: string;
         phoneNumber?: string;
         dateOfBirth?: string;
-        gender?: 'MALE' | 'FEMALE' | 'OTHER';
         avatar?: string;
         mappedUsername?: string;
         mappedPassword?: string;
@@ -1610,7 +1609,7 @@ class ApiClient {
         version: number;
     }>> {
         return this.request(`/profiles/user/${userId}`, {
-            method: "PUT",
+            method: "PATCH",
             body: JSON.stringify(profileData),
         });
     }

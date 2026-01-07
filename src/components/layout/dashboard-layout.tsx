@@ -184,12 +184,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 }
             ]
         },
-        {
-            name: 'Cài đặt',
-            href: '/settings',
-            icon: Settings,
-            description: 'Cấu hình hệ thống và tài khoản'
-        }
+        // {
+        //     name: 'Cài đặt',
+        //     href: '/settings',
+        //     icon: Settings,
+        //     description: 'Cấu hình hệ thống và tài khoản'
+        // }
     ] 
 
     // Filter navigation based on role

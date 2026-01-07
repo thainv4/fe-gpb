@@ -28,17 +28,28 @@ import { apiClient, User, UserRequest, Province, Ward, Department } from '@/lib/
 // Schema cho cập nhật - tương tự form đăng ký nhưng không có username, email, password
 const updateSchema = z.object({
     // Profile fields (optional) - giống RegisterForm
-    provinceId: z.string().optional(),
-    wardId: z.string().optional(),
-    address: z.string().max(500, 'Địa chỉ tối đa 500 ký tự').optional(),
-    departmentId: z.string().optional(),
-    position: z.string().max(100, 'Chức vụ tối đa 100 ký tự').optional(),
-    employeeCode: z.string().max(50, 'Mã nhân viên tối đa 50 ký tự').optional(),
-    phoneNumber: z.string().regex(/^[0-9+\-\s()]+$/, 'Số điện thoại không hợp lệ').min(10).max(20).optional().or(z.literal('')),
-    dateOfBirth: z.string().optional(),
-    gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-    mappedUsername: z.string().min(3).max(100).optional().or(z.literal('')),
-    mappedPassword: z.string().min(6).max(100).optional().or(z.literal('')),
+    provinceId: z.string().optional().or(z.literal('')),
+    wardId: z.string().optional().or(z.literal('')),
+    address: z.string().max(500, 'Địa chỉ tối đa 500 ký tự').optional().or(z.literal('')),
+    departmentId: z.string().optional().or(z.literal('')),
+    position: z.string().max(100, 'Chức vụ tối đa 100 ký tự').optional().or(z.literal('')),
+    employeeCode: z.string().max(50, 'Mã nhân viên tối đa 50 ký tự').optional().or(z.literal('')),
+    phoneNumber: z.union([
+        z.string().regex(/^[0-9+\-\s()]+$/, 'Số điện thoại không hợp lệ').min(10).max(20),
+        z.literal('')
+    ]).optional(),
+    dateOfBirth: z.string().optional().or(z.literal('')),
+    // Sửa gender để chấp nhận null, undefined hoặc các giá trị enum
+    gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional().nullable(),
+    // Sửa mappedUsername và mappedPassword để xử lý empty string đúng cách
+    mappedUsername: z.union([
+        z.string().min(3, 'Tên đăng nhập HIS tối thiểu 3 ký tự').max(100, 'Tên đăng nhập HIS tối đa 100 ký tự'),
+        z.literal('')
+    ]).optional(),
+    mappedPassword: z.union([
+        z.string().min(6, 'Mật khẩu HIS tối thiểu 6 ký tự').max(100, 'Mật khẩu HIS tối đa 100 ký tự'),
+        z.literal('')
+    ]).optional(),
 })
 
 type UpdateFormData = z.infer<typeof updateSchema>
@@ -156,11 +167,6 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
         onSubmit(submitData as UserRequest)
     }
 
-    const selectedProvinceId = form.watch('provinceId')
-    const filteredWards = selectedProvinceId
-        ? wards.filter(ward => ward.provinceId === selectedProvinceId)
-        : []
-
     if (profileLoading) {
         return (
             <div className="flex items-center justify-center py-8">
@@ -172,20 +178,29 @@ export function UserForm({ initialData, onSubmit, isLoading = false }: UserFormP
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form 
+            onSubmit={form.handleSubmit(
+                handleSubmit,
+                (errors) => {
+                    // Error handler để xem validation errors
+                    console.error('❌ Validation errors:', errors)
+                    console.error('❌ Form state:', {
+                        isValid: form.formState.isValid,
+                        isSubmitting: form.formState.isSubmitting,
+                        isDirty: form.formState.isDirty,
+                        errors: form.formState.errors,
+                    })
+                }
+            )} 
+            className="space-y-4 border-b pb-4"
+        >
                 {/* Thông tin người dùng (readonly) */}
-                <div className="space-y-4 border-b pb-4">
                     <h3 className="text-lg font-semibold">Thông tin đăng nhập</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label htmlFor='username' className="text-sm font-medium">Tên đăng nhập</label>
                             <Input value={initialData?.username || ''} disabled className="bg-gray-50" />
                         </div>
-                        <div className="space-y-2">
-                            <label htmlFor='email' className="text-sm font-medium">Email</label>
-                            <Input value={initialData?.email || ''} disabled className="bg-gray-50" />
-                        </div>
-                    </div>
                     <div className="space-y-2">
                         <label htmlFor='fullName' className="text-sm font-medium">Họ tên</label>
                         <Input value={initialData?.fullName || ''} disabled className="bg-gray-50" />
