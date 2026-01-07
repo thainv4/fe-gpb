@@ -1,227 +1,262 @@
-﻿'use client';
+﻿"use client";
 
-import React from 'react';
-import {StoredServiceRequestResponse, StoredService} from '@/lib/api/client';
+import React from "react";
+import { StoredServiceRequestResponse, StoredService } from "@/lib/api/client";
 
 interface FormTemplateProps {
-    data: StoredServiceRequestResponse;
-    specificService?: StoredService; // Service cụ thể để hiển thị resultText
-    // Ảnh chữ ký (base64, KHÔNG gồm tiền tố data:image/png;base64, ...)
-    signatureImageBase64?: string;
+  data: StoredServiceRequestResponse;
+  specificService?: StoredService; // Service cụ thể để hiển thị resultText
+  // Ảnh chữ ký (base64, KHÔNG gồm tiền tố data:image/png;base64, ...)
+  signatureImageBase64?: string;
 }
 
 // Helper function to calculate age from DOB
 function calculateAge(dob: number): number {
-    const dobStr = dob.toString();
-    const year = Number.parseInt(dobStr.substring(0, 4), 10);
-    const currentYear = new Date().getFullYear();
-    return currentYear - year;
+  const dobStr = dob.toString();
+  const year = Number.parseInt(dobStr.substring(0, 4), 10);
+  const currentYear = new Date().getFullYear();
+  return currentYear - year;
 }
 
 // Header component to be repeated on every page
-function PageHeader({data, specificService}: {data: StoredServiceRequestResponse; specificService?: StoredService}) {
-    const {
-        patientCode,
-        patientName,
-        patientDob,
-        patientGenderName,
-        patientAddress,
-        treatmentCode,
-        requestDepartmentName,
-        requestRoomName,
-        icdCode,
-        icdName,
-        serviceReqCode
-    } = data;
+function PageHeader({
+  data,
+  specificService,
+}: {
+  data: StoredServiceRequestResponse;
+  specificService?: StoredService;
+}) {
+  const {
+    patientCode,
+    patientName,
+    patientDob,
+    patientGenderName,
+    patientAddress,
+    treatmentCode,
+    requestDepartmentName,
+    requestRoomName,
+    icdCode,
+    icdName,
+    serviceReqCode,
+  } = data;
 
-    const age = calculateAge(patientDob);
+  const age = calculateAge(patientDob);
 
-    return (
-        <div className="print-header" style={{breakInside: 'avoid'}}>
-            {/* HEADER */}
-            <div className="flex justify-between items-start mb-4">
-                {/* Logo and Hospital Info */}
-                <div className="flex flex-1 items-center gap-4">
-                    <img src='/logo-bvbm-wh.png' alt='logo-bvbm' className='w-2/12'/>
-                    <div className="text-sm text-gray-700 leading-tight space-y-1 text-center">
-                        <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
-                        <div className="text-xs">TRUNG TÂM GIẢI PHẪU BỆNH</div>
-                        <div className="text-xs font-semibold">KHOA TẾ BÀO HỌC</div>
-                    </div>
-                </div>
+  // Lấy sampleTypeName từ specificService
+  const sampleTypeName = specificService?.sampleTypeName || '';
 
-                {/* Patient Code Info */}
-                <div className="text-left text-sm leading-tight space-y-1 p-3 rounded">
-                    <div><span className="font-semibold text-gray-700">Mã Y lệnh:</span> <span
-                        className="font-bold">{serviceReqCode}</span></div>
-                    <div><span className="font-semibold text-gray-700">Mã BN:</span> <span
-                        className="font-bold">{patientCode}</span></div>
-                    <div><span className="font-semibold text-gray-700">Mã ĐT:</span> <span
-                        className="font-bold">{treatmentCode}</span></div>
-                </div>
-            </div>
-
-            {/* Title */}
-            <div className="text-center mt-6 mb-6">
-                {(() => {
-                    const title = specificService?.resultName || 'Phiếu xét nghiệm sinh thiết';
-                    const lines = title.split('\n');
-                    return (
-                        <>
-                            {lines.map((line, index) => (
-                                <h1 
-                                    key={index}
-                                    className={`font-bold ${index === 0 ? 'text-2xl' : 'text-xl'}`}
-                                >
-                                    {line}
-                                </h1>
-                            ))}
-                        </>
-                    );
-                })()}
-            </div>
-
-            {/* Patient Info Section */}
-            <div className="mt-6 mb-3 p-4">
-                <div className="space-y-2 text-sm">
-                    <div className="flex flex-wrap gap-x-14">
-                        <span className="flex-shrink-0">
-                            <span className="text-gray-600">Họ và tên:</span>
-                            <span className="font-bold ml-2">{patientName}</span>
-                        </span>
-                        <span>
-                            <span className="text-gray-600">Tuổi:</span>
-                            <span className="font-semibold ml-2">{age}</span>
-                        </span>
-                        <span>
-                            <span className="text-gray-600">Giới tính:</span>
-                            <span className="font-semibold ml-2">{patientGenderName}</span>
-                        </span>
-                    </div>
-
-                    <div>
-                        <span className="text-gray-600">Địa chỉ:</span>
-                        <span className="ml-2">{patientAddress}</span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-x-16">
-                        <span>
-                            <span className="text-gray-600">Viện/Khoa:</span>
-                            <span className="font-semibold ml-2">{requestDepartmentName}</span>
-                        </span>
-                        <span>
-                            <span className="text-gray-600">Phòng:</span>
-                            <span className="font-semibold ml-2">{requestRoomName}</span>
-                        </span>
-                    </div>
-
-                    <div>
-                        <span className="text-gray-600">Mã bệnh phẩm:</span>
-                        <span className="ml-2 font-semibold">{specificService?.receptionCode || ''}</span>
-                    </div>
-
-                    <div>
-                        <span className="text-gray-600">Chẩn đoán lâm sàng:</span>
-                        <span className="ml-2 font-semibold text-red-700">{icdCode} - {icdName}</span>
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="print-header" style={{ breakInside: "avoid" }}>
+      {/* HEADER */}
+      <div className="flex justify-between items-start mb-4">
+        {/* Logo and Hospital Info */}
+        <div className="flex flex-1 items-center gap-4">
+          <img src="/logo-bvbm-wh.png" alt="logo-bvbm" className="w-2/12" />
+          <div className="text-sm text-gray-700 leading-tight space-y-1 text-center">
+            <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
+            <div className="text-xs">TRUNG TÂM GIẢI PHẪU BỆNH</div>
+            <div className="text-xs font-semibold">KHOA TẾ BÀO HỌC</div>
+          </div>
         </div>
-    );
+
+        {/* Patient Code Info */}
+        <div className="text-left text-sm leading-tight space-y-1 p-3 rounded">
+          <div>
+            <span className="font-semibold text-gray-700">Mã Y lệnh:</span>{" "}
+            <span className="font-bold">{serviceReqCode}</span>
+          </div>
+          <div>
+            <span className="font-semibold text-gray-700">Mã BN:</span>{" "}
+            <span className="font-bold">{patientCode}</span>
+          </div>
+          <div>
+            <span className="font-semibold text-gray-700">Mã ĐT:</span>{" "}
+            <span className="font-bold">{treatmentCode}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Title */}
+      <div className="text-center mt-6 mb-6">
+        {(() => {
+          const title =
+            specificService?.resultName || "Phiếu xét nghiệm sinh thiết";
+          const lines = title.split("\n");
+          return (
+            <>
+              {lines.map((line, index) => (
+                <h1
+                  key={index}
+                  className={`font-bold ${
+                    index === 0 ? "text-2xl" : "text-xl"
+                  }`}
+                >
+                  {line}
+                </h1>
+              ))}
+            </>
+          );
+        })()}
+      </div>
+
+      {/* Patient Info Section */}
+      <div className="mt-6 mb-3 p-4">
+        <div className="space-y-2 text-sm">
+          <div className="flex flex-wrap gap-x-14">
+            <span className="flex-shrink-0">
+              <span className="text-gray-600">Họ và tên:</span>
+              <span className="font-bold ml-2">{patientName}</span>
+            </span>
+            <span>
+              <span className="text-gray-600">Tuổi:</span>
+              <span className="font-semibold ml-2">{age}</span>
+            </span>
+            <span>
+              <span className="text-gray-600">Giới tính:</span>
+              <span className="font-semibold ml-2">{patientGenderName}</span>
+            </span>
+          </div>
+
+          <div>
+            <span className="text-gray-600">Địa chỉ:</span>
+            <span className="ml-2">{patientAddress}</span>
+          </div>
+
+          <div className="flex flex-wrap gap-x-16">
+            <span>
+              <span className="text-gray-600">Viện/Khoa:</span>
+              <span className="font-semibold ml-2">
+                {requestDepartmentName}
+              </span>
+            </span>
+            <span>
+              <span className="text-gray-600">Phòng:</span>
+              <span className="font-semibold ml-2">{requestRoomName}</span>
+            </span>
+          </div>
+
+          <div>
+            <span className="text-gray-600">Mã bệnh phẩm:</span>
+            <span className="ml-2 font-semibold">
+              {specificService?.receptionCode || ""}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-gray-600">Tên bệnh phẩm:</span>
+            <span className="ml-2">{sampleTypeName || '-'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-600">Chẩn đoán lâm sàng:</span>
+            <span className="ml-2 font-semibold text-red-700">
+              {icdCode} - {icdName}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Function to split HTML content into pages
 function splitContentIntoPages(htmlContent: string): string[] {
-    if (!htmlContent) return [''];
+  if (!htmlContent) return [""];
 
-    const tempDiv = document.createElement('div');
-    tempDiv.style.cssText = `
+  const tempDiv = document.createElement("div");
+  tempDiv.style.cssText = `
         position: absolute;
         visibility: hidden;
         width: 180mm;
         font-size: 14px;
         line-height: 1.5;
     `;
-    tempDiv.className = 'prose prose-sm max-w-none';
-    tempDiv.innerHTML = htmlContent;
-    document.body.appendChild(tempDiv);
+  tempDiv.className = "prose prose-sm max-w-none";
+  tempDiv.innerHTML = htmlContent;
+  document.body.appendChild(tempDiv);
 
-    const MM_TO_PX = 3.7795275591;
-    const CONTENT_HEIGHT_PER_PAGE = 170 * MM_TO_PX; // ~170mm cho content mỗi trang
+  const MM_TO_PX = 3.7795275591;
+  const CONTENT_HEIGHT_PER_PAGE = 170 * MM_TO_PX; // ~170mm cho content mỗi trang
 
-    // Sử dụng chiều cao cố định để tránh khoảng trống dư thừa
-    const firstPageHeight = CONTENT_HEIGHT_PER_PAGE;
-    const otherPageHeight = CONTENT_HEIGHT_PER_PAGE;
+  // Sử dụng chiều cao cố định để tránh khoảng trống dư thừa
+  const firstPageHeight = CONTENT_HEIGHT_PER_PAGE;
+  const otherPageHeight = CONTENT_HEIGHT_PER_PAGE;
 
-    const pages: string[] = [];
-    const children = Array.from(tempDiv.children) as HTMLElement[];
+  const pages: string[] = [];
+  const children = Array.from(tempDiv.children) as HTMLElement[];
 
-    let currentPageContent: HTMLElement[] = [];
-    let currentPageHeight = 0;
-    let pageIndex = 0;
+  let currentPageContent: HTMLElement[] = [];
+  let currentPageHeight = 0;
+  let pageIndex = 0;
 
-    children.forEach((child) => {
-        const childClone = child.cloneNode(true) as HTMLElement;
-        const childHeight = child.offsetHeight;
+  children.forEach((child) => {
+    const childClone = child.cloneNode(true) as HTMLElement;
+    const childHeight = child.offsetHeight;
 
-        const maxHeight = pageIndex === 0 ? firstPageHeight : otherPageHeight;
+    const maxHeight = pageIndex === 0 ? firstPageHeight : otherPageHeight;
 
-        // Nếu phần tử quá cao, không được cắt - đưa sang trang mới
-        if (currentPageHeight + childHeight > maxHeight) {
-            if (currentPageContent.length > 0) {
-                // Lưu trang hiện tại
-                const pageDiv = document.createElement('div');
-                currentPageContent.forEach(el => pageDiv.appendChild(el));
-                pages.push(pageDiv.innerHTML);
-
-                // Bắt đầu trang mới
-                currentPageContent = [childClone];
-                currentPageHeight = childHeight;
-                pageIndex++;
-            } else {
-                // Phần tử đầu tiên quá cao, vẫn phải thêm vào
-                currentPageContent.push(childClone);
-                currentPageHeight += childHeight;
-            }
-        } else {
-            currentPageContent.push(childClone);
-            currentPageHeight += childHeight;
-        }
-    });
-
-    // Thêm trang cuối cùng
-    if (currentPageContent.length > 0) {
-        const pageDiv = document.createElement('div');
-        currentPageContent.forEach(el => pageDiv.appendChild(el));
+    // Nếu phần tử quá cao, không được cắt - đưa sang trang mới
+    if (currentPageHeight + childHeight > maxHeight) {
+      if (currentPageContent.length > 0) {
+        // Lưu trang hiện tại
+        const pageDiv = document.createElement("div");
+        currentPageContent.forEach((el) => pageDiv.appendChild(el));
         pages.push(pageDiv.innerHTML);
+
+        // Bắt đầu trang mới
+        currentPageContent = [childClone];
+        currentPageHeight = childHeight;
+        pageIndex++;
+      } else {
+        // Phần tử đầu tiên quá cao, vẫn phải thêm vào
+        currentPageContent.push(childClone);
+        currentPageHeight += childHeight;
+      }
+    } else {
+      currentPageContent.push(childClone);
+      currentPageHeight += childHeight;
     }
+  });
 
-    tempDiv.remove();
+  // Thêm trang cuối cùng
+  if (currentPageContent.length > 0) {
+    const pageDiv = document.createElement("div");
+    currentPageContent.forEach((el) => pageDiv.appendChild(el));
+    pages.push(pageDiv.innerHTML);
+  }
 
-    return pages.length > 0 ? pages : [''];
+  tempDiv.remove();
+
+  return pages.length > 0 ? pages : [""];
 }
 
-export function FormTemplate({data, specificService, signatureImageBase64}: FormTemplateProps) {
-    const contentRef = React.useRef<HTMLDivElement>(null);
-    const [contentPages, setContentPages] = React.useState<string[]>(['']);
+export function FormTemplate({
+  data,
+  specificService,
+  signatureImageBase64,
+}: FormTemplateProps) {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const [contentPages, setContentPages] = React.useState<string[]>([""]);
 
-    // Chỉ lấy resultText từ specificService
-    const resultText = specificService?.resultText || '';
+  // Chỉ lấy resultText từ specificService
+  const resultText = specificService?.resultText || "";
 
-    React.useEffect(() => {
-        if (!resultText) {
-            setContentPages(['']);
-            return;
-        }
+  React.useEffect(() => {
+    if (!resultText) {
+      setContentPages([""]);
+      return;
+    }
 
-        // Chia nội dung thành các trang
-        const pages = splitContentIntoPages(resultText);
-        setContentPages(pages);
-    }, [resultText]);
+    // Chia nội dung thành các trang
+    const pages = splitContentIntoPages(resultText);
+    setContentPages(pages);
+  }, [resultText]);
 
-    return (
-        <div className="w-[210mm] mx-auto bg-white">
-            <style dangerouslySetInnerHTML={{__html: `
+  return (
+    <div className="w-[210mm] mx-auto bg-white">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
                 * {
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
@@ -316,63 +351,93 @@ export function FormTemplate({data, specificService, signatureImageBase64}: Form
                     page-break-inside: avoid;
                     break-inside: avoid;
                 }
-            `}} />
+            `,
+        }}
+      />
 
-            <div ref={contentRef}>
-                {contentPages.map((pageContent, index) => (
-                    <div key={`page-${index + 1}`} className="pdf-page" style={{display: 'flex', flexDirection: 'column', width: '210mm', height: '297mm', padding: '10mm 15mm', position: 'relative', overflow: 'hidden'}}>
-                        {/* Header on EVERY page */}
-                        <div className="page-header">
-                            <PageHeader data={data} specificService={specificService} />
-                        </div>
-
-                        {/* Results Section */}
-                        <div className="page-content-area" style={{flex: '1', overflow: 'visible', paddingBottom: index === contentPages.length - 1 ? '40mm' : '0'}}>
-                            {index === 0 && (
-                                <h2 className="text-center font-bold text-lg uppercase py-2 mb-4" style={{breakInside: 'avoid'}}>
-                                    KẾT QUẢ
-                                </h2>
-                            )}
-
-                            {pageContent ? (
-                                <div
-                                    className="prose prose-sm max-w-none leading-relaxed text-[14px]"
-                                    dangerouslySetInnerHTML={{__html: pageContent}}
-                                />
-                            ) : (
-                                index === 0 && (
-                                    <div className="p-8 text-gray-400 italic text-center border-2 border-dashed border-gray-300 rounded">
-                                        Chưa có kết quả xét nghiệm
-                                    </div>
-                                )
-                            )}
-                        </div>
-
-                        {/* Signature Section - Chỉ trang cuối */}
-                        {index === contentPages.length - 1 && (
-                            <div className="signature-section mt-auto pb-8 flex justify-end" style={{position: 'absolute', bottom: '20mm', right: '15mm'}}>
-                                <div className="text-center">
-                                    <div className="text-sm text-gray-600 mb-1 border-t border-gray-400 px-10">
-                                        Ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}
-                                    </div>
-
-                                    <div className="font-bold text-base mb-2">Bác sĩ đọc kết quả</div>
-
-                                    {signatureImageBase64 && (
-                                        <div className="flex justify-center mb-2">
-                                            <img
-                                                src={`data:image/png;base64,${signatureImageBase64}`}
-                                                alt="Chữ ký bác sĩ"
-                                                className="max-h-20 w-auto object-contain"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                ))}
+      <div ref={contentRef}>
+        {contentPages.map((pageContent, index) => (
+          <div
+            key={`page-${index + 1}`}
+            className="pdf-page"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              width: "210mm",
+              height: "297mm",
+              padding: "10mm 15mm",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* Header on EVERY page */}
+            <div className="page-header">
+              <PageHeader data={data} specificService={specificService} />
             </div>
-        </div>
-    );
+
+            {/* Results Section */}
+            <div
+              className="page-content-area"
+              style={{
+                flex: "1",
+                overflow: "visible",
+                paddingBottom: index === contentPages.length - 1 ? "40mm" : "0",
+              }}
+            >
+              {index === 0 && (
+                <h2
+                  className="text-center font-bold text-lg uppercase py-2 mb-4"
+                  style={{ breakInside: "avoid" }}
+                >
+                  KẾT QUẢ
+                </h2>
+              )}
+
+              {pageContent ? (
+                <div
+                  className="prose prose-sm max-w-none leading-relaxed text-[14px]"
+                  dangerouslySetInnerHTML={{ __html: pageContent }}
+                />
+              ) : (
+                index === 0 && (
+                  <div className="p-8 text-gray-400 italic text-center border-2 border-dashed border-gray-300 rounded">
+                    Chưa có kết quả xét nghiệm
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Signature Section - Chỉ trang cuối */}
+            {index === contentPages.length - 1 && (
+              <div
+                className="signature-section mt-auto pb-8 flex justify-end"
+                style={{ position: "absolute", bottom: "20mm", right: "15mm" }}
+              >
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1 border-t border-gray-400 px-10">
+                    Ngày {new Date().getDate()} tháng{" "}
+                    {new Date().getMonth() + 1} năm {new Date().getFullYear()}
+                  </div>
+
+                  <div className="font-bold text-base mb-2">
+                    Bác sĩ đọc kết quả
+                  </div>
+
+                  {signatureImageBase64 && (
+                    <div className="flex justify-center mb-2">
+                      <img
+                        src={`data:image/png;base64,${signatureImageBase64}`}
+                        alt="Chữ ký bác sĩ"
+                        className="max-h-20 w-auto object-contain"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

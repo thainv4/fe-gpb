@@ -150,7 +150,7 @@ export default function TestIndicationsTable() {
     }
 
     const clearSampleFields = () => {
-        setSelectedSampleType('')
+        // Không reset selectedSampleType để giữ lại giá trị đã chọn
         setSelectedPrefix('')
         setSampleCode('')
     }
@@ -183,7 +183,7 @@ export default function TestIndicationsTable() {
     const currentUserId = profileData?.data?.id
 
     // Query stored service request nếu có storedServiceReqId
-    const { data: storedServiceRequestData } = useQuery({
+    const { data: storedServiceRequestData, refetch: refetchStoredServiceRequest } = useQuery({
         queryKey: ['stored-service-request', storedServiceReqId],
         queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId!),
         enabled: !!storedServiceReqId,
@@ -440,8 +440,9 @@ export default function TestIndicationsTable() {
                         })
                     )
                     await Promise.all(updatePromises)
-                    // Refetch lại nội dung của yêu cầu
-                    queryClient.invalidateQueries({ queryKey: ['stored-service-request', storedServiceReqId] })
+                    // Refetch lại nội dung của yêu cầu để cập nhật barcode
+                    await queryClient.invalidateQueries({ queryKey: ['stored-service-request', storedServiceReqId] })
+                    await refetchStoredServiceRequest() // Refetch ngay lập tức để cập nhật barcode
                     toast({
                         title: "Thành công",
                         description: `✅ Đã cập nhật mã tiếp nhận và bệnh phẩm cho ${services.length} dịch vụ!`,
@@ -503,6 +504,14 @@ export default function TestIndicationsTable() {
             }
 
             console.log("✅ Lưu thành công!");
+
+            // Sau khi tạo mới thành công, cần set storedServiceReqId và refetch để hiển thị barcode
+            const newStoredServiceReqId = (storeResponse.data as any)?.id;
+            if (newStoredServiceReqId) {
+                setStoredServiceReqId(newStoredServiceReqId);
+                // Refetch để hiển thị barcode mới
+                await queryClient.invalidateQueries({ queryKey: ['stored-service-request', newStoredServiceReqId] });
+            }
 
             // Hiển thị thông báo thành công
             toast({
@@ -614,6 +623,7 @@ export default function TestIndicationsTable() {
                             <SelectItem value="T">T</SelectItem>
                             <SelectItem value="C">C</SelectItem>
                             <SelectItem value="F">F</SelectItem>
+                            <SelectItem value="S">S</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -634,6 +644,7 @@ export default function TestIndicationsTable() {
                         </div>
                         <div ref={barcodeRef}>
                             <Barcode
+                                key={currentReceptionCode} // Force re-render khi currentReceptionCode thay đổi
                                 value={currentReceptionCode}
                                 format="CODE128"
                                 width={2}

@@ -17,6 +17,8 @@ import {CheckCircle2, XCircle, Loader2} from "lucide-react";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -46,6 +48,10 @@ export default function TestResultForm() {
 
     // Template selector dialog state
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false)
+
+    // Confirmation dialogs state
+    const [confirmSignDialogOpen, setConfirmSignDialogOpen] = useState(false)
+    const [confirmCancelSignDialogOpen, setConfirmCancelSignDialogOpen] = useState(false)
 
     // Single rich text editor state with template
     const defaultTemplate = `
@@ -469,7 +475,7 @@ export default function TestResultForm() {
                 DocumentName: `Phiếu XN ${storedServiceRequestData.data.serviceReqCode}`,
                 TreatmentCode: storedServiceRequestData.data.treatmentCode || storedServiceRequestData.data.patientCode,
                 DocumentTypeId: 22,
-                DocumentGroupId: 1,
+                DocumentGroupId: 101,
                 HisCode: `HIS_${storedServiceRequestData.data.serviceReqCode}_${Date.now()}`,
                 FileType: 0,
                 OriginalVersion: {
@@ -893,24 +899,25 @@ export default function TestResultForm() {
                                     {/* Services Table */}
                                     {storedServiceReqId && services.length > 0 && (
                                         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                                            <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
-                                                Chọn danh sách dịch vụ để trả kết quả
-                                            </h3>
-                                            <Button 
-                                                onClick={handleCancelDigitalSign}
-                                                disabled={isSigning || selectedServices.size === 0}
-                                                variant="destructive"
-                                                className="mb-4"
-                                            >
-                                                {isSigning ? (
-                                                    <>
-                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        Đang xử lý...
-                                                    </>
-                                                ) : (
-                                                    'Hủy chữ ký số'
-                                                )}
-                                            </Button>
+                                            <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
+                                                <h3 className="text-lg font-semibold">
+                                                    Chọn danh sách dịch vụ để trả kết quả
+                                                </h3>
+                                                <Button 
+                                                    onClick={() => setConfirmCancelSignDialogOpen(true)}
+                                                    disabled={isSigning || selectedServices.size === 0}
+                                                    variant="destructive"
+                                                >
+                                                    {isSigning ? (
+                                                        <>
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            Đang xử lý...
+                                                        </>
+                                                    ) : (
+                                                        'Hủy chữ ký số'
+                                                    )}
+                                                </Button>
+                                            </div>
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-gray-200">
                                                     <thead className="bg-gray-50">
@@ -1124,7 +1131,7 @@ export default function TestResultForm() {
                                 <Button
                                     variant="default"
                                     size="sm"
-                                    onClick={handleSignDocument}
+                                    onClick={() => setConfirmSignDialogOpen(true)}
                                     disabled={!storedServiceRequestData?.data || !previewServiceData?.data || isSigning}
                                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                                 >
@@ -1168,6 +1175,74 @@ export default function TestResultForm() {
                 onOpenChange={setTemplateSelectorOpen}
                 onSelect={handleTemplateSelect}
             />
+
+            {/* Dialog xác nhận ký số */}
+            <Dialog open={confirmSignDialogOpen} onOpenChange={setConfirmSignDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận ký số</DialogTitle>
+                        <DialogDescription>
+                            Bạn có chắc chắn muốn ký số cho tài liệu này? Hành động này không thể hoàn tác.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmSignDialogOpen(false)}>
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setConfirmSignDialogOpen(false)
+                                handleSignDocument()
+                            }}
+                            disabled={isSigning}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            {isSigning ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang xử lý...
+                                </>
+                            ) : (
+                                'Xác nhận ký số'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog xác nhận hủy chữ ký số */}
+            <Dialog open={confirmCancelSignDialogOpen} onOpenChange={setConfirmCancelSignDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận hủy chữ ký số</DialogTitle>
+                        <DialogDescription>
+                            Bạn có chắc chắn muốn hủy chữ ký số cho {selectedServices.size} dịch vụ đã chọn? Hành động này không thể hoàn tác.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmCancelSignDialogOpen(false)}>
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setConfirmCancelSignDialogOpen(false)
+                                handleCancelDigitalSign()
+                            }}
+                            disabled={isSigning}
+                            variant="destructive"
+                        >
+                            {isSigning ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang xử lý...
+                                </>
+                            ) : (
+                                'Xác nhận hủy'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }

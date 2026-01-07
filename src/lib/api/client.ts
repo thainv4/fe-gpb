@@ -774,6 +774,7 @@ export interface StoredService {
     testId?: string | null;
     isActive?: number | null;
     documentId?: string | number | null;
+    sampleTypeName?: string | null;
 }
 
 export interface StoreServiceRequestBody {
