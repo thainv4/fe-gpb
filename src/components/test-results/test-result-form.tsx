@@ -202,6 +202,18 @@ export default function TestResultForm() {
         setPreviewDialogOpen(true)
     }
 
+    // Helper function để extract error message từ API response
+    const getErrorMessage = (response: any, defaultMessage: string = "Có lỗi xảy ra"): string => {
+        if (response?.message) return String(response.message)
+        if (response?.error) {
+            if (typeof response.error === 'string') return response.error
+            if (typeof response.error === 'object' && response.error !== null && 'message' in response.error) {
+                return String(response.error.message)
+            }
+        }
+        return defaultMessage
+    }
+
     // Handler khi click vào dịch vụ để load kết quả
     const handleServiceClick = async (serviceId: string) => {
         if (!storedServiceReqId) {
@@ -222,17 +234,26 @@ export default function TestResultForm() {
                 // Chọn dịch vụ này
                 setSelectedServices(new Set([serviceId]))
             } else {
-                // Nếu chưa có kết quả, reset về template mặc định
+                // Nếu chưa có kết quả hoặc lỗi, reset về template mặc định
                 setTestResult(defaultTemplate)
                 setResultName('')
                 setSelectedServices(new Set([serviceId]))
+                
+                // Hiển thị thông báo nếu có lỗi
+                if (!response.success) {
+                    toast({
+                        variant: "destructive",
+                        title: "Lỗi",
+                        description: getErrorMessage(response, "Không thể tải kết quả dịch vụ")
+                    })
+                }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error loading service result:', error)
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Có lỗi xảy ra khi tải kết quả dịch vụ"
+                description: error?.message || "Có lỗi xảy ra khi tải kết quả dịch vụ"
             })
         }
     }
@@ -335,7 +356,7 @@ export default function TestResultForm() {
                 toast({
                     variant: "destructive",
                     title: "Lỗi",
-                    description: "Không tìm thấy thông tin người ký trong hệ thống EMR"
+                    description: getErrorMessage(response, "Không tìm thấy thông tin người ký trong hệ thống EMR")
                 })
             }
         } catch (error: any) {
@@ -470,26 +491,41 @@ export default function TestResultForm() {
                 'EMR'
             )
 
-            if (response.success) {
+            if (response.success && response.data) {
                 // Lấy documentId từ response
                 const documentId = response.data?.Data?.DocumentId;
 
                 // Nếu có documentId và serviceId, gọi API cập nhật
                 if (documentId && previewServiceId) {
                     try {
-                        await apiClient.patchServiceRequestDocumentId(previewServiceId, documentId);
+                        const updateResponse = await apiClient.patchServiceRequestDocumentId(previewServiceId, documentId);
+                        
+                        if (!updateResponse.success) {
+                            console.error('❌ Lỗi cập nhật document ID:', updateResponse);
+                            toast({
+                                variant: "destructive",
+                                title: "Cảnh báo",
+                                description: getErrorMessage(updateResponse, "Đã ký số nhưng không thể cập nhật document ID")
+                            })
+                        }
 
                         // Refresh danh sách services để hiển thị trạng thái "Đã ký"
                         await refetchStoredServiceRequest();
-                    } catch (docIdError) {
+                    } catch (docIdError: any) {
                         console.error('❌ Lỗi cập nhật document ID:', docIdError);
-                        // Không hiển thị lỗi cho user vì đã ký thành công
+                        toast({
+                            variant: "destructive",
+                            title: "Cảnh báo",
+                            description: docIdError?.message || "Đã ký số nhưng không thể cập nhật document ID"
+                        })
                     }
                 }
 
+                // Hiển thị message từ API nếu có
+                const successMessage = response.message || "Đã ký số tài liệu thành công"
                 toast({
                     title: "Thành công",
-                    description: "Đã ký số tài liệu thành công",
+                    description: successMessage,
                     variant: "default"
                 })
                 setSignerInfo({ signerId: '', serialNumber: '' })
@@ -497,7 +533,7 @@ export default function TestResultForm() {
                 toast({
                     variant: "destructive",
                     title: "Lỗi",
-                    description: response.error || "Có lỗi xảy ra khi ký số"
+                    description: getErrorMessage(response, "Có lỗi xảy ra khi ký số")
                 })
             }
         } catch (error: any) {
@@ -556,33 +592,90 @@ export default function TestResultForm() {
 
         setIsSigning(true)
         try {
-            // Gọi API delete-document cho từng service có documentId
-            const deletePromises = selectedServicesWithDocumentId.map(async (service) => {
+            // Gom nhóm các service theo documentId để tránh gọi API nhiều lần cho cùng documentId
+            const documentIdMap = new Map<number, string[]>()
+            
+            selectedServicesWithDocumentId.forEach(service => {
                 if (service.documentId) {
-                    // Gọi API hủy chữ ký số
-                    await apiClient.deleteEmrDocument(service.documentId, tokenCode!, 'EMR')
+                    // Convert documentId sang number
+                    const docId = typeof service.documentId === 'string' 
+                        ? Number.parseInt(service.documentId, 10) 
+                        : Number(service.documentId)
                     
-                    // Cập nhật documentId = null cho service
-                    await apiClient.patchServiceRequestDocumentId(service.id, null)
+                    if (!Number.isNaN(docId)) {
+                        if (!documentIdMap.has(docId)) {
+                            documentIdMap.set(docId, [])
+                        }
+                        documentIdMap.get(docId)!.push(service.id)
+                    }
                 }
             })
 
-            await Promise.all(deletePromises)
+            // Gọi API delete-document một lần cho mỗi documentId duy nhất và cập nhật tất cả services
+            const results = await Promise.allSettled(
+                Array.from(documentIdMap.entries()).map(async ([documentId, serviceIds]) => {
+                    // Gọi API hủy chữ ký số (chỉ một lần cho mỗi documentId) - documentId đã là number
+                    const deleteResponse = await apiClient.deleteEmrDocument(documentId, tokenCode!, 'EMR')
+                    
+                    if (!deleteResponse.success) {
+                        throw new Error(getErrorMessage(deleteResponse, `Không thể hủy chữ ký số cho document ${documentId}`))
+                    }
+                    
+                    // Cập nhật documentId = null cho tất cả các service có documentId này
+                    const updateResults = await Promise.allSettled(
+                        serviceIds.map(async (serviceId) => {
+                            const updateResponse = await apiClient.patchServiceRequestDocumentId(serviceId, null)
+                            if (!updateResponse.success) {
+                                throw new Error(getErrorMessage(updateResponse, `Không thể cập nhật document ID cho service ${serviceId}`))
+                            }
+                            return { success: true, serviceId }
+                        })
+                    )
+                    
+                    // Kiểm tra nếu có lỗi trong việc cập nhật
+                    const updateErrors = updateResults.filter(r => r.status === 'rejected')
+                    if (updateErrors.length > 0) {
+                        const errorMessages = updateErrors.map(r => r.status === 'rejected' ? r.reason?.message || 'Lỗi không xác định' : '').filter(Boolean)
+                        throw new Error(`Lỗi cập nhật: ${errorMessages.join(', ')}`)
+                    }
+                    
+                    return { success: true, documentId, serviceIds }
+                })
+            )
+
+            // Đếm số lượng thành công và thất bại
+            const successful = results.filter(r => r.status === 'fulfilled').length
+            const failed = results.filter(r => r.status === 'rejected').length
 
             // Refresh danh sách services
             await refetchStoredServiceRequest()
 
-            toast({
-                title: "Thành công",
-                description: `Đã hủy chữ ký số cho ${selectedServicesWithDocumentId.length} dịch vụ`,
-                variant: "default"
-            })
+            if (failed === 0) {
+                toast({
+                    title: "Thành công",
+                    description: `Đã hủy chữ ký số cho ${selectedServicesWithDocumentId.length} dịch vụ (${documentIdMap.size} document)`,
+                    variant: "default"
+                })
+            } else {
+                const errorMessages = results
+                    .filter(r => r.status === 'rejected')
+                    .map(r => r.status === 'rejected' ? r.reason?.message || 'Lỗi không xác định' : '')
+                    .filter(Boolean)
+                
+                toast({
+                    title: failed === results.length ? "Lỗi" : "Hoàn thành",
+                    description: failed === results.length 
+                        ? `Không thể hủy chữ ký số: ${errorMessages[0] || 'Lỗi không xác định'}`
+                        : `Đã hủy chữ ký số cho ${successful}/${documentIdMap.size} document. ${failed} document gặp lỗi.`,
+                    variant: failed === results.length ? "destructive" : "default"
+                })
+            }
         } catch (error: any) {
             console.error('Error canceling digital sign:', error)
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: error?.message || "Có lỗi xảy ra khi hủy chữ ký số"
+                description: error?.message || getErrorMessage(error, "Có lỗi xảy ra khi hủy chữ ký số")
             })
         } finally {
             setIsSigning(false)
@@ -620,21 +713,49 @@ export default function TestResultForm() {
 
         setIsSaving(true)
         try {
-            const promises = Array.from(selectedServices).map(serviceId =>
-                apiClient.saveServiceResult(storedServiceRequest.id, serviceId, {
+            const savePromises = Array.from(selectedServices).map(async (serviceId) => {
+                const response = await apiClient.saveServiceResult(storedServiceRequest.id, serviceId, {
                     resultValue: 12.5,
                     resultValueText: "12.5",
                     resultText: testResult,
                     resultStatus: 'NORMAL',
                     resultName: resultName
                 })
-            )
+                
+                if (!response.success) {
+                    throw new Error(getErrorMessage(response, `Không thể lưu kết quả cho dịch vụ ${serviceId}`))
+                }
+                
+                return response
+            })
 
-            await Promise.all(promises)
+            const saveResults = await Promise.allSettled(savePromises)
+            
+            // Kiểm tra kết quả lưu
+            const saveSuccessful = saveResults.filter(r => r.status === 'fulfilled').length
+            const saveFailed = saveResults.filter(r => r.status === 'rejected').length
+            
+            if (saveFailed > 0) {
+                const errorMessages = saveResults
+                    .filter(r => r.status === 'rejected')
+                    .map(r => r.status === 'rejected' ? r.reason?.message || 'Lỗi không xác định' : '')
+                    .filter(Boolean)
+                
+                toast({
+                    variant: "destructive",
+                    title: "Lỗi",
+                    description: `Không thể lưu kết quả cho ${saveFailed}/${selectedServices.size} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
+                })
+                
+                // Nếu tất cả đều lỗi, dừng lại
+                if (saveFailed === selectedServices.size) {
+                    return
+                }
+            }
 
             // Sau khi lưu kết quả thành công, gọi API chuyển trạng thái workflow
             try {
-                await apiClient.transitionWorkflow({
+                const workflowResponse = await apiClient.transitionWorkflow({
                     storedServiceReqId: storedServiceRequest.id,
                     toStateId: '426df256-bbfe-28d1-e065-9e6b783dd008',
                     actionType: 'COMPLETE',
@@ -642,32 +763,48 @@ export default function TestResultForm() {
                     currentDepartmentId: currentDepartmentId,
                     currentRoomId: currentRoomId,
                 })
-            } catch (err) {
+                
+                if (!workflowResponse.success) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Cảnh báo',
+                        description: getErrorMessage(workflowResponse, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.')
+                    })
+                }
+            } catch (err: any) {
                 console.error('Error transitioning workflow:', err)
-                // Không chặn luồng lưu kết quả; thông báo cảnh báo cho người dùng
                 toast({
                     variant: 'destructive',
                     title: 'Cảnh báo',
-                    description: 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.'
+                    description: err?.message || getErrorMessage(err, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.')
                 })
             }
-            toast({
-                title: "Thành công",
-                description: `Đã lưu kết quả cho ${selectedServices.size} dịch vụ`,
-                variant: "default"
-            })
             
-            // Trigger refresh để cập nhật trạng thái dịch vụ
+            // Hiển thị thông báo thành công
+            if (saveSuccessful > 0) {
+                toast({
+                    title: "Thành công",
+                    description: saveFailed > 0 
+                        ? `Đã lưu kết quả cho ${saveSuccessful}/${selectedServices.size} dịch vụ`
+                        : `Đã lưu kết quả cho ${selectedServices.size} dịch vụ`,
+                    variant: "default"
+                })
+                
+                // Refresh ngay lập tức để cập nhật bảng dịch vụ
+                await refetchStoredServiceRequest()
+            }
+            
+            // Trigger refresh để cập nhật trạng thái dịch vụ (cho sidebar và các components khác)
             setRefreshTrigger(prev => prev + 1)
             
             setSelectedServices(new Set())
             setTestResult(defaultTemplate)
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving results:', error)
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Có lỗi xảy ra khi lưu kết quả"
+                description: error?.message || getErrorMessage(error, "Có lỗi xảy ra khi lưu kết quả")
             })
         } finally {
             setIsSaving(false)

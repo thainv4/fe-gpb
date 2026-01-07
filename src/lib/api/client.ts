@@ -1988,7 +1988,7 @@ class ApiClient {
     }
 
     async deleteEmrDocument(
-        documentId: number | string,
+        documentId: number,
         tokenCode: string,
         applicationCode: string = 'EMR'
     ): Promise<ApiResponse> {
@@ -1996,9 +1996,16 @@ class ApiClient {
             throw new Error('TokenCode header is required');
         }
 
+        // Đảm bảo documentId là number
+        const numericDocumentId = typeof documentId === 'string' ? Number.parseInt(documentId, 10) : documentId;
+        
+        if (isNaN(numericDocumentId)) {
+            throw new Error('documentId must be a valid number');
+        }
+
         return this.request("/emr/delete-document", {
             method: "POST",
-            body: JSON.stringify({ documentId }),
+            body: JSON.stringify({ documentId: numericDocumentId }),
             headers: {
                 'TokenCode': tokenCode,
                 'ApplicationCode': applicationCode,
