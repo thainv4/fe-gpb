@@ -167,7 +167,7 @@ export function RegisterForm({ onSubmit, isLoading = false }: RegisterFormProps)
                             <FormItem>
                                 <FormLabel>Mật khẩu *</FormLabel>
                                 <FormControl>
-                                    <Input type="password" placeholder="Nhập mật khẩu (tối thiểu 8 ký tự)" {...field} />
+                                    <Input type="password" placeholder="Nhập mật khẩu" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
