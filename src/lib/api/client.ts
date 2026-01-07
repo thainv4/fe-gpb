@@ -2856,6 +2856,7 @@ class ApiClient {
         limit?: number;
         offset?: number;
         isActive?: number;
+        IsSelected?: number;
         order?: 'ASC' | 'DESC';
         orderBy?: 'stateOrder' | 'stateName';
     }): Promise<ApiResponse<{
@@ -2882,6 +2883,7 @@ class ApiClient {
         if (params?.limit) queryParams.append('limit', params.limit.toString());
         if (params?.offset !== undefined) queryParams.append('offset', params.offset.toString());
         if (params?.isActive !== undefined) queryParams.append('isActive', params.isActive.toString());
+        if (params?.IsSelected !== undefined) queryParams.append('isSelected', params.IsSelected.toString());
         if (params?.order) queryParams.append('order', params.order);
         if (params?.orderBy) queryParams.append('orderBy', params.orderBy);
 

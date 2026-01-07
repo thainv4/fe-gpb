@@ -99,11 +99,12 @@ export default function SampleDeliveryTable() {
 
     // Query workflow states to get "Bàn giao mẫu" state ID
     const { data: statesData } = useQuery({
-        queryKey: ['workflow-states'],
+        queryKey: ['workflow-states', { limit: 100, offset: 0, isActive: 1, IsSelected: 1, order: 'ASC', orderBy: 'stateOrder' }],
         queryFn: () => apiClient.getWorkflowStates({
             limit: 100,
             offset: 0,
             isActive: 1,
+            IsSelected: 1,
             order: 'ASC',
             orderBy: 'stateOrder'
         }),
@@ -422,7 +423,7 @@ export default function SampleDeliveryTable() {
                                         onOpenChange={setExecuteRoomSelectOpen}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder={receiverRoomName && receiverDepartmentName ? `${receiverRoomName} - ${receiverDepartmentName}` : 'Chọn phòng nhận mẫu'} />
+                                            <SelectValue placeholder="Chọn đơn vị thực hiện" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {(() => {
@@ -452,7 +453,7 @@ export default function SampleDeliveryTable() {
                                     </Select>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <Label>Người thực hiện</Label>
+                                    <Label>Người bàn giao</Label>
                                     <Input type="text" value={currentUserName} disabled className="font-semibold" />
                                 </div>
                                 <div className="flex flex-col gap-2">
