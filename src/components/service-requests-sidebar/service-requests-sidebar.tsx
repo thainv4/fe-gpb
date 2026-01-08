@@ -1,13 +1,23 @@
 ﻿// src/components/service-requests-sidebar/service-requests-sidebar.tsx
 import {useState, useMemo, useEffect} from 'react'
-import {useQuery} from '@tanstack/react-query'
+import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {apiClient} from '@/lib/api/client'
 import {useCurrentRoomStore} from '@/lib/stores/current-room'
 import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
-import {Loader2} from 'lucide-react'
+import {Loader2, Trash2} from 'lucide-react'
 import {cn} from '@/lib/utils'
+import {useToast} from '@/hooks/use-toast'
+import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 
 interface ServiceRequestsSidebarProps {
     readonly onSelect: (serviceReqCode: string, storedServiceReqId?: string, receptionCode?: string) => void
@@ -55,11 +65,17 @@ const getStateColor = (stateCode?: string) => {
 
 export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, defaultStateId, refreshTrigger}: ServiceRequestsSidebarProps) {
     const {currentRoomId} = useCurrentRoomStore()
+    const { toast } = useToast()
+    const queryClient = useQueryClient()
     // selectedStateId: 'all' means show all states (no state filter)
     // Default to 'all' to show all states, or use defaultStateId if provided
     const [selectedStateId, setSelectedStateId] = useState<string | undefined>(defaultStateId ?? 'all')
     // State tạm thời cho input tìm kiếm (chỉ update filters khi nhấn Enter)
     const [searchInput, setSearchInput] = useState<string>(serviceReqCode ?? '')
+    // State để quản lý radio được chọn (chỉ một)
+    const [selectedId, setSelectedId] = useState<string | null>(null)
+    // State để quản lý dialog xác nhận xóa
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [filters, setFilters] = useState<FilterParams>({
         roomType: 'currentRoomId',
         stateType: '',
@@ -139,13 +155,90 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         }
     }
 
+    // Helper function để extract error message từ API response
+    const getErrorMessage = (response: any, defaultMessage: string = "Có lỗi xảy ra"): string => {
+        if (response?.message) return String(response.message)
+        if (response?.error) {
+            if (typeof response.error === 'string') return response.error
+            if (typeof response.error === 'object' && response.error !== null && 'message' in response.error) {
+                return String(response.error.message)
+            }
+        }
+        return defaultMessage
+    }
+
+    // Mutation để xóa workflow history
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const response = await apiClient.deleteWorkflowHistory(id)
+            if (!response.success) {
+                throw new Error(getErrorMessage(response, 'Không thể xóa bản ghi dòng thời gian'))
+            }
+            return response
+        },
+        onSuccess: () => {
+            toast({
+                title: 'Thành công',
+                description: 'Đã xóa bản ghi dòng thời gian',
+            })
+            // Refresh danh sách
+            queryClient.invalidateQueries({ queryKey: ['workflow-history'] })
+            // Xóa id đã chọn và đóng dialog
+            setSelectedId(null)
+            setDeleteDialogOpen(false)
+        },
+        onError: (error: any) => {
+            const errorMessage = error?.message || getErrorMessage(error, 'Không thể xóa bản ghi')
+            toast({
+                title: 'Lỗi',
+                description: errorMessage,
+                variant: 'destructive',
+            })
+        },
+    })
+
+    // Xử lý mở dialog xác nhận xóa
+    const handleDeleteClick = () => {
+        if (!selectedId) {
+            toast({
+                title: 'Thông báo',
+                description: 'Vui lòng chọn một bản ghi để xóa',
+            })
+            return
+        }
+        setDeleteDialogOpen(true)
+    }
+
+    // Xử lý xóa bản ghi đã chọn
+    const handleConfirmDelete = async () => {
+        if (!selectedId) return
+        
+        try {
+            await deleteMutation.mutateAsync(selectedId)
+        } catch (error) {
+            console.error('Error deleting workflow history:', error)
+            // Error đã được xử lý trong onError của mutation
+        }
+    }
+
     return (
         <div className="h-full flex flex-col border-r border-gray-200 bg-gray-50">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 bg-white">
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold">Danh sách yêu cầu</h3>
-
+                    <h3 className="text-sm font-semibold">Dòng thời gian</h3>
+                    {selectedId && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDeleteClick}
+                            disabled={deleteMutation.isPending}
+                            className="h-6 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
 
                 {/* Workflow State Selector */}
@@ -246,79 +339,95 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
                 {currentRoomId && selectedStateId && serviceRequests.length > 0 && (
                     <div className="bg-white">
-                        <table className="w-full border-collapse">
-                            <thead className="sticky top-0 bg-gray-100 border-b border-gray-200">
-                            <tr>
-                                <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
-                                    Mã Y lệnh
-                                </th>
-                                <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
-                                    Tên bệnh nhân
-                                </th>
-                                <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Trạng thái</th>
-                                <th className="text-left text-xs font-semibold text-gray-700 p-2">Thời gian</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {serviceRequests.map((item: {
-                                id: string;
-                                storedServiceReqId?: string;
-                                createdAt?: string;
-                                toState?: {
+                        <RadioGroup value={selectedId || ''} onValueChange={setSelectedId} className="w-full">
+                            <table className="w-full border-collapse">
+                                <thead className="sticky top-0 bg-gray-100 border-b border-gray-200">
+                                <tr>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200 w-12">
+                                    </th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
+                                        Mã Y lệnh
+                                    </th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
+                                        Tên bệnh nhân
+                                    </th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Trạng thái</th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2">Thời gian</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {serviceRequests.map((item: {
                                     id: string;
-                                    stateName: string;
-                                    stateCode: string;
-                                };
-                                serviceRequest?: {
-                                    id?: string;
-                                    hisServiceReqCode?: string;
-                                    serviceReqCode?: string;
-                                    patientName?: string;
-                                    patientCode?: string;
-                                    receptionCode?: string;
-                                };
-                            }) => {
-                                const serviceReq = item.serviceRequest
-                                const serviceReqCode = serviceReq?.hisServiceReqCode || serviceReq?.serviceReqCode || ''
-                                const receptionCode = serviceReq?.receptionCode || ''
-                                const stateName = item.toState?.stateName || 'Chưa xác định'
-                                const stateColor = getStateColor(item.toState?.stateCode)
-                                const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                }) : ''
+                                    storedServiceReqId?: string;
+                                    createdAt?: string;
+                                    toState?: {
+                                        id: string;
+                                        stateName: string;
+                                        stateCode: string;
+                                    };
+                                    serviceRequest?: {
+                                        id?: string;
+                                        hisServiceReqCode?: string;
+                                        serviceReqCode?: string;
+                                        patientName?: string;
+                                        patientCode?: string;
+                                        receptionCode?: string;
+                                    };
+                                }) => {
+                                    const serviceReq = item.serviceRequest
+                                    const serviceReqCode = serviceReq?.hisServiceReqCode || serviceReq?.serviceReqCode || ''
+                                    const receptionCode = serviceReq?.receptionCode || ''
+                                    const stateName = item.toState?.stateName || 'Chưa xác định'
+                                    const stateColor = getStateColor(item.toState?.stateCode)
+                                    const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    }) : ''
 
-                                return (
-                                    <tr
-                                        key={item.id}
-                                        onClick={() => onSelect(serviceReqCode, item.storedServiceReqId, receptionCode)}
-                                        className={cn(
-                                            'cursor-pointer hover:bg-blue-50 transition-colors border-b border-gray-100',
-                                            selectedCode === serviceReqCode && 'bg-blue-100'
-                                        )}
-                                    >
-                                        <td className="p-2 text-xs font-medium text-gray-900 border-r border-gray-100">
-                                            {serviceReqCode}
-                                        </td>
-                                        <td className="p-2 text-xs text-gray-700 border-r border-gray-100">
-                                            {serviceReq?.patientName}
-                                        </td>
-                                        <td className="p-2 text-xs border-r border-gray-100">
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${stateColor}`}>
-                                                {stateName}
-                                            </span>
-                                        </td>
-                                        <td className="p-2 text-xs text-gray-500">
-                                            {createdDate}
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                            </tbody>
-                        </table>
+                                    return (
+                                        <tr
+                                            key={item.id}
+                                            onClick={(e) => {
+                                                // Không trigger onSelect khi click vào radio
+                                                if ((e.target as HTMLElement).closest('[role="radio"]')) {
+                                                    return
+                                                }
+                                                onSelect(serviceReqCode, item.storedServiceReqId, receptionCode)
+                                            }}
+                                            className={cn(
+                                                'cursor-pointer hover:bg-blue-50 transition-colors border-b border-gray-100',
+                                                selectedCode === serviceReqCode && 'bg-blue-100'
+                                            )}
+                                        >
+                                            <td 
+                                                className="p-2 border-r border-gray-100"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <RadioGroupItem value={item.id} />
+                                            </td>
+                                            <td className="p-2 text-xs font-medium text-gray-900 border-r border-gray-100">
+                                                {serviceReqCode}
+                                            </td>
+                                            <td className="p-2 text-xs text-gray-700 border-r border-gray-100">
+                                                {serviceReq?.patientName}
+                                            </td>
+                                            <td className="p-2 text-xs border-r border-gray-100">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${stateColor}`}>
+                                                    {stateName}
+                                                </span>
+                                            </td>
+                                            <td className="p-2 text-xs text-gray-500">
+                                                {createdDate}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                                </tbody>
+                            </table>
+                        </RadioGroup>
                     </div>
                 )}
             </div>
@@ -339,6 +448,41 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                     </div>
                 </div>
             )}
+
+            {/* Dialog xác nhận xóa */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận xóa</DialogTitle>
+                        <DialogDescription>
+                            Bạn có chắc chắn muốn xóa bản ghi dòng thời gian đã chọn? Hành động này không thể hoàn tác.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialogOpen(false)}
+                            disabled={deleteMutation.isPending}
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleConfirmDelete}
+                            disabled={deleteMutation.isPending}
+                        >
+                            {deleteMutation.isPending ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang xóa...
+                                </>
+                            ) : (
+                                'Xóa'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
          </div>
      )
  }

@@ -2977,6 +2977,12 @@ class ApiClient {
         });
     }
 
+    async deleteWorkflowHistory(id: string): Promise<ApiResponse> {
+        return this.request(`/workflow-history/${id}`, {
+            method: "DELETE",
+        });
+    }
+
     // ========== USER ROOM ENDPOINTS ==========
 
     /**
