@@ -527,6 +527,35 @@ export default function TestResultForm() {
                     }
                 }
 
+                // Sau khi ký số thành công, gọi API chuyển trạng thái workflow
+                if (storedServiceRequest?.id) {
+                    try {
+                        const workflowResponse = await apiClient.transitionWorkflow({
+                            storedServiceReqId: storedServiceRequest.id,
+                            toStateId: '426df256-bc00-28d1-e065-9e6b783dd008',
+                            actionType: 'COMPLETE',
+                            currentUserId: currentUserId,
+                            currentDepartmentId: currentDepartmentId,
+                            currentRoomId: currentRoomId,
+                        })
+                        
+                        if (!workflowResponse.success) {
+                            toast({
+                                variant: 'destructive',
+                                title: 'Cảnh báo',
+                                description: getErrorMessage(workflowResponse, 'Đã ký số nhưng không thể cập nhật trạng thái quy trình.')
+                            })
+                        }
+                    } catch (err: any) {
+                        console.error('Error transitioning workflow:', err)
+                        toast({
+                            variant: 'destructive',
+                            title: 'Cảnh báo',
+                            description: err?.message || getErrorMessage(err, 'Đã ký số nhưng không thể cập nhật trạng thái quy trình.')
+                        })
+                    }
+                }
+
                 // Hiển thị message từ API nếu có
                 const successMessage = response.message || "Đã ký số tài liệu thành công"
                 toast({
@@ -659,7 +688,7 @@ export default function TestResultForm() {
             if (failed === 0) {
                 toast({
                     title: "Thành công",
-                    description: `Đã hủy chữ ký số cho ${selectedServicesWithDocumentId.length} dịch vụ (${documentIdMap.size} document)`,
+                    description: `Đã hủy chữ ký số cho ${selectedServicesWithDocumentId.length} dịch vụ`,
                     variant: "default"
                 })
             } else {
@@ -744,7 +773,12 @@ export default function TestResultForm() {
             if (saveFailed > 0) {
                 const errorMessages = saveResults
                     .filter(r => r.status === 'rejected')
-                    .map(r => r.status === 'rejected' ? r.reason?.message || 'Lỗi không xác định' : '')
+                    .map(r => {
+                        if (r.status === 'rejected') {
+                            return r.reason?.message || 'Lỗi không xác định'
+                        }
+                        return ''
+                    })
                     .filter(Boolean)
                 
                 toast({
@@ -759,31 +793,33 @@ export default function TestResultForm() {
                 }
             }
 
-            // Sau khi lưu kết quả thành công, gọi API chuyển trạng thái workflow
-            try {
-                const workflowResponse = await apiClient.transitionWorkflow({
-                    storedServiceReqId: storedServiceRequest.id,
-                    toStateId: '426df256-bbfe-28d1-e065-9e6b783dd008',
-                    actionType: 'COMPLETE',
-                    currentUserId: currentUserId,
-                    currentDepartmentId: currentDepartmentId,
-                    currentRoomId: currentRoomId,
-                })
-                
-                if (!workflowResponse.success) {
+            // Sau khi có ít nhất một service lưu kết quả thành công, gọi API chuyển trạng thái workflow
+            if (saveSuccessful > 0) {
+                try {
+                    const workflowResponse = await apiClient.transitionWorkflow({
+                        storedServiceReqId: storedServiceRequest.id,
+                        toStateId: '426df256-bbfe-28d1-e065-9e6b783dd008',
+                        actionType: 'COMPLETE',
+                        currentUserId: currentUserId,
+                        currentDepartmentId: currentDepartmentId,
+                        currentRoomId: currentRoomId,
+                    })
+                    
+                    if (!workflowResponse.success) {
+                        toast({
+                            variant: 'destructive',
+                            title: 'Cảnh báo',
+                            description: getErrorMessage(workflowResponse, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.')
+                        })
+                    }
+                } catch (err: any) {
+                    console.error('Error transitioning workflow:', err)
                     toast({
                         variant: 'destructive',
                         title: 'Cảnh báo',
-                        description: getErrorMessage(workflowResponse, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.')
+                        description: err?.message || getErrorMessage(err, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.')
                     })
                 }
-            } catch (err: any) {
-                console.error('Error transitioning workflow:', err)
-                toast({
-                    variant: 'destructive',
-                    title: 'Cảnh báo',
-                    description: err?.message || getErrorMessage(err, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.')
-                })
             }
             
             // Hiển thị thông báo thành công
