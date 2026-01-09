@@ -352,6 +352,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                         Tên bệnh nhân
                                     </th>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Trạng thái</th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Người tạo</th>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2">Thời gian</th>
                                 </tr>
                                 </thead>
@@ -372,6 +373,11 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                         patientName?: string;
                                         patientCode?: string;
                                         receptionCode?: string;
+                                    };
+                                    creator?: {
+                                        id?: string;
+                                        userName?: string;
+                                        fullName?: string;
                                     };
                                 }) => {
                                     const serviceReq = item.serviceRequest
@@ -418,6 +424,16 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${stateColor}`}>
                                                     {stateName}
                                                 </span>
+                                            </td>
+                                            <td className="p-2 text-xs text-gray-700 border-r border-gray-100">
+                                                {item.creator ? (
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">{item.creator.userName || '-'}</span>
+                                                        <span className="text-gray-500 text-[10px]">{item.creator.fullName || '-'}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400">-</span>
+                                                )}
                                             </td>
                                             <td className="p-2 text-xs text-gray-500">
                                                 {createdDate}

@@ -2731,6 +2731,15 @@ class ApiClient {
         });
     }
 
+    async querySampleTypeByReceptionCode(
+        receptionCode: string
+    ): Promise<ApiResponse<{ sampleTypeId: string }>> {
+        return this.request<{ sampleTypeId: string }>("/sample-receptions/query-sample-type", {
+            method: "POST",
+            body: JSON.stringify({ receptionCode }),
+        });
+    }
+
     async generateSampleReceptionCode(
         sampleTypeCode: string,
         date: string
@@ -2798,18 +2807,17 @@ class ApiClient {
     }
 
     async saveServiceResult(
-        storedReqId: string,
         serviceId: string,
         data: {
             resultValue?: number;
             resultValueText?: string;
-            resultText?: string;
+            resultText?: string | null;
             resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
             resultName?: string;
         }
     ): Promise<ApiResponse> {
         return this.request(
-            `/service-requests/stored/${storedReqId}/services/${serviceId}/result`,
+            `/service-requests/stored/services/${serviceId}/result`,
             {
                 method: 'PATCH',
                 body: JSON.stringify(data),
@@ -2819,16 +2827,14 @@ class ApiClient {
 
     /**
      * Lấy kết quả dịch vụ bằng GET method
-     * @param storedReqId ID của stored service request
      * @param serviceId ID của service
      * @returns Promise<ApiResponse<StoredService>>
      */
     async getServiceResult(
-        storedReqId: string,
         serviceId: string
     ): Promise<ApiResponse<StoredService>> {
         return this.request<StoredService>(
-            `/service-requests/stored/${storedReqId}/services/${serviceId}/result`
+            `/service-requests/stored/services/${serviceId}/result`
         );
     }
 

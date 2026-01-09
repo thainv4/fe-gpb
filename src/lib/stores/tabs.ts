@@ -100,9 +100,9 @@ export const useTabsStore = create<TabsState>()((set, get) => ({
     // Build display label with room info (only if room info is provided)
     let displayLabel = tab.label
     if (tab.roomCode && tab.departmentCode) {
-      displayLabel = `${tab.label} - ${tab.roomCode} - ${tab.departmentCode}`
+      displayLabel = `${tab.label}`
     } else if (tab.roomCode) {
-      displayLabel = `${tab.label} - ${tab.roomCode}`
+      displayLabel = `${tab.label}`
     }
 
     const newTab: TabItem = {

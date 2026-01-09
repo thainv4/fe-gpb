@@ -149,6 +149,41 @@ export default function TestIndicationsTable() {
         }
     }
 
+    // Handler khi nhấn Enter trong input nhập barcode thủ công
+    const handleManualBarcodeKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && isManualInput && manualBarcode.trim()) {
+            const receptionCode = manualBarcode.trim()
+            try {
+                const response = await apiClient.querySampleTypeByReceptionCode(receptionCode)
+                
+                if (response.success && response.data?.sampleTypeId) {
+                    // Set sampleTypeId vào dropdown
+                    setSelectedSampleType(response.data.sampleTypeId)
+                    toast({
+                        title: "Thành công",
+                        description: "Đã tìm thấy bệnh phẩm tương ứng với mã tiếp nhận",
+                        variant: "default"
+                    })
+                } else {
+                    // Hiển thị lỗi từ API
+                    const errorMessage = response.error || response.message || "Không tìm thấy bệnh phẩm tương ứng"
+                    toast({
+                        title: "Lỗi",
+                        description: errorMessage,
+                        variant: "destructive"
+                    })
+                }
+            } catch (error: any) {
+                console.error('Error querying sample type:', error)
+                toast({
+                    title: "Lỗi",
+                    description: error?.message || "Có lỗi xảy ra khi tìm kiếm bệnh phẩm",
+                    variant: "destructive"
+                })
+            }
+        }
+    }
+
     const handleSelectFromList = (code: string, storedId?: string, receptionCode?: string) => {
         setServiceReqCode(code)
         setSearchCode(code)
@@ -681,9 +716,10 @@ export default function TestIndicationsTable() {
                     {isManualInput ? (
                         <Input
                             type="text"
-                            placeholder="Nhập barcode thủ công"
+                            placeholder="Nhấn Enter để tìm bệnh phẩm"
                             value={manualBarcode}
                             onChange={(e) => setManualBarcode(e.target.value)}
+                            onKeyDown={handleManualBarcodeKeyDown}
                             className="text-sm"
                         />
                     ) : (
