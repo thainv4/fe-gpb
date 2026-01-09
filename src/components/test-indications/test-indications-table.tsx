@@ -3,6 +3,7 @@ import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {Checkbox} from "@/components/ui/checkbox";
 import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
 import {apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest} from "@/lib/api/client";
 import {formatDobFromHis} from "@/lib/utils";
@@ -49,6 +50,8 @@ export default function TestIndicationsTable() {
     const [appliedSearch, setAppliedSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
     const [storedServiceReqId, setStoredServiceReqId] = useState<string | undefined>()
     const [selectedPrefix, setSelectedPrefix] = useState<string>('') // Prefix chưa được chọn
+    const [manualBarcode, setManualBarcode] = useState<string>('') // Barcode nhập thủ công
+    const [isManualInput, setIsManualInput] = useState<boolean>(false) // Checkbox "Nhập thủ công"
     const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false)
 
     const sidInputRef = useRef<HTMLInputElement>(null)
@@ -65,6 +68,8 @@ export default function TestIndicationsTable() {
             sampleTypeSearch,
             appliedSearch,
             selectedPrefix,
+            manualBarcode,
+            isManualInput,
         },
         {
             saveScroll: true,
@@ -77,6 +82,8 @@ export default function TestIndicationsTable() {
                 if (data.sampleTypeSearch) setSampleTypeSearch(data.sampleTypeSearch)
                 if (data.appliedSearch) setAppliedSearch(data.appliedSearch)
                 if (data.selectedPrefix) setSelectedPrefix(data.selectedPrefix)
+                if (data.manualBarcode) setManualBarcode(data.manualBarcode)
+                if (data.isManualInput !== undefined) setIsManualInput(data.isManualInput)
             },
         }
     )
@@ -147,11 +154,15 @@ export default function TestIndicationsTable() {
         setSearchCode(code)
         setStoredServiceReqId(storedId) // Lưu storedServiceReqId
         setSelectedPrefix('') // Reset prefix về giá trị mặc định
+        setManualBarcode('') // Reset manual barcode về giá trị mặc định
+        setIsManualInput(false) // Reset checkbox về mặc định
     }
 
     const clearSampleFields = () => {
         // Không reset selectedSampleType để giữ lại giá trị đã chọn
         setSelectedPrefix('')
+        setManualBarcode('')
+        setIsManualInput(false)
         setSampleCode('')
     }
 
@@ -160,6 +171,8 @@ export default function TestIndicationsTable() {
         setSearchCode('')
         setSelectedSampleType('')
         setSelectedPrefix('')
+        setManualBarcode('')
+        setIsManualInput(false)
         setSampleCode('')
         setStoredServiceReqId(undefined) // Reset storedServiceReqId
         sidInputRef.current?.focus()
@@ -406,19 +419,26 @@ export default function TestIndicationsTable() {
                     return
                 }
 
-                // Khi update yêu cầu đã có sẵn, cần chọn cả bệnh phẩm và prefix
-                if (!selectedSampleType || !selectedPrefix) {
+                // Khi update yêu cầu đã có sẵn, cần chọn cả bệnh phẩm và (prefix hoặc barcode thủ công)
+                if (!selectedSampleType || (!isManualInput && !selectedPrefix) || (isManualInput && !manualBarcode.trim())) {
                     toast({
                         title: "Lỗi",
-                        description: "❌ Vui lòng chọn cả bệnh phẩm và prefix để cập nhật",
+                        description: isManualInput 
+                            ? "❌ Vui lòng chọn cả bệnh phẩm và nhập barcode thủ công để cập nhật"
+                            : "❌ Vui lòng chọn cả bệnh phẩm và prefix để cập nhật",
                         variant: "destructive",
                     })
                     return
                 }
 
-                // Tạo receptionCode mới và update cả receptionCode và sampleTypeName
-                if (selectedSampleType && selectedPrefix) {
-                    // Tạo receptionCode mới và update cả receptionCode và sampleTypeName
+                // Sử dụng barcode thủ công nếu checkbox được chọn, nếu không thì tạo từ prefix
+                let receptionCode: string;
+                
+                if (isManualInput) {
+                    // Sử dụng barcode nhập thủ công - KHÔNG gọi API
+                    receptionCode = manualBarcode.trim();
+                } else if (selectedSampleType && selectedPrefix) {
+                    // Tạo receptionCode mới từ prefix - GỌI API
                     const receptionResponse = await createSampleReceptionMutation.mutateAsync({
                         prefix: selectedPrefix,
                         sampleTypeId: selectedSampleType
@@ -431,53 +451,72 @@ export default function TestIndicationsTable() {
                         })
                         return;
                     }
-                    const receptionCode = receptionResponse.data.receptionCode;
-                    const updatePromises = services.map(service => 
-                        updateReceptionCodeMutation.mutateAsync({
-                            serviceId: service.id,
-                            receptionCode: receptionCode,
-                            sampleTypeName: selectedType?.typeName
-                        })
-                    )
-                    await Promise.all(updatePromises)
-                    // Refetch lại nội dung của yêu cầu để cập nhật barcode
-                    await queryClient.invalidateQueries({ queryKey: ['stored-service-request', storedServiceReqId] })
-                    await refetchStoredServiceRequest() // Refetch ngay lập tức để cập nhật barcode
+                    receptionCode = receptionResponse.data.receptionCode;
+                } else {
                     toast({
-                        title: "Thành công",
-                        description: `✅ Đã cập nhật mã tiếp nhận và bệnh phẩm cho ${services.length} dịch vụ!`,
+                        title: "Lỗi",
+                        description: "❌ Vui lòng chọn prefix hoặc nhập barcode thủ công",
+                        variant: "destructive",
                     })
-                    clearSampleFields()
-                    return
+                    return;
                 }
+
+                // Update cả receptionCode và sampleTypeName
+                const updatePromises = services.map(service => 
+                    updateReceptionCodeMutation.mutateAsync({
+                        serviceId: service.id,
+                        receptionCode: receptionCode,
+                        sampleTypeName: selectedType?.typeName
+                    })
+                )
+                await Promise.all(updatePromises)
+                // Refetch lại nội dung của yêu cầu để cập nhật barcode
+                await queryClient.invalidateQueries({ queryKey: ['stored-service-request', storedServiceReqId] })
+                await refetchStoredServiceRequest() // Refetch ngay lập tức để cập nhật barcode
+                toast({
+                    title: "Thành công",
+                    description: `✅ Đã cập nhật mã tiếp nhận và bệnh phẩm cho ${services.length} dịch vụ!`,
+                })
+                clearSampleFields()
+                return
             }
 
-            // Bước 2: Chưa có stored service request -> Tạo mới (cần cả prefix và bệnh phẩm)
-            if (!selectedPrefix) {
+            // Bước 2: Chưa có stored service request -> Tạo mới (cần prefix hoặc barcode thủ công)
+            if ((!isManualInput && !selectedPrefix) || (isManualInput && !manualBarcode.trim())) {
                 toast({
                     title: "Lỗi",
-                    description: "❌ Vui lòng chọn prefix để tạo mã tiếp nhận mới",
+                    description: isManualInput
+                        ? "❌ Vui lòng nhập barcode thủ công để tạo mã tiếp nhận mới"
+                        : "❌ Vui lòng chọn prefix để tạo mã tiếp nhận mới",
                     variant: "destructive",
                 })
                 return;
             }
 
-            // Tạo mã tiếp nhận mới
-            const receptionResponse = await createSampleReceptionMutation.mutateAsync({
-                prefix: selectedPrefix,
-                sampleTypeId: selectedSampleType || undefined
-            });
+            // Sử dụng barcode thủ công nếu checkbox được chọn, nếu không thì tạo từ prefix
+            let receptionCode: string;
+            
+            if (isManualInput) {
+                // Sử dụng barcode nhập thủ công - KHÔNG gọi API
+                receptionCode = manualBarcode.trim();
+            } else {
+                // Tạo mã tiếp nhận mới từ prefix - GỌI API
+                const receptionResponse = await createSampleReceptionMutation.mutateAsync({
+                    prefix: selectedPrefix,
+                    sampleTypeId: selectedSampleType || undefined
+                });
 
-            if (!receptionResponse.success || !receptionResponse.data?.receptionCode) {
-                toast({
-                    title: "Lỗi",
-                    description: "❌ Không tạo được mã tiếp nhận",
-                    variant: "destructive",
-                })
-                return;
+                if (!receptionResponse.success || !receptionResponse.data?.receptionCode) {
+                    toast({
+                        title: "Lỗi",
+                        description: "❌ Không tạo được mã tiếp nhận",
+                        variant: "destructive",
+                    })
+                    return;
+                }
+
+                receptionCode = receptionResponse.data.receptionCode;
             }
-
-            const receptionCode = receptionResponse.data.receptionCode;
 
             // Bước 3: Chưa có stored service request -> Tạo mới như cũ
             const body = {
@@ -497,7 +536,7 @@ export default function TestIndicationsTable() {
             if (!storeResponse.success) {
                 toast({
                     title: "Lỗi",
-                    description: storeResponse.message || "Không thể lưu chỉ định xét nghiệm",
+                    description: storeResponse.message || "Không thể lưu chỉ định xét nghiệm do y lệnh đã được lưu trước đây",
                     variant: "destructive",
                 });
                 return;
@@ -614,18 +653,55 @@ export default function TestIndicationsTable() {
                 </div>
 
                 <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                    <Label className="text-sm font-medium">Chọn tiền tố sinh barcode</Label>
-                    <Select value={selectedPrefix} onValueChange={setSelectedPrefix}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Chọn tiền tố" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="T">T</SelectItem>
-                            <SelectItem value="C">C</SelectItem>
-                            <SelectItem value="F">F</SelectItem>
-                            <SelectItem value="S">S</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Label className="text-sm font-medium">Chọn tiền tố sinh barcode</Label>
+                        <div className="flex items-center gap-2 ml-4">
+                            <Checkbox
+                                id="manual-input"
+                                checked={isManualInput}
+                                onCheckedChange={(checked) => {
+                                    setIsManualInput(checked === true)
+                                    if (checked) {
+                                        // Khi bật checkbox, clear prefix và focus vào input
+                                        setSelectedPrefix('')
+                                    } else {
+                                        // Khi tắt checkbox, clear manual barcode
+                                        setManualBarcode('')
+                                    }
+                                }}
+                            />
+                            <Label
+                                htmlFor="manual-input"
+                                className="text-sm font-normal cursor-pointer"
+                            >
+                                Nhập thủ công
+                            </Label>
+                        </div>
+                    </div>
+                    {isManualInput ? (
+                        <Input
+                            type="text"
+                            placeholder="Nhập barcode thủ công"
+                            value={manualBarcode}
+                            onChange={(e) => setManualBarcode(e.target.value)}
+                            className="text-sm"
+                        />
+                    ) : (
+                        <Select 
+                            value={selectedPrefix} 
+                            onValueChange={setSelectedPrefix}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Chọn tiền tố" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="T">T</SelectItem>
+                                <SelectItem value="C">C</SelectItem>
+                                <SelectItem value="F">F</SelectItem>
+                                <SelectItem value="S">S</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
                 </div>
 
                 {storedServiceReqId && currentReceptionCode && (
@@ -791,13 +867,15 @@ export default function TestIndicationsTable() {
                         <Button
                             onClick={handleConfirmSave}
                             disabled={
-                                // Cần cả bệnh phẩm và prefix (cho cả update và tạo mới)
-                                !selectedSampleType || !selectedPrefix ||
+                                // Cần cả bệnh phẩm và (prefix hoặc barcode thủ công) (cho cả update và tạo mới)
+                                !selectedSampleType || 
+                                (!isManualInput && !selectedPrefix) || 
+                                (isManualInput && !manualBarcode.trim()) ||
                                 !tabRoomId ||
                                 !tabDepartmentId ||
                                 !(searchCode || serviceReqCode) ||
                                 !currentUserId ||
-                                createSampleReceptionMutation.isPending ||
+                                (!isManualInput && createSampleReceptionMutation.isPending) ||
                                 storeServiceRequestMutation.isPending ||
                                 updateReceptionCodeMutation.isPending
                             }
