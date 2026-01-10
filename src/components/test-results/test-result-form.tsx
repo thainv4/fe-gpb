@@ -866,7 +866,7 @@ export default function TestResultForm() {
         <>
             <Card>
                 <CardHeader className={'border-b border-gray-200'}>
-                    <CardTitle className="text-2xl font-bold">Kết quả xét nghiệm sinh thiết</CardTitle>
+                    <CardTitle className="text-2xl font-bold">Trả kết quả xét nghiệm</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>} className="flex h-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>

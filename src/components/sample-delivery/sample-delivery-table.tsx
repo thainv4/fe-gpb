@@ -473,7 +473,7 @@ export default function SampleDeliveryTable() {
                         {/* Phần 2: Đơn vị nhận mẫu */}
                         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                             <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
-                                Đơn vị thực hiện
+                                Nhận bệnh phẩm
                             </h3>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -516,7 +516,7 @@ export default function SampleDeliveryTable() {
                                     </Select>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <Label>Người bàn giao</Label>
+                                    <Label>Người nhận mẫu</Label>
                                     <Input type="text" value={currentUserName} disabled className="font-semibold" />
                                 </div>
                                 <div className="flex flex-col gap-2">
@@ -533,7 +533,7 @@ export default function SampleDeliveryTable() {
                                     </Select>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <Label>Ngày giờ thực hiện</Label>
+                                    <Label>Thời gian nhận mẫu</Label>
                                     <Input type="datetime-local" value={receiveDateTime} onChange={(e) => setReceiveDateTime(e.target.value)} />
                                 </div>
                                 <div className="flex gap-2 my-2">

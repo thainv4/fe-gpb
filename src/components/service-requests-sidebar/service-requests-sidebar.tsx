@@ -301,7 +301,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
             {/* Header */}
             <div className="p-4 border-b border-gray-200 bg-white">
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold">Dòng thời gian</h3>
+                    <h3 className="text-sm font-semibold">Danh sách bệnh nhân</h3>
                     <div className="flex items-center gap-2">
                         {serviceRequests.length > 0 && (
                             <Button
@@ -366,7 +366,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
                     {/* Filter by Flag */}
                     <div className="flex gap-2 py-1">
-                        <Label className="text-sm font-medium">Lọc theo cờ:</Label>
+                        <Label className="text-sm font-medium">Lọc theo bệnh phẩm:</Label>
                         <RadioGroup value={selectedFlag} onValueChange={(value) => {
                             setSelectedFlag(value)
                             setFilters(prev => ({...prev, offset: 0}))

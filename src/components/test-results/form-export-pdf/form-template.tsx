@@ -2,6 +2,7 @@
 
 import React from "react";
 import { StoredServiceRequestResponse, StoredService } from "@/lib/api/client";
+import { QRCodeSVG } from "qrcode.react";
 
 interface FormTemplateProps {
   data: StoredServiceRequestResponse;
@@ -48,7 +49,7 @@ function PageHeader({
   return (
     <div className="print-header" style={{ breakInside: "avoid" }}>
       {/* HEADER */}
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-2">
         {/* Logo and Hospital Info */}
         <div className="flex flex-1 items-center gap-4">
           <img src="/logo-bvbm-wh.png" alt="logo-bvbm" className="w-2/12" />
@@ -60,7 +61,19 @@ function PageHeader({
         </div>
 
         {/* Patient Code Info */}
-        <div className="text-left text-sm leading-tight space-y-1 p-3 rounded">
+        <div className="text-left text-sm leading-tight space-y-2 p-3 rounded">
+          {/* QR Code */}
+          {serviceReqCode && (
+            <div className="flex flex-col items-center mb-2">
+              <QRCodeSVG
+                value={serviceReqCode}
+                size={60}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+          )}
+          
           <div>
             <span className="font-semibold text-gray-700">Mã Y lệnh:</span>{" "}
             <span className="font-bold">{serviceReqCode}</span>
@@ -77,7 +90,7 @@ function PageHeader({
       </div>
 
       {/* Title */}
-      <div className="text-center mt-6 mb-6">
+      <div className="text-center mb-6">
         {(() => {
           const title =
             specificService?.resultName || "Phiếu xét nghiệm sinh thiết";

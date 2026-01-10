@@ -56,7 +56,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     // Navigation config
     const navigation = [
         {
-            name: 'Dashboard',
+            name: 'Trang chủ',
             href: '/dashboard',
             icon: LayoutDashboard,
             description: 'Tổng quan hệ thống và thống kê'

@@ -25,9 +25,9 @@ export default function DashboardPage() {
         <DashboardLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+                    <h1 className="text-3xl font-bold text-gray-900">Viện xét nghiệm y học - Trung tâm giải phẫu bệnh</h1>
                     <p className="text-gray-600">
-                        Chào mừng trở lại, {user?.username}
+                        Chào mừng trở lại, {user?.fullName}
                     </p>
                 </div>
 
