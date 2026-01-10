@@ -31,6 +31,7 @@ export default function SampleDeliveryTable() {
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
     const queryClient = useQueryClient()
     const { toast } = useToast()
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     // Lấy thông tin phòng hiện tại từ store (phòng đã chọn ở sidebar)
     const { currentRoomId, currentDepartmentId } = useCurrentRoomStore()
@@ -331,6 +332,8 @@ export default function SampleDeliveryTable() {
             })
             // Không reset ghi chú để người dùng có thể tiếp tục
             queryClient.invalidateQueries({ queryKey: ['workflow-history'] })
+            // Refresh sidebar sau khi transition thành công
+            setRefreshTrigger(prev => prev + 1)
         },
         onError: (error: unknown) => {
             const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
@@ -416,6 +419,7 @@ export default function SampleDeliveryTable() {
                 <ServiceRequestsSidebar
                     onSelect={handleSelectServiceRequest}
                     selectedCode={selectedServiceReqCode}
+                    refreshTrigger={refreshTrigger}
                 />
             </div>
 

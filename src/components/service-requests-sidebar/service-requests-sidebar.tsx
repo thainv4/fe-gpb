@@ -312,7 +312,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                 className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
                                 title="Xuất Excel"
                             >
-                                <FileSpreadsheet className="h-4 w-4" />
+                                Xuất Excel
                             </Button>
                         )}
                         {selectedId && (

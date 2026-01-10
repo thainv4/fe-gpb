@@ -166,6 +166,25 @@ export interface HisTokenStatus {
     expireTime: string;
 }
 
+export interface HisPacsUpdateResultApiData {
+    IsCancel: boolean;
+    BeginTime: number | null;
+    EndTime: number | null;
+    Description: string;
+    Conclude: string;
+    Note: string;
+    ExecuteLoginname: string;
+    ExecuteUsername: string;
+    TechnicianLoginname: string;
+    TechnicianUsername: string;
+    MachineCode: string;
+    NumberOfFilm: number | null;
+}
+
+export interface HisPacsUpdateResultRequest {
+    ApiData: HisPacsUpdateResultApiData;
+}
+
 export interface HisApiCallRequest {
     endpoint: string;
     method?: string;
@@ -2045,6 +2064,40 @@ class ApiClient {
                 headers: {
                     'TokenCode': tokenCode,
                     'ApplicationCode': applicationCode,
+                },
+            }
+        );
+    }
+
+    // HIS-PACS methods
+    /**
+     * Update result for HIS-PACS
+     * POST /his-pacs/update-result
+     */
+    async updateHisPacsResult(
+        params: {
+            tdlServiceReqCode: string;
+            tdlServiceCode: string;
+        },
+        requestBody: HisPacsUpdateResultRequest,
+        tokenCode: string
+    ): Promise<ApiResponse<unknown>> {
+        if (!tokenCode) {
+            throw new Error('TokenCode header is required');
+        }
+
+        const queryParams = new URLSearchParams();
+        queryParams.append('tdlServiceReqCode', params.tdlServiceReqCode);
+        queryParams.append('tdlServiceCode', params.tdlServiceCode);
+
+        const queryString = queryParams.toString();
+        return this.request<unknown>(
+            `/his-pacs/update-result?${queryString}`,
+            {
+                method: 'POST',
+                body: JSON.stringify(requestBody),
+                headers: {
+                    'TokenCode': tokenCode,
                 },
             }
         );

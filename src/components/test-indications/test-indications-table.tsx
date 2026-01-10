@@ -53,6 +53,7 @@ export default function TestIndicationsTable() {
     const [manualBarcode, setManualBarcode] = useState<string>('') // Barcode nhập thủ công
     const [isManualInput, setIsManualInput] = useState<boolean>(false) // Checkbox "Nhập thủ công"
     const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false)
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
@@ -593,6 +594,9 @@ export default function TestIndicationsTable() {
                 description: "✅ Đã lưu chỉ định xét nghiệm thành công!",
             });
 
+            // Refresh sidebar sau khi lưu thành công
+            setRefreshTrigger(prev => prev + 1)
+
             // Bước 4: Reset các trường liên quan đến bệnh phẩm
             clearSampleFields();
         } catch (error) {
@@ -613,18 +617,19 @@ export default function TestIndicationsTable() {
                 <ServiceRequestsSidebar
                     onSelect={handleSelectFromList}
                     selectedCode={searchCode || serviceReqCode}
+                    refreshTrigger={refreshTrigger}
                 />
             </div>
 
             {/* Main Content - 3/4 màn hình */}
             <div className="flex-1 overflow-y-auto p-6 bg-white">{/* ...existing code... */}
-                {!tabRoomId && (
+                {/* {!tabRoomId && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                         <div className="text-sm font-medium text-yellow-900">
                             ⚠️ Chưa chọn phòng làm việc. Vui lòng chọn phòng trước khi lưu.
                         </div>
                     </div>
-                )}
+                )} */}
 
                 {/* Controls area: keep SID and specimen select isolated from patient inputs */}
                 <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-end gap-3 md:gap-6 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">

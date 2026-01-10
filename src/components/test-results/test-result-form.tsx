@@ -63,7 +63,7 @@ export default function TestResultForm() {
         <p></p>
         
         <h2>CHẨN ĐOÁN MÔ BỆNH HỌC:</h2>
-        <p></p>
+        <p className="conclude"></p>
         
         <h2>BÀN LUẬN:</h2>
         <p></p>
@@ -219,6 +219,151 @@ export default function TestResultForm() {
             }
         }
         return defaultMessage
+    }
+
+    // Helper function để format thời gian theo format yyyyMMddHHmmss cho HIS-PACS
+    const formatDateTimeForHisPacs = (date: Date = new Date()): number => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return Number.parseInt(`${year}${month}${day}${hours}${minutes}${seconds}`, 10);
+    }
+
+    // Helper function để chuyển HTML thành text có format (giữ xuống dòng)
+    const htmlToFormattedText = (html: string): string => {
+        if (!html) return '';
+        
+        if (typeof globalThis.window !== 'undefined') {
+            // Tạo một DOM element tạm thời để parse HTML
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            
+            // Thay thế các block elements và <br> bằng ký tự xuống dòng
+            const blockElements = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'ul', 'ol', 'tr', 'td', 'th'];
+            
+            // Clone node tree để tránh modify DOM trực tiếp
+            const walker = document.createTreeWalker(
+                tmp,
+                NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+                null
+            );
+            
+            const nodesToProcess: Array<{ element: Element; insertBr: boolean }> = [];
+            let node;
+            
+            while ((node = walker.nextNode())) {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    const element = node as Element;
+                    const tagName = element.tagName.toLowerCase();
+                    
+                    if (tagName === 'br') {
+                        // Thay thế <br> bằng text node với ký tự xuống dòng
+                        nodesToProcess.push({ element, insertBr: true });
+                    } else if (blockElements.includes(tagName)) {
+                        // Thêm xuống dòng trước và sau block element
+                        nodesToProcess.push({ element, insertBr: false });
+                    }
+                }
+            }
+            
+            // Xử lý ngược lại để tránh ảnh hưởng đến index
+            const reversedNodes = [...nodesToProcess].reverse();
+            reversedNodes.forEach(({ element, insertBr }) => {
+                if (insertBr) {
+                    // Thay thế <br> bằng text node
+                    const textNode = document.createTextNode('\n');
+                    element.parentNode?.replaceChild(textNode, element);
+                } else {
+                    // Thêm text node với xuống dòng trước và sau block element
+                    const brBefore = document.createTextNode('\n');
+                    const brAfter = document.createTextNode('\n');
+                    element.parentNode?.insertBefore(brBefore, element);
+                    element.appendChild(brAfter);
+                }
+            });
+            
+            // Lấy textContent để lấy text với các ký tự xuống dòng đã được thêm
+            let text = tmp.textContent || '';
+            
+            // Xử lý HTML entities
+            text = text
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&apos;/g, "'");
+            
+            // Clean up: loại bỏ các xuống dòng và khoảng trắng thừa nhưng giữ format cơ bản
+            text = text
+                .replace(/\n{3,}/g, '\n\n')        // Tối đa 2 xuống dòng liên tiếp
+                .replace(/([ \t]){3,}/g, '  ')     // Tối đa 2 khoảng trắng liên tiếp
+                .replace(/^\s+|\s+$/g, '')         // Loại bỏ khoảng trắng đầu cuối
+                .replace(/\n\s+\n/g, '\n\n');      // Loại bỏ khoảng trắng giữa các đoạn
+            
+            return text;
+        }
+        
+        // Fallback cho server-side: dùng regex
+        return html
+            .replace(/<p[^>]*>/gi, '\n')
+            .replace(/<\/p>/gi, '\n')
+            .replace(/<div[^>]*>/gi, '\n')
+            .replace(/<\/div>/gi, '\n')
+            .replace(/<h[1-6][^>]*>/gi, '\n')
+            .replace(/<\/h[1-6]>/gi, '\n')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<li[^>]*>/gi, '\n• ')
+            .replace(/<\/li>/gi, '')
+            .replace(/<ul[^>]*>/gi, '\n')
+            .replace(/<\/ul>/gi, '\n')
+            .replace(/<ol[^>]*>/gi, '\n')
+            .replace(/<\/ol>/gi, '\n')
+            .replace(/<[^>]*>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&apos;/g, "'")
+            .replace(/\n{3,}/g, '\n\n')
+            .replace(/([ \t]){3,}/g, '  ')
+            .replace(/^\s+|\s+$/g, '')
+            .replace(/\n\s+\n/g, '\n\n');
+    }
+
+    // Helper function để lấy Conclude từ HTML: ưu tiên thẻ <p className="conclude">, nếu không có thì lấy toàn bộ
+    const getConcludeText = (html: string): string => {
+        if (!html) return '';
+        
+        if (typeof globalThis.window !== 'undefined') {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            
+            // Tìm thẻ <p className="conclude">
+            const concludeElement = tmp.querySelector('p.conclude');
+            
+            if (concludeElement) {
+                // Nếu có thẻ conclude, lấy nội dung của nó
+                const concludeHtml = concludeElement.innerHTML;
+                return htmlToFormattedText(`<div>${concludeHtml}</div>`);
+            } else {
+                // Nếu không có, lấy toàn bộ HTML
+                return htmlToFormattedText(html);
+            }
+        }
+        
+        // Fallback cho server-side
+        const concludeMatch = html.match(/<p[^>]*class\s*=\s*["']conclude["'][^>]*>(.*?)<\/p>/is);
+        if (concludeMatch && concludeMatch[1]) {
+            return htmlToFormattedText(`<div>${concludeMatch[1]}</div>`);
+        }
+        return htmlToFormattedText(html);
     }
 
     // Handler khi click vào dịch vụ để load kết quả
@@ -514,10 +659,77 @@ export default function TestResultForm() {
                                 title: "Cảnh báo",
                                 description: getErrorMessage(updateResponse, "Đã ký số nhưng không thể cập nhật document ID")
                             })
-                        }
+                        } else {
+                            // Refresh danh sách services để hiển thị trạng thái "Đã ký"
+                            await refetchStoredServiceRequest();
 
-                        // Refresh danh sách services để hiển thị trạng thái "Đã ký"
-                        await refetchStoredServiceRequest();
+                            // Sau khi cập nhật documentId thành công, gọi API update HIS-PACS result
+                            try {
+                                // Lấy resultText từ stored service request hoặc từ testResult state
+                                const currentStoredServiceResponse = await apiClient.getStoredServiceById(previewServiceId);
+                                const resultTextHtml = currentStoredServiceResponse?.data?.resultText || previewServiceData?.data?.resultText || testResult || '';
+                                
+                                // Lấy Conclude: ưu tiên từ thẻ <p className="conclude">, nếu không có thì lấy toàn bộ
+                                const concludeText = getConcludeText(resultTextHtml);
+
+                                // Lấy thông tin user hiện tại
+                                const executeLoginname = profileData?.data?.username || '';
+                                const executeUsername = profileData?.data?.fullName || '';
+
+                                // Lấy serviceReqCode và serviceCode
+                                const tdlServiceReqCode = storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode || '';
+                                const tdlServiceCode = currentStoredServiceResponse?.data?.serviceCode || previewServiceData?.data?.serviceCode || '';
+
+                                // Chỉ gọi API nếu có đủ thông tin
+                                if (tdlServiceReqCode && tdlServiceCode && tokenCode) {
+                                    const hisPacsUpdateResponse = await apiClient.updateHisPacsResult(
+                                        {
+                                            tdlServiceReqCode,
+                                            tdlServiceCode,
+                                        },
+                                        {
+                                            ApiData: {
+                                                IsCancel: false,
+                                                BeginTime: null,
+                                                EndTime: formatDateTimeForHisPacs(),
+                                                Description: '',
+                                                Conclude: concludeText,
+                                                Note: '',
+                                                ExecuteLoginname: executeLoginname,
+                                                ExecuteUsername: executeUsername,
+                                                TechnicianLoginname: '',
+                                                TechnicianUsername: '',
+                                                MachineCode: '',
+                                                NumberOfFilm: null,
+                                            },
+                                        },
+                                        tokenCode
+                                    );
+
+                                    if (!hisPacsUpdateResponse.success) {
+                                        console.error('❌ Lỗi cập nhật HIS-PACS result:', hisPacsUpdateResponse);
+                                        toast({
+                                            variant: 'default',
+                                            title: 'Cảnh báo',
+                                            description: getErrorMessage(hisPacsUpdateResponse, 'Đã ký số nhưng không thể cập nhật kết quả HIS-PACS.')
+                                        });
+                                    }
+                                } else {
+                                    console.warn('⚠️ Thiếu thông tin để gọi API HIS-PACS update:', {
+                                        tdlServiceReqCode,
+                                        tdlServiceCode,
+                                        hasTokenCode: !!tokenCode
+                                    });
+                                }
+                            } catch (hisPacsError: any) {
+                                console.error('❌ Lỗi cập nhật HIS-PACS result:', hisPacsError);
+                                toast({
+                                    variant: 'default',
+                                    title: 'Cảnh báo',
+                                    description: hisPacsError?.message || 'Đã ký số nhưng không thể cập nhật kết quả HIS-PACS.'
+                                });
+                            }
+                        }
                     } catch (docIdError: any) {
                         console.error('❌ Lỗi cập nhật document ID:', docIdError);
                         toast({
@@ -540,7 +752,10 @@ export default function TestResultForm() {
                             currentRoomId: currentRoomId,
                         })
                         
-                        if (!workflowResponse.success) {
+                        if (workflowResponse.success) {
+                            // Refresh sidebar sau khi transition thành công
+                            setRefreshTrigger(prev => prev + 1)
+                        } else {
                             toast({
                                 variant: 'destructive',
                                 title: 'Cảnh báo',
@@ -806,7 +1021,10 @@ export default function TestResultForm() {
                         currentRoomId: currentRoomId,
                     })
                     
-                    if (!workflowResponse.success) {
+                    if (workflowResponse.success) {
+                        // Refresh sidebar sau khi transition thành công
+                        setRefreshTrigger(prev => prev + 1)
+                    } else {
                         toast({
                             variant: 'destructive',
                             title: 'Cảnh báo',

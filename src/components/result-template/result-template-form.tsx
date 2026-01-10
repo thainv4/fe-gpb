@@ -55,7 +55,7 @@ const defaultTemplate = `<h2>NHẬN XÉT ĐẠI THỂ:</h2>
 <p></p>
 
 <h2>CHẨN ĐOÁN MÔ BỆNH HỌC:</h2>
-<p></p>
+<p className="conclude"></p>
 
 <h2>BÀN LUẬN:</h2>
 <p></p>
