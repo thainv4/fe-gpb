@@ -22,7 +22,7 @@ import {usePathname} from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import {useTabPersistence} from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
-import Barcode from 'react-barcode';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function TestIndicationsTable() {
 
@@ -257,14 +257,14 @@ export default function TestIndicationsTable() {
         }
     }, [storedServiceRequestData])
 
-    // Function để in barcode - chỉ in barcode và ngày giờ
+    // Function để in QR code - chỉ in QR code và ngày giờ
     const handlePrintBarcode = () => {
         if (!barcodeRef.current || !currentReceptionCode) return
 
         const printWindow = window.open('', '_blank')
         if (!printWindow) return
 
-        const barcodeHtml = barcodeRef.current.innerHTML
+        const qrCodeHtml = barcodeRef.current.innerHTML
 
         printWindow.document.write(`
             <!DOCTYPE html>
@@ -272,7 +272,7 @@ export default function TestIndicationsTable() {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>In mã vạch - ${currentReceptionCode}</title>
+                <title>In mã QR - ${currentReceptionCode}</title>
                 <script src="https://cdn.tailwindcss.com"></script>
                 <style>
                     @page {
@@ -296,8 +296,8 @@ export default function TestIndicationsTable() {
             </head>
             <body class="min-h-screen flex items-center justify-center bg-white p-4">
                 <div class="print-container text-center">
-                    <div class="flex justify-center items-center mb-2">
-                        ${barcodeHtml}
+                    <div class="flex flex-col justify-center items-center mb-2">
+                        ${qrCodeHtml}
                     </div>
                     <div class="text-sm text-gray-700">
                         <p>Ngày in: ${new Date().toLocaleString('vi-VN')}</p>
@@ -629,7 +629,7 @@ export default function TestIndicationsTable() {
                 {/* Controls area: keep SID and specimen select isolated from patient inputs */}
                 <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-end gap-3 md:gap-6 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                    <Label className="text-sm font-medium">Bước 1: Mã y lệnh</Label>
+                    <Label className="text-sm font-medium">Nhập mã y lệnh</Label>
                     <div className="flex gap-2">
                         <Input
                             ref={sidInputRef}
@@ -659,7 +659,7 @@ export default function TestIndicationsTable() {
                 </div>
 
                 <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                    <Label className="text-sm font-medium">Bước 2: Chọn bệnh phẩm</Label>
+                    <Label className="text-sm font-medium">Chọn bệnh phẩm</Label>
                     <Select value={selectedSampleType} onValueChange={setSelectedSampleType} open={selectOpen} onOpenChange={setSelectOpen}>
                         <SelectTrigger ref={sampleTriggerRef}>
                             <SelectValue placeholder="Chọn bệnh phẩm" />
@@ -750,21 +750,21 @@ export default function TestIndicationsTable() {
                                 onClick={handlePrintBarcode}
                                 className="h-7"
                             >
-                                <Printer className="h-4 w-4 mr-1" />
-                                In mã vạch
+                                <Printer className="h-4 w-4 mr-1"/>
+                                In mã QR
                             </Button>
                         </div>
-                        <div ref={barcodeRef}>
-                            <Barcode
+                        <div ref={barcodeRef} className="flex flex-col items-center">
+                            <QRCodeSVG
                                 key={currentReceptionCode} // Force re-render khi currentReceptionCode thay đổi
                                 value={currentReceptionCode}
-                                format="CODE128"
-                                width={2}
-                                height={40}
-                                displayValue={true}
-                                fontSize={15}
-                                margin={0}
+                                size={80}
+                                level="M"
+                                includeMargin={false}
                             />
+                            <div className="mt-2 text-sm font-medium text-gray-700">
+                                {currentReceptionCode}
+                            </div>
                         </div>
                     </div>
                 )}

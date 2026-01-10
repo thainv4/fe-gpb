@@ -2811,7 +2811,7 @@ class ApiClient {
         data: {
             resultValue?: number;
             resultValueText?: string;
-            resultText?: string | null;
+            resultText?: string;
             resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
             resultName?: string;
         }

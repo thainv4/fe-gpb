@@ -53,7 +53,6 @@ export default function TestResultForm() {
     // Confirmation dialogs state
     const [confirmSignDialogOpen, setConfirmSignDialogOpen] = useState(false)
     const [confirmCancelSignDialogOpen, setConfirmCancelSignDialogOpen] = useState(false)
-    const [confirmDeleteResultDialogOpen, setConfirmDeleteResultDialogOpen] = useState(false)
 
     // Single rich text editor state with template
     const defaultTemplate = `
@@ -719,96 +718,6 @@ export default function TestResultForm() {
         }
     }
 
-    // Handler xóa kết quả
-    const handleDeleteResult = async () => {
-        if (selectedServices.size === 0) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Vui lòng chọn ít nhất một dịch vụ để xóa kết quả"
-            })
-            return
-        }
-
-        setIsSaving(true)
-        try {
-            const deletePromises = Array.from(selectedServices).map(async (serviceId) => {
-                const response = await apiClient.saveServiceResult(serviceId, {
-                    resultText: null,
-                    resultStatus: "NORMAL"
-                })
-                
-                if (!response.success) {
-                    throw new Error(getErrorMessage(response, `Không thể xóa kết quả cho dịch vụ ${serviceId}`))
-                }
-                
-                return response
-            })
-
-            const deleteResults = await Promise.allSettled(deletePromises)
-            
-            // Kiểm tra kết quả
-            const successful = deleteResults.filter(r => r.status === 'fulfilled').length
-            const failed = deleteResults.filter(r => r.status === 'rejected').length
-            
-            if (failed > 0) {
-                const errorMessages = deleteResults
-                    .filter(r => r.status === 'rejected')
-                    .map(r => {
-                        if (r.status === 'rejected') {
-                            return r.reason?.message || 'Lỗi không xác định'
-                        }
-                        return ''
-                    })
-                    .filter(Boolean)
-                
-                toast({
-                    variant: "destructive",
-                    title: "Lỗi",
-                    description: `Không thể xóa kết quả cho ${failed}/${selectedServices.size} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
-                })
-                
-                if (failed === selectedServices.size) {
-                    return
-                }
-            }
-
-            // Invalidate và refetch để cập nhật danh sách dịch vụ
-            if (successful > 0 && storedServiceRequest?.id) {
-                await queryClient.invalidateQueries({ 
-                    queryKey: ['stored-service-request', storedServiceRequest.id] 
-                })
-                await queryClient.invalidateQueries({ 
-                    queryKey: ['stored-service-detail'] 
-                })
-                
-                await refetchStoredServiceRequest()
-                
-                toast({
-                    title: "Thành công",
-                    description: failed > 0 
-                        ? `Đã xóa kết quả cho ${successful}/${selectedServices.size} dịch vụ`
-                        : `Đã xóa kết quả cho ${selectedServices.size} dịch vụ`,
-                    variant: "default"
-                })
-                
-                // Reset form về template mặc định
-                setTestResult(defaultTemplate)
-                setResultName('')
-                setSelectedServices(new Set())
-            }
-        } catch (error: any) {
-            console.error('Error deleting result:', error)
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: error?.message || getErrorMessage(error, "Có lỗi xảy ra khi xóa kết quả")
-            })
-        } finally {
-            setIsSaving(false)
-        }
-    }
-
     // Handler lưu kết quả
     const handleSaveResults = async () => {
         if (selectedServices.size === 0) {
@@ -1039,36 +948,20 @@ export default function TestResultForm() {
                                                 <h3 className="text-lg font-semibold">
                                                     Chọn danh sách dịch vụ để trả kết quả
                                                 </h3>
-                                                <div className="flex gap-2">
-                                                    <Button 
-                                                        onClick={() => setConfirmDeleteResultDialogOpen(true)}
-                                                        disabled={isSaving || selectedServices.size === 0}
-                                                        variant="outline"
-                                                    >
-                                                        {isSaving ? (
-                                                            <>
-                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                                Đang xử lý...
-                                                            </>
-                                                        ) : (
-                                                            'Xóa kết quả'
-                                                        )}
-                                                    </Button>
-                                                    <Button 
-                                                        onClick={() => setConfirmCancelSignDialogOpen(true)}
-                                                        disabled={isSigning || selectedServices.size === 0}
-                                                        variant="destructive"
-                                                    >
-                                                        {isSigning ? (
-                                                            <>
-                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                                Đang xử lý...
-                                                            </>
-                                                        ) : (
-                                                            'Hủy chữ ký số'
-                                                        )}
-                                                    </Button>
-                                                </div>
+                                                <Button 
+                                                    onClick={() => setConfirmCancelSignDialogOpen(true)}
+                                                    disabled={isSigning || selectedServices.size === 0}
+                                                    variant="destructive"
+                                                >
+                                                    {isSigning ? (
+                                                        <>
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            Đang xử lý...
+                                                        </>
+                                                    ) : (
+                                                        'Hủy chữ ký số'
+                                                    )}
+                                                </Button>
                                             </div>
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-gray-200">
@@ -1390,40 +1283,6 @@ export default function TestResultForm() {
                                 </>
                             ) : (
                                 'Xác nhận hủy'
-                            )}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Dialog xác nhận xóa kết quả */}
-            <Dialog open={confirmDeleteResultDialogOpen} onOpenChange={setConfirmDeleteResultDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Xác nhận xóa kết quả</DialogTitle>
-                        <DialogDescription>
-                            Bạn có chắc chắn muốn xóa kết quả cho {selectedServices.size} dịch vụ đã chọn? Hành động này không thể hoàn tác.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setConfirmDeleteResultDialogOpen(false)}>
-                            Hủy
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                setConfirmDeleteResultDialogOpen(false)
-                                handleDeleteResult()
-                            }}
-                            disabled={isSaving}
-                            variant="destructive"
-                        >
-                            {isSaving ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Đang xử lý...
-                                </>
-                            ) : (
-                                'Xóa kết quả'
                             )}
                         </Button>
                     </DialogFooter>

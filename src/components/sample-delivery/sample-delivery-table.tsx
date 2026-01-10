@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useTabsStore } from "@/lib/stores/tabs";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
+import { useCurrentRoomStore } from "@/lib/stores/current-room";
 import { Package, Printer } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import { Textarea } from "@/components/ui/textarea";
-import Barcode from 'react-barcode';
+import { QRCodeSVG } from 'qrcode.react';
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -29,6 +30,9 @@ export default function SampleDeliveryTable() {
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
     const queryClient = useQueryClient()
     const { toast } = useToast()
+
+    // Lấy thông tin phòng hiện tại từ store (phòng đã chọn ở sidebar)
+    const { currentRoomId, currentDepartmentId } = useCurrentRoomStore()
 
     // Get current user info
     const { data: profileData } = useQuery({
@@ -174,14 +178,14 @@ export default function SampleDeliveryTable() {
     // Ref cho phần barcode để in
     const barcodeRef = useRef<HTMLDivElement>(null)
 
-    // Function để in barcode - chỉ in barcode và ngày giờ
+    // Function để in QR code - chỉ in QR code và ngày giờ
     const handlePrintBarcode = () => {
         if (!barcodeRef.current || !receptionCodeFromStored) return
 
         const printWindow = window.open('', '_blank')
         if (!printWindow) return
 
-        const barcodeHtml = barcodeRef.current.innerHTML
+        const qrCodeHtml = barcodeRef.current.innerHTML
 
         printWindow.document.write(`
             <!DOCTYPE html>
@@ -189,7 +193,7 @@ export default function SampleDeliveryTable() {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>In mã vạch - ${receptionCodeFromStored}</title>
+                <title>In mã QR - ${receptionCodeFromStored}</title>
                 <script src="https://cdn.tailwindcss.com"></script>
                 <style>
                     @page {
@@ -213,8 +217,8 @@ export default function SampleDeliveryTable() {
             </head>
             <body class="min-h-screen flex items-center justify-center bg-white p-4">
                 <div class="print-container text-center">
-                    <div class="flex justify-center items-center mb-2">
-                        ${barcodeHtml}
+                    <div class="flex flex-col justify-center items-center mb-2">
+                        ${qrCodeHtml}
                     </div>
                     <div class="text-sm text-gray-700">
                         <p>Ngày in: ${new Date().toLocaleString('vi-VN')}</p>
@@ -254,6 +258,17 @@ export default function SampleDeliveryTable() {
             setSelectedStateId(handoverStateId)
         }
     }, [handoverStateId, selectedStateId])
+
+    // Auto-select phòng hiện tại khi availableRooms đã load và có currentRoomId
+    useEffect(() => {
+        if (currentRoomId && availableRooms.length > 0 && !selectedReceiverRoomKey) {
+            // Tìm phòng trong availableRooms có roomId khớp với currentRoomId
+            const matchingRoom = availableRooms.find(r => r.roomId === currentRoomId)
+            if (matchingRoom) {
+                setSelectedReceiverRoomKey(matchingRoom.key)
+            }
+        }
+    }, [currentRoomId, availableRooms, selectedReceiverRoomKey])
 
     // Mutation for workflow transition
     const transitionMutation = useMutation({
@@ -338,6 +353,14 @@ export default function SampleDeliveryTable() {
         setStoredServiceReqId(storedId)
         setReceptionCode(receptionCode || '')
         setReceiveDateTime(getVietnamTime())
+        
+        // Tự động chọn phòng hiện tại khi chọn service request từ sidebar
+        if (currentRoomId && availableRooms.length > 0) {
+            const matchingRoom = availableRooms.find(r => r.roomId === currentRoomId)
+            if (matchingRoom) {
+                setSelectedReceiverRoomKey(matchingRoom.key)
+            }
+        }
     }
 
     // Reset form whenever selectedServiceReqCode changes (as a safety measure)
@@ -380,19 +403,20 @@ export default function SampleDeliveryTable() {
                                                     className="h-7"
                                                 >
                                                     <Printer className="h-4 w-4 mr-1" />
-                                                    In mã vạch
+                                                    In mã QR
                                                 </Button>
                                             </div>
-                                            <div ref={barcodeRef}>
-                                                <Barcode
+                                            <div ref={barcodeRef} className="flex flex-col items-start">
+                                                <QRCodeSVG
+                                                    key={receptionCodeFromStored} // Force re-render khi receptionCodeFromStored thay đổi
                                                     value={receptionCodeFromStored}
-                                                    format="CODE128"
-                                                    width={2}
-                                                    height={40}
-                                                    displayValue={true}
-                                                    fontSize={15}
-                                                    margin={0}
+                                                    size={80}
+                                                    level="M"
+                                                    includeMargin={false}
                                                 />
+                                                <div className="mt-2 text-sm font-medium text-gray-700">
+                                                    {receptionCodeFromStored}
+                                                </div>
                                             </div>
                                         </div>
                                     )}
