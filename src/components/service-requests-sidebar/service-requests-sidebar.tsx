@@ -6,9 +6,11 @@ import {useCurrentRoomStore} from '@/lib/stores/current-room'
 import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
-import {Loader2, Trash2} from 'lucide-react'
+import {Label} from '@/components/ui/label'
+import {Loader2, Trash2, FileSpreadsheet} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {useToast} from '@/hooks/use-toast'
+import {exportToExcel, formatDateTimeForExcel, type ExportExcelItem} from '@/utils/export-excel'
 import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group'
 import {
     Dialog,
@@ -39,6 +41,7 @@ interface FilterParams {
     order: 'ASC' | 'DESC'
     orderBy: 'actionTimestamp' | 'createdAt' | 'startedAt'
     hisServiceReqCode?: string
+    flag?: string
 }
 
 // Function to get color for each workflow state
@@ -76,6 +79,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const [selectedId, setSelectedId] = useState<string | null>(null)
     // State để quản lý dialog xác nhận xóa
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    // State để quản lý filter flag
+    const [selectedFlag, setSelectedFlag] = useState<string>('all')
     const [filters, setFilters] = useState<FilterParams>({
         roomType: 'currentRoomId',
         stateType: '',
@@ -103,12 +108,16 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
     // Query service requests
     const {data, isLoading, refetch} = useQuery({
-        queryKey: ['workflow-history', currentRoomId, selectedStateId, filters, refreshTrigger],
+        queryKey: ['workflow-history', currentRoomId, selectedStateId, selectedFlag, filters, refreshTrigger],
         queryFn: () => {
             // build params: include stateId only when a concrete state is selected
             const params: any = {roomId: currentRoomId!, ...filters}
             if (selectedStateId && selectedStateId !== 'all') {
                 params.stateId = selectedStateId
+            }
+            // Thêm flag nếu được chọn (khác 'all')
+            if (selectedFlag && selectedFlag !== 'all') {
+                params.flag = selectedFlag
             }
             // Thêm hisServiceReqCode với giá trị mặc định là '' nếu không có
             if (!params.hisServiceReqCode) {
@@ -221,24 +230,104 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         }
     }
 
+    // Xử lý xuất Excel
+    const handleExportExcel = () => {
+        if (serviceRequests.length === 0) {
+            toast({
+                title: 'Thông báo',
+                description: 'Không có dữ liệu để xuất',
+                variant: 'default',
+            })
+            return
+        }
+
+        try {
+            // Lấy tên trạng thái hiện tại
+            const currentStateName = selectedStateId === 'all' 
+                ? 'Tất cả' 
+                : workflowStates.find(s => s.id === selectedStateId)?.stateName || 'Chưa xác định'
+
+            // Chuẩn bị dữ liệu cho Excel
+            const excelData: ExportExcelItem[] = serviceRequests.map((item: {
+                id: string;
+                storedServiceReqId?: string;
+                createdAt?: string;
+                toState?: {
+                    id: string;
+                    stateName: string;
+                    stateCode: string;
+                };
+                serviceRequest?: {
+                    id?: string;
+                    hisServiceReqCode?: string;
+                    serviceReqCode?: string;
+                    patientName?: string;
+                    patientCode?: string;
+                    receptionCode?: string;
+                };
+            }) => {
+                const serviceReq = item.serviceRequest
+                const serviceReqCode = serviceReq?.hisServiceReqCode || serviceReq?.serviceReqCode || ''
+                const patientName = serviceReq?.patientName || ''
+                const stateName = item.toState?.stateName || 'Chưa xác định'
+                const createdAt = formatDateTimeForExcel(item.createdAt)
+
+                return {
+                    serviceReqCode,
+                    patientName,
+                    stateName,
+                    createdAt,
+                }
+            })
+
+            // Xuất Excel
+            exportToExcel({
+                data: excelData,
+                stateName: currentStateName,
+                sheetName: 'Dòng thời gian',
+            })
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi xuất Excel'
+            toast({
+                title: 'Lỗi',
+                description: errorMessage,
+                variant: 'destructive',
+            })
+        }
+    }
+
     return (
         <div className="h-full flex flex-col border-r border-gray-200 bg-gray-50">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 bg-white">
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold">Dòng thời gian</h3>
-                    {selectedId && (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleDeleteClick}
-                            disabled={deleteMutation.isPending}
-                            className="h-6 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {serviceRequests.length > 0 && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleExportExcel}
+                                className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                title="Xuất Excel"
+                            >
+                                <FileSpreadsheet className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {selectedId && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleDeleteClick}
+                                disabled={deleteMutation.isPending}
+                                className="h-6 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Workflow State Selector */}
@@ -274,6 +363,32 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                         placeholder="Tìm theo mã Y lệnh (nhấn Enter)..."
                         className="text-sm"
                     />
+
+                    {/* Filter by Flag */}
+                    <div className="flex gap-2 py-1">
+                        <Label className="text-sm font-medium">Lọc theo cờ:</Label>
+                        <RadioGroup value={selectedFlag} onValueChange={(value) => {
+                            setSelectedFlag(value)
+                            setFilters(prev => ({...prev, offset: 0}))
+                        }} className="flex gap-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="all" id="flag-all" />
+                                <Label htmlFor="flag-all" className="cursor-pointer text-xs">Tất cả</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="ST" id="flag-st-filter" />
+                                <Label htmlFor="flag-st-filter" className="cursor-pointer text-xs">ST</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="PT" id="flag-pt-filter" />
+                                <Label htmlFor="flag-pt-filter" className="cursor-pointer text-xs">PT</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="HC" id="flag-hc-filter" />
+                                <Label htmlFor="flag-hc-filter" className="cursor-pointer text-xs">HC</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-2">
                         <Input

@@ -2806,6 +2806,22 @@ class ApiClient {
         );
     }
 
+    /**
+     * Update flag for a stored service request
+     */
+    async updateStoredServiceRequestFlag(
+        storedServiceReqId: string,
+        flag: string
+    ): Promise<ApiResponse<unknown>> {
+        return this.request<unknown>(
+            `/service-requests/stored/${storedServiceReqId}/flag`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify({ flag }),
+            }
+        );
+    }
+
     async saveServiceResult(
         serviceId: string,
         data: {
@@ -2910,6 +2926,7 @@ class ApiClient {
         order?: 'ASC' | 'DESC';
         orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
         hisServiceReqCode?: string;
+        flag?: string;
     }): Promise<ApiResponse<{
         items: Array<{
             id: string;
@@ -2951,6 +2968,7 @@ class ApiClient {
         if (params.orderBy) queryParams.append('orderBy', params.orderBy);
         // Thêm hisServiceReqCode với giá trị mặc định là '' nếu không có
         queryParams.append('hisServiceReqCode', params.hisServiceReqCode ?? '');
+        if (params.flag) queryParams.append('flag', params.flag);
 
         return this.request(
             `/workflow-history/by-room-and-state?${queryParams.toString()}`

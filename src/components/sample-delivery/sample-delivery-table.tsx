@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useToast } from "@/hooks/use-toast";
@@ -130,6 +131,8 @@ export default function SampleDeliveryTable() {
     const [handoverNote, setHandoverNote] = useState<string>('')
     // Thêm state cho receptionCode
     const [receptionCode, setReceptionCode] = useState<string>('')
+    // State cho flag (ST, PT, HC)
+    const [selectedFlag, setSelectedFlag] = useState<string>('')
 
     // Tab persistence
     const pathname = usePathname()
@@ -143,6 +146,7 @@ export default function SampleDeliveryTable() {
             selectedStateId,
             handoverNote,
             receptionCode,
+            selectedFlag,
         },
         {
             saveScroll: true,
@@ -154,6 +158,7 @@ export default function SampleDeliveryTable() {
                 if (data.selectedStateId) setSelectedStateId(data.selectedStateId)
                 if (data.handoverNote !== undefined) setHandoverNote(data.handoverNote)
                 if (data.receptionCode) setReceptionCode(data.receptionCode)
+                if (data.selectedFlag) setSelectedFlag(data.selectedFlag)
             },
         }
     )
@@ -278,6 +283,7 @@ export default function SampleDeliveryTable() {
             currentUserId: string;
             currentDepartmentId: string;
             currentRoomId: string;
+            selectedFlag: string;
         }) => {
             const response = await apiClient.transitionWorkflow({
                 storedServiceReqId: params.storedServiceReqId,
@@ -294,7 +300,31 @@ export default function SampleDeliveryTable() {
             }
             return response
         },
-        onSuccess: () => {
+        onSuccess: async (_data, variables) => {
+            // Gọi API flag với storedServiceReqId từ mutation variables
+            if (variables.storedServiceReqId && variables.selectedFlag) {
+                try {
+                    const flagResponse = await apiClient.updateStoredServiceRequestFlag(
+                        variables.storedServiceReqId,
+                        variables.selectedFlag
+                    )
+                    if (!flagResponse.success) {
+                        toast({
+                            title: 'Cảnh báo',
+                            description: flagResponse.message || 'Đã xác nhận bàn giao nhưng không thể cập nhật flag',
+                            variant: 'default',
+                        })
+                    }
+                } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
+                    toast({
+                        title: 'Cảnh báo',
+                        description: `Đã xác nhận bàn giao nhưng không thể cập nhật flag: ${errorMessage}`,
+                        variant: 'default',
+                    })
+                }
+            }
+
             toast({
                 title: 'Thành công',
                 description: 'Đã xác nhận bàn giao mẫu',
@@ -337,6 +367,14 @@ export default function SampleDeliveryTable() {
             })
             return
         }
+        if (!selectedFlag) {
+            toast({
+                title: 'Lỗi',
+                description: 'Vui lòng chọn cờ để đánh dấu',
+                variant: 'destructive',
+            })
+            return
+        }
 
         transitionMutation.mutate({
             storedServiceReqId,
@@ -344,6 +382,7 @@ export default function SampleDeliveryTable() {
             currentUserId,
             currentDepartmentId: receiverDepartmentId,
             currentRoomId: receiverRoomId,
+            selectedFlag,
         })
     }
 
@@ -497,6 +536,23 @@ export default function SampleDeliveryTable() {
                                     <Label>Ngày giờ thực hiện</Label>
                                     <Input type="datetime-local" value={receiveDateTime} onChange={(e) => setReceiveDateTime(e.target.value)} />
                                 </div>
+                                <div className="flex gap-2 my-2">
+                                    <Label>Chọn cờ để đánh dấu: </Label>
+                                    <RadioGroup value={selectedFlag} onValueChange={setSelectedFlag} className="flex gap-6">
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="ST" id="flag-st" />
+                                            <Label htmlFor="flag-st" className="cursor-pointer">ST</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="PT" id="flag-pt" />
+                                            <Label htmlFor="flag-pt" className="cursor-pointer">PT</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="HC" id="flag-hc" />
+                                            <Label htmlFor="flag-hc" className="cursor-pointer">HC</Label>
+                                        </div>
+                                    </RadioGroup>
+                                </div>
                                 <div className="flex flex-col gap-2 md:col-span-2">
                                     <Label>Ghi chú</Label>
                                     <Textarea
@@ -511,7 +567,7 @@ export default function SampleDeliveryTable() {
 
                         {/* Action buttons */}
                         <div className="flex justify-center gap-3 mt-6">
-                            <Button onClick={handleConfirmHandover} disabled={transitionMutation.isPending || !storedServiceReqId || !selectedStateId || !receiverRoomId || !receiverDepartmentId}>
+                            <Button onClick={handleConfirmHandover} disabled={transitionMutation.isPending || !storedServiceReqId || !selectedStateId || !receiverRoomId || !receiverDepartmentId || !selectedFlag}>
                                 {transitionMutation.isPending ? 'Đang xử lý...' : 'Xác nhận bàn giao'}
                             </Button>
                             <Button variant="secondary" onClick={() => setReceiveDateTime(getVietnamTime())} disabled={transitionMutation.isPending}>
