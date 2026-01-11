@@ -7,7 +7,7 @@ import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
 import {Label} from '@/components/ui/label'
-import {Loader2, Trash2, FileSpreadsheet} from 'lucide-react'
+import {Loader2, Trash2} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {useToast} from '@/hooks/use-toast'
 import {exportToExcel, formatDateTimeForExcel, type ExportExcelItem} from '@/utils/export-excel'
@@ -42,6 +42,7 @@ interface FilterParams {
     orderBy: 'actionTimestamp' | 'createdAt' | 'startedAt'
     hisServiceReqCode?: string
     flag?: string
+    receptionCode?: string
 }
 
 // Function to get color for each workflow state
@@ -75,6 +76,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const [selectedStateId, setSelectedStateId] = useState<string | undefined>(defaultStateId ?? 'all')
     // State tạm thời cho input tìm kiếm (chỉ update filters khi nhấn Enter)
     const [searchInput, setSearchInput] = useState<string>(serviceReqCode ?? '')
+    // State tạm thời cho input tìm kiếm barcode (chỉ update filters khi nhấn Enter)
+    const [barcodeInput, setBarcodeInput] = useState<string>('')
     // State để quản lý radio được chọn (chỉ một)
     const [selectedId, setSelectedId] = useState<string | null>(null)
     // State để quản lý dialog xác nhận xóa
@@ -123,6 +126,10 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
             if (!params.hisServiceReqCode) {
                 params.hisServiceReqCode = ''
             }
+            // Thêm receptionCode nếu có
+            if (filters.receptionCode) {
+                params.receptionCode = filters.receptionCode
+            }
             return apiClient.getWorkflowHistory(params)
         },
         // enabled when room selected and we've initialized state selection (can be 'all')
@@ -161,6 +168,13 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             updateFilter('hisServiceReqCode', searchInput || undefined)
+        }
+    }
+
+    // Xử lý tìm kiếm barcode khi nhấn Enter
+    const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            updateFilter('receptionCode', barcodeInput || undefined)
         }
     }
 
@@ -361,6 +375,15 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                         onChange={(e) => setSearchInput(e.target.value)}
                         onKeyDown={handleSearchKeyDown}
                         placeholder="Tìm theo mã Y lệnh (nhấn Enter)..."
+                        className="text-sm"
+                    />
+
+                    <Input
+                        type="text"
+                        value={barcodeInput}
+                        onChange={(e) => setBarcodeInput(e.target.value)}
+                        onKeyDown={handleBarcodeKeyDown}
+                        placeholder="Tìm theo mã barcode (nhấn Enter)..."
                         className="text-sm"
                     />
 
@@ -586,7 +609,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                     <DialogHeader>
                         <DialogTitle>Xác nhận xóa</DialogTitle>
                         <DialogDescription>
-                            Bạn có chắc chắn muốn xóa bản ghi dòng thời gian đã chọn? Hành động này không thể hoàn tác.
+                            Bạn có chắc chắn muốn xóa bản ghi đã chọn? Hành động này không thể hoàn tác.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

@@ -2980,6 +2980,7 @@ class ApiClient {
         orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
         hisServiceReqCode?: string;
         flag?: string;
+        receptionCode?: string;
     }): Promise<ApiResponse<{
         items: Array<{
             id: string;
@@ -3022,6 +3023,7 @@ class ApiClient {
         // Thêm hisServiceReqCode với giá trị mặc định là '' nếu không có
         queryParams.append('hisServiceReqCode', params.hisServiceReqCode ?? '');
         if (params.flag) queryParams.append('flag', params.flag);
+        if (params.receptionCode) queryParams.append('receptionCode', params.receptionCode);
 
         return this.request(
             `/workflow-history/by-room-and-state?${queryParams.toString()}`
@@ -3058,6 +3060,26 @@ class ApiClient {
         return this.request(`/workflow-history/${id}`, {
             method: "DELETE",
         });
+    }
+
+    /**
+     * Xóa workflow history bằng toStateId và storedServiceReqId
+     * DELETE /workflow-history/by-state-and-request?toStateId=xxx&storedServiceReqId=xxx
+     */
+    async deleteWorkflowHistoryByStateAndRequest(
+        toStateId: string,
+        storedServiceReqId: string
+    ): Promise<ApiResponse> {
+        const queryParams = new URLSearchParams();
+        queryParams.append('toStateId', toStateId);
+        queryParams.append('storedServiceReqId', storedServiceReqId);
+        
+        return this.request(
+            `/workflow-history/by-state-and-request?${queryParams.toString()}`,
+            {
+                method: "DELETE",
+            }
+        );
     }
 
     // ========== USER ROOM ENDPOINTS ==========

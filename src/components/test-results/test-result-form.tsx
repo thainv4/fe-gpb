@@ -902,6 +902,25 @@ export default function TestResultForm() {
             await refetchStoredServiceRequest()
 
             if (failed === 0) {
+                // Sau khi hủy chữ ký số thành công, gọi API xóa workflow history
+                if (storedServiceRequest?.id) {
+                    try {
+                        const stateId = '426df256-bc00-28d1-e065-9e6b783dd008';
+                        const deleteWorkflowHistoryResponse = await apiClient.deleteWorkflowHistoryByStateAndRequest(
+                            stateId,
+                            storedServiceRequest.id
+                        );
+                        
+                        if (!deleteWorkflowHistoryResponse.success) {
+                            console.error('❌ Lỗi xóa workflow history:', deleteWorkflowHistoryResponse);
+                            // Không hiển thị toast vì đây không phải lỗi nghiêm trọng
+                        }
+                    } catch (historyError: any) {
+                        console.error('❌ Lỗi xóa workflow history:', historyError);
+                        // Không hiển thị toast vì đây không phải lỗi nghiêm trọng
+                    }
+                }
+                
                 toast({
                     title: "Thành công",
                     description: `Đã hủy chữ ký số cho ${selectedServicesWithDocumentId.length} dịch vụ`,
