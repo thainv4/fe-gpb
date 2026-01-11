@@ -359,7 +359,7 @@ export default function TestResultForm() {
         }
         
         // Fallback cho server-side
-        const concludeMatch = html.match(/<p[^>]*class\s*=\s*["']conclude["'][^>]*>(.*?)<\/p>/is);
+        const concludeMatch = html.match(/<p[^>]*class\s*=\s*["']conclude["'][^>]*>([\s\S]*?)<\/p>/i);
         if (concludeMatch && concludeMatch[1]) {
             return htmlToFormattedText(`<div>${concludeMatch[1]}</div>`);
         }
