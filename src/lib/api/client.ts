@@ -1190,7 +1190,6 @@ class ApiClient {
         }
 
         try {
-            console.log("Refreshing access token...");
 
             // Call refresh endpoint without going through request() to avoid infinite loop
             const url = `${this.baseURL}/auth/refresh`;
@@ -2088,6 +2087,33 @@ class ApiClient {
         const queryString = queryParams.toString();
         return this.request<unknown>(
             `/his-pacs/start?${queryString}`,
+            {
+                method: 'POST',
+                headers: {
+                    'TokenCode': tokenCode,
+                },
+            }
+        );
+    }
+
+    /**
+     * Unstart for HIS-PACS
+     * POST /his-pacs/unstart
+     */
+    async unstartHisPacs(
+        tdlServiceReqCode: string,
+        tokenCode: string
+    ): Promise<ApiResponse<unknown>> {
+        if (!tokenCode) {
+            throw new Error('TokenCode header is required');
+        }
+
+        const queryParams = new URLSearchParams();
+        queryParams.append('tdlServiceReqCode', tdlServiceReqCode);
+
+        const queryString = queryParams.toString();
+        return this.request<unknown>(
+            `/his-pacs/unstart?${queryString}`,
             {
                 method: 'POST',
                 headers: {

@@ -3,6 +3,7 @@ import {useState, useMemo, useEffect} from 'react'
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {apiClient} from '@/lib/api/client'
 import {useCurrentRoomStore} from '@/lib/stores/current-room'
+import {useHisStore} from '@/lib/stores/his'
 import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
@@ -71,6 +72,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const {currentRoomId} = useCurrentRoomStore()
     const { toast } = useToast()
     const queryClient = useQueryClient()
+    const { token: hisToken } = useHisStore()
     // selectedStateId: 'all' means show all states (no state filter)
     // Default to 'all' to show all states, or use defaultStateId if provided
     const [selectedStateId, setSelectedStateId] = useState<string | undefined>(defaultStateId ?? 'all')
@@ -193,10 +195,73 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     // Mutation để xóa workflow history
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
+            // Tìm workflow history item được chọn để lấy thông tin trước khi xóa
+            const selectedItem = serviceRequests.find((item: any) => item.id === id) as any
+            
+            console.log('deleteMutation - id:', id)
+            console.log('deleteMutation - selectedItem:', selectedItem)
+            console.log('deleteMutation - toStateId:', selectedItem?.toStateId)
+            
+            // Nếu toStateId = '426df256-bbfa-28d1-e065-9e6b783dd008', gọi API unstart TRƯỚC khi xóa
+            if (selectedItem?.toStateId === '426df256-bbfa-28d1-e065-9e6b783dd008') {
+                console.log('✅ toStateId matches, calling unstartHisPacs BEFORE delete')
+                
+                const serviceReq = selectedItem?.serviceRequest
+                const tdlServiceReqCode = serviceReq?.hisServiceReqCode || serviceReq?.serviceReqCode || ''
+                
+                console.log('deleteMutation - serviceReq:', serviceReq)
+                console.log('deleteMutation - tdlServiceReqCode:', tdlServiceReqCode)
+                
+                if (tdlServiceReqCode) {
+                    try {
+                        // Lấy HIS token code
+                        let tokenCode: string | null = typeof globalThis.window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null
+                        if (!tokenCode) {
+                            tokenCode = hisToken?.tokenCode || null
+                        }
+                        if (!tokenCode) {
+                            const hisStorage = localStorage.getItem('his-storage')
+                            if (hisStorage) {
+                                try {
+                                    const parsed = JSON.parse(hisStorage)
+                                    tokenCode = parsed.state?.token?.tokenCode || null
+                                } catch (e) {
+                                    console.error('Error parsing HIS storage:', e)
+                                }
+                            }
+                        }
+                        
+                        if (tokenCode) {
+                            console.log('✅ Calling unstartHisPacs with tdlServiceReqCode:', tdlServiceReqCode, 'tokenCode:', tokenCode?.substring(0, 10) + '...')
+                            const unstartResponse = await apiClient.unstartHisPacs(
+                                tdlServiceReqCode,
+                                tokenCode
+                            )
+                            
+                            console.log('unstartHisPacs response:', unstartResponse)
+                            
+                            if (!unstartResponse.success) {
+                                console.error('❌ Lỗi gọi API HIS-PACS unstart:', unstartResponse)
+                                // Không throw error để vẫn tiếp tục xóa workflow-history
+                            } else {
+                                console.log('✅ unstartHisPacs called successfully')
+                            }
+                        } else {
+                            console.warn('⚠️ Không có TokenCode để gọi API HIS-PACS unstart')
+                        }
+                    } catch (unstartError: any) {
+                        console.error('❌ Lỗi gọi API HIS-PACS unstart:', unstartError)
+                        // Không throw error để vẫn tiếp tục xóa workflow-history
+                    }
+                }
+            }
+            
+            // Sau khi gọi API unstart (nếu cần), mới gọi API xóa workflow-history
             const response = await apiClient.deleteWorkflowHistory(id)
             if (!response.success) {
                 throw new Error(getErrorMessage(response, 'Không thể xóa bản ghi dòng thời gian'))
             }
+            
             return response
         },
         onSuccess: () => {
