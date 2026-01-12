@@ -453,30 +453,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                     />
 
                     {/* Filter by Flag */}
-                    <div className="flex gap-2 py-1">
-                        <Label className="text-sm font-medium">Lọc theo bệnh phẩm:</Label>
-                        <RadioGroup value={selectedFlag} onValueChange={(value) => {
-                            setSelectedFlag(value)
-                            setFilters(prev => ({...prev, offset: 0}))
-                        }} className="flex gap-4">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="all" id="flag-all" />
-                                <Label htmlFor="flag-all" className="cursor-pointer text-xs">Tất cả</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="ST" id="flag-st-filter" />
-                                <Label htmlFor="flag-st-filter" className="cursor-pointer text-xs">ST</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="PT" id="flag-pt-filter" />
-                                <Label htmlFor="flag-pt-filter" className="cursor-pointer text-xs">PT</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="HC" id="flag-hc-filter" />
-                                <Label htmlFor="flag-hc-filter" className="cursor-pointer text-xs">HC</Label>
-                            </div>
-                        </RadioGroup>
-                    </div>
+                    
 
                     <div className="grid grid-cols-2 gap-2">
                         <Input
@@ -509,6 +486,31 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                             className="text-xs"
                             placeholder="Đến ngày"
                         />
+                    </div>
+
+                    <div className="flex gap-2 py-1">
+                        <Label className="text-sm font-medium">Lọc theo bệnh phẩm:</Label>
+                        <RadioGroup value={selectedFlag} onValueChange={(value) => {
+                            setSelectedFlag(value)
+                            setFilters(prev => ({...prev, offset: 0}))
+                        }} className="flex gap-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="all" id="flag-all" />
+                                <Label htmlFor="flag-all" className="cursor-pointer text-xs">Tất cả</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="ST" id="flag-st-filter" />
+                                <Label htmlFor="flag-st-filter" className="cursor-pointer text-xs">ST</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="PT" id="flag-pt-filter" />
+                                <Label htmlFor="flag-pt-filter" className="cursor-pointer text-xs">PT</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="HC" id="flag-hc-filter" />
+                                <Label htmlFor="flag-hc-filter" className="cursor-pointer text-xs">HC</Label>
+                            </div>
+                        </RadioGroup>
                     </div>
                 </div>
 
@@ -551,6 +553,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
                                         Mã Y lệnh
                                     </th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Barcode</th>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
                                         Tên bệnh nhân
                                     </th>
@@ -619,6 +622,9 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                             </td>
                                             <td className="p-2 text-xs font-medium text-gray-900 border-r border-gray-100">
                                                 {serviceReqCode}
+                                            </td>
+                                            <td className="p-2 text-xs text-gray-700 border-r border-gray-100">
+                                                {receptionCode || <span className="text-gray-400">-</span>}
                                             </td>
                                             <td className="p-2 text-xs text-gray-700 border-r border-gray-100">
                                                 {serviceReq?.patientName}

@@ -603,9 +603,15 @@ export default function TestResultForm() {
             setSignaturePageTotal(pageCount);
 
             // Tính toạ độ chữ ký theo tỉ lệ cấu hình
+            // Format ngày hiện tại thành yyyy-mm-dd
+            const now = new Date()
+            const year = now.getFullYear()
+            const month = String(now.getMonth() + 1).padStart(2, '0')
+            const day = String(now.getDate()).padStart(2, '0')
+            const dateStr = `${year}-${month}-${day}`
+            const serviceReqCode = storedServiceRequestData.data.serviceReqCode
 
             const signRequest = {
-                Description: `Kết quả xét nghiệm ${previewServiceData.data.serviceName}`,
                 PointSign: {
                     CoorXRectangle: 460,
                     CoorYRectangle: 45,
@@ -616,13 +622,13 @@ export default function TestResultForm() {
                     TextPosition: 0,
                     TypeDisplay: 2,
                     SizeFont: 11,
-                    FormatRectangleText: "Người ký: {USERNAME}\\nThời gian: {SIGNTIME}"
+                    FormatRectangleText: "{SIGNTIME}"
                 },
-                DocumentName: `Phiếu XN ${storedServiceRequestData.data.serviceReqCode}`,
-                TreatmentCode: storedServiceRequestData.data.treatmentCode || storedServiceRequestData.data.patientCode,
+                DocumentName: `${dateStr}-${serviceReqCode}_Signed`,
+                TreatmentCode: storedServiceRequestData.data.treatmentCode,
                 DocumentTypeId: 22,
                 DocumentGroupId: 101,
-                HisCode: `HIS_${storedServiceRequestData.data.serviceReqCode}_${Date.now()}`,
+                HisCode: `SERVICE_REQ_CODE:${storedServiceRequestData.data.serviceReqCode}`,
                 FileType: 0,
                 OriginalVersion: {
                     Base64Data: pdfBase64

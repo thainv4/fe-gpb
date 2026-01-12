@@ -1227,7 +1227,6 @@ class ApiClient {
                     useAuthStore.getState().updateTokens(newAccessToken, newRefreshToken);
                 }
 
-                console.log("Token refreshed successfully");
                 return newAccessToken;
             }
 
@@ -1242,7 +1241,6 @@ class ApiClient {
      * Handle logout when refresh token fails
      */
     private async handleLogout(): Promise<void> {
-        console.log("Refresh token invalid, logging out user...");
 
         this.token = null;
         this.refreshTokenValue = null;
@@ -1319,15 +1317,6 @@ class ApiClient {
         }
 
         try {
-            console.log("API Request:", {
-                url,
-                method: options.method || "GET",
-                headers: {
-                    ...headers,
-                    Authorization: this.token ? "Bearer ***" : "None",
-                },
-                body: options.body,
-            });
 
             const response = await fetch(url, {
                 ...options,
@@ -1343,17 +1332,8 @@ class ApiClient {
                 data = {message: await response.text()};
             }
 
-            console.log("API Response:", {
-                status: response.status,
-                statusText: response.statusText,
-                data,
-                dataType: typeof data,
-                dataKeys: data ? Object.keys(data) : "null",
-            });
-
             // Handle 401 Unauthorized - token expired
             if (response.status === 401 && !isRetry && !endpoint.includes("/auth/")) {
-                console.log("Received 401, attempting to refresh token...");
 
                 // Try to refresh token
                 if (this.refreshTokenValue) {
@@ -1361,7 +1341,6 @@ class ApiClient {
 
                     if (newToken) {
                         // Retry the original request with new token
-                        console.log("Retrying request with new token...");
                         return this.request<T>(endpoint, options, true);
                     }
                 }
