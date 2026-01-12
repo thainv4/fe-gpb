@@ -921,6 +921,9 @@ export default function TestResultForm() {
                     }
                 }
                 
+                // Refresh sidebar để cập nhật trạng thái dịch vụ
+                setRefreshTrigger(prev => prev + 1)
+                
                 toast({
                     title: "Thành công",
                     description: `Đã hủy chữ ký số cho ${selectedServicesWithDocumentId.length} dịch vụ`,

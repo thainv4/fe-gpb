@@ -419,6 +419,7 @@ export default function SampleDeliveryTable() {
                 <ServiceRequestsSidebar
                     onSelect={handleSelectServiceRequest}
                     selectedCode={selectedServiceReqCode}
+                    defaultStateId="426df256-bbfa-28d1-e065-9e6b783dd008"
                     refreshTrigger={refreshTrigger}
                 />
             </div>

@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import {useTabPersistence} from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { QRCodeSVG } from 'qrcode.react';
+import {useHisStore} from "@/lib/stores/his";
 
 export default function TestIndicationsTable() {
 
@@ -32,6 +33,7 @@ export default function TestIndicationsTable() {
     const pathname = usePathname()
     const tabKey = activeKey ?? pathname ?? 'default' // Use pathname as fallback
     const { setTabData, getTabData } = useTabsStore()
+    const { token: hisToken } = useHisStore()
 
     // Get current tab's room info
     const currentTab = tabs.find(t => t.key === tabKey)
@@ -588,10 +590,47 @@ export default function TestIndicationsTable() {
                 await queryClient.invalidateQueries({ queryKey: ['stored-service-request', newStoredServiceReqId] });
             }
 
+            // Sau khi store thành công, gọi API HIS-PACS start
+            try {
+                // Lấy HIS token code
+                let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
+                if (!tokenCode) {
+                    tokenCode = hisToken?.tokenCode || null;
+                }
+                if (!tokenCode) {
+                    const hisStorage = localStorage.getItem('his-storage');
+                    if (hisStorage) {
+                        try {
+                            const parsed = JSON.parse(hisStorage);
+                            tokenCode = parsed.state?.token?.tokenCode || null;
+                        } catch (e) {
+                            console.error('Error parsing HIS storage:', e);
+                        }
+                    }
+                }
+
+                if (tokenCode) {
+                    const startHisPacsResponse = await apiClient.startHisPacs(
+                        serviceCodeToSave,
+                        tokenCode
+                    );
+
+                    if (!startHisPacsResponse.success) {
+                        console.error('❌ Lỗi gọi API HIS-PACS start:', startHisPacsResponse);
+                        // Không hiển thị toast vì đây không phải lỗi nghiêm trọng
+                    }
+                } else {
+                    console.warn('⚠️ Không có TokenCode để gọi API HIS-PACS start');
+                }
+            } catch (startError: any) {
+                console.error('❌ Lỗi gọi API HIS-PACS start:', startError);
+                // Không hiển thị toast vì đây không phải lỗi nghiêm trọng
+            }
+
             // Hiển thị thông báo thành công
             toast({
                 title: "Thành công",
-                description: "✅ Đã lưu chỉ định xét nghiệm thành công!",
+                description: "Đã lưu chỉ định xét nghiệm thành công!",
             });
 
             // Refresh sidebar sau khi lưu thành công

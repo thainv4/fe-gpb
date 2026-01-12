@@ -2071,6 +2071,33 @@ class ApiClient {
 
     // HIS-PACS methods
     /**
+     * Start for HIS-PACS
+     * POST /his-pacs/start
+     */
+    async startHisPacs(
+        tdlServiceReqCode: string,
+        tokenCode: string
+    ): Promise<ApiResponse<unknown>> {
+        if (!tokenCode) {
+            throw new Error('TokenCode header is required');
+        }
+
+        const queryParams = new URLSearchParams();
+        queryParams.append('tdlServiceReqCode', tdlServiceReqCode);
+
+        const queryString = queryParams.toString();
+        return this.request<unknown>(
+            `/his-pacs/start?${queryString}`,
+            {
+                method: 'POST',
+                headers: {
+                    'TokenCode': tokenCode,
+                },
+            }
+        );
+    }
+
+    /**
      * Update result for HIS-PACS
      * POST /his-pacs/update-result
      */
