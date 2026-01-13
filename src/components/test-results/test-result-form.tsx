@@ -544,6 +544,16 @@ export default function TestResultForm() {
             return
         }
 
+        // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả
+        if (!previewServiceData?.data?.resultText) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Không thể ký số khi chưa có kết quả xét nghiệm"
+            })
+            return
+        }
+
         if (!previewRef.current) {
             toast({
                 variant: "destructive",
@@ -698,7 +708,7 @@ export default function TestResultForm() {
                                                 IsCancel: false,
                                                 BeginTime: null,
                                                 EndTime: formatDateTimeForHisPacs(),
-                                                Description: '',
+                                                Description: concludeText,
                                                 Conclude: concludeText,
                                                 Note: '',
                                                 ExecuteLoginname: executeLoginname,
