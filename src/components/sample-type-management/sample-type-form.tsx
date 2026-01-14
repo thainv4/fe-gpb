@@ -51,13 +51,16 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
 
     function handleSubmit(data: SampleTypeFormData) {
         // Đảm bảo các giá trị mặc định luôn được gửi lên
+        // Không gửi codePrefix trong request
         const submitData: SampleTypeRequest = {
-            ...data,
-            codePrefix: '', // Set giá trị mặc định cho codePrefix
-            allowDuplicate: false,
-            resetPeriod: 'MONTHLY' as const,
-            codeWidth: 4,
-            sortOrder: 1,
+            typeName: data.typeName,
+            shortName: data.shortName,
+            description: data.description,
+            sortOrder: data.sortOrder ?? 1,
+            codeWidth: data.codeWidth ?? 4,
+            allowDuplicate: data.allowDuplicate ?? false,
+            resetPeriod: data.resetPeriod ?? 'MONTHLY',
+            // Không include codePrefix
         }
         onSubmit(submitData)
     }

@@ -489,7 +489,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                     </div>
 
                     <div className="flex gap-2 py-1">
-                        <Label className="text-sm font-medium">Lọc theo bệnh phẩm:</Label>
+                        <Label className="text-sm font-medium">Bệnh phẩm:</Label>
                         <RadioGroup value={selectedFlag} onValueChange={(value) => {
                             setSelectedFlag(value)
                             setFilters(prev => ({...prev, offset: 0}))
@@ -509,6 +509,14 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="HC" id="flag-hc-filter" />
                                 <Label htmlFor="flag-hc-filter" className="cursor-pointer text-xs">HC</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="HMMD" id="flag-hmmd-filter" />
+                                <Label htmlFor="flag-hmmd-filter" className="cursor-pointer text-xs">HMMD</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="DB" id="flag-db-filter" />
+                                <Label htmlFor="flag-db-filter" className="cursor-pointer text-xs">DB</Label>
                             </div>
                         </RadioGroup>
                     </div>

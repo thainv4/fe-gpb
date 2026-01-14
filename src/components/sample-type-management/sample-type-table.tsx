@@ -22,7 +22,6 @@ import {
     DialogFooter
 } from '@/components/ui/dialog'
 import {
-    Hash,
     Plus,
     Loader2,
     ChevronLeft,
@@ -56,10 +55,26 @@ export function SampleTypeTable() {
         offset: currentPage * pageSize,
     }
 
-    // Fetch sample types
+    // Fetch sample types - use different API based on search term
     const {data: sampleTypes, isLoading, error} = useQuery({
-        queryKey: ['sample-types', filters],
-        queryFn: () => apiClient.getSampleTypes(filters),
+        queryKey: ['sample-types', searchTerm, currentPage, pageSize],
+        queryFn: async () => {
+            // If there's a search term, use the by-type-name API
+            if (searchTerm?.trim()) {
+                const response = await apiClient.getSampleTypeByTypeName(searchTerm.trim())
+                // API returns array in response.data, convert to expected structure
+                return {
+                    data: {
+                        sampleTypes: response.data || [],
+                        total: response.data?.length || 0,
+                        limit: pageSize,
+                        offset: 0,
+                    }
+                }
+            }
+            // Otherwise use the regular list API with pagination
+            return apiClient.getSampleTypes(filters)
+        },
     })
 
     const createMutation = useMutation({
@@ -202,9 +217,12 @@ export function SampleTypeTable() {
                         <div className="relative flex-1">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
                             <Input
-                                placeholder="Tìm kiếm theo tên hoặc mã loại mẫu..."
+                                placeholder="Tìm kiếm theo tên loại mẫu..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value)
+                                    setCurrentPage(0) // Reset to first page when searching
+                                }}
                                 className="pl-8"
                             />
                         </div>

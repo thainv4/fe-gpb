@@ -366,8 +366,8 @@ export default function TestResultForm() {
         return htmlToFormattedText(html);
     }
 
-    // Handler khi click vào dịch vụ để load kết quả
-    const handleServiceClick = async (serviceId: string) => {
+    // Handler khi click vào dịch vụ để chọn dịch vụ
+    const handleServiceClick = (serviceId: string) => {
         if (!storedServiceReqId) {
             toast({
                 variant: "destructive",
@@ -377,37 +377,8 @@ export default function TestResultForm() {
             return
         }
 
-        try {
-            const response = await apiClient.getServiceResult(serviceId)
-            if (response.success && response.data) {
-                const serviceData = response.data
-                setTestResult(serviceData.resultText || defaultTemplate)
-                setResultName(serviceData.resultName || '')
-                // Chọn dịch vụ này
-                setSelectedServices(new Set([serviceId]))
-            } else {
-                // Nếu chưa có kết quả hoặc lỗi, reset về template mặc định
-                setTestResult(defaultTemplate)
-                setResultName('')
-                setSelectedServices(new Set([serviceId]))
-                
-                // Hiển thị thông báo nếu có lỗi
-                if (!response.success) {
-                    toast({
-                        variant: "destructive",
-                        title: "Lỗi",
-                        description: getErrorMessage(response, "Không thể tải kết quả dịch vụ")
-                    })
-                }
-            }
-        } catch (error: any) {
-            console.error('Error loading service result:', error)
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: error?.message || "Có lỗi xảy ra khi tải kết quả dịch vụ"
-            })
-        }
+        // Chỉ chọn dịch vụ, không gọi API getServiceResult
+        setSelectedServices(new Set([serviceId]))
     }
 
     const handleDownloadPdf = async () => {

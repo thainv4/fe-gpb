@@ -147,10 +147,24 @@ export default function TestIndicationsTable() {
     }
 
     const handleSampleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Ngăn chặn tất cả keyboard events lan truyền đến Select component
+        // để tránh tự động highlight/chọn items khi đang gõ
         if (e.key === 'Enter') {
+            e.preventDefault()
+            e.stopPropagation()
             setAppliedSearch(sampleTypeSearch)
+            return
         }
+        
+        // Cho phép Escape để đóng dropdown
+        if (e.key === 'Escape') {
+            return
+        }
+        
+        // Ngăn tất cả các phím khác lan truyền để tránh Select tự động filter/chọn
+        e.stopPropagation()
     }
+
 
     // Handler khi nhấn Enter trong input nhập barcode thủ công
     const handleManualBarcodeKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -218,12 +232,29 @@ export default function TestIndicationsTable() {
 
     const errorMessage = error ? error.message : ''
 
+    // Fetch sample types based on search
+    const { data: searchedSampleTypeData } = useQuery({
+        queryKey: ['sample-type-search', appliedSearch],
+        queryFn: () => apiClient.getSampleTypeByTypeName(appliedSearch),
+        enabled: !!appliedSearch && appliedSearch.trim().length > 0,
+        retry: false,
+    })
+
     const sampleTypeItems: SampleType[] = (sampleTypesData?.data?.sampleTypes ?? []) as SampleType[]
 
-    // Lọc danh sách bệnh phẩm theo từ khóa đã apply (sau khi nhấn Enter)
-    const filteredSampleTypeItems = sampleTypeItems.filter(item =>
-        item.typeName.toLowerCase().includes(appliedSearch.toLowerCase())
-    )
+    // Nếu có search và có kết quả từ API search, dùng kết quả đó. Nếu không có search, dùng danh sách đầy đủ
+    const filteredSampleTypeItems = useMemo(() => {
+        if (appliedSearch && appliedSearch.trim()) {
+            // Nếu có search term và có kết quả từ API (response.data là mảng)
+            if (searchedSampleTypeData?.data && Array.isArray(searchedSampleTypeData.data)) {
+                return searchedSampleTypeData.data
+            }
+            // Nếu có search term nhưng không có kết quả, trả về mảng rỗng
+            return []
+        }
+        // Nếu không có search term, trả về tất cả
+        return sampleTypeItems
+    }, [appliedSearch, searchedSampleTypeData, sampleTypeItems])
 
 
     const { data: profileData } = useQuery({
@@ -432,12 +463,12 @@ export default function TestIndicationsTable() {
             return;
         }
 
-        // Lấy sampleTypeCode từ selectedSampleType
-        const selectedType = sampleTypeItems.find(item => item.id === selectedSampleType)
-        if (!selectedType?.typeCode) {
+        // Lấy sampleTypeCode từ selectedSampleType - tìm trong filteredSampleTypeItems (có thể từ search hoặc full list)
+        const selectedType = filteredSampleTypeItems.find(item => item.id === selectedSampleType)
+        if (!selectedType?.typeName) {
             toast({
                 title: "Lỗi",
-                description: "❌ Không tìm thấy mã loại bệnh phẩm",
+                description: "❌ Không tìm thấy thông tin loại bệnh phẩm",
                 variant: "destructive",
             })
             return;
@@ -709,14 +740,21 @@ export default function TestIndicationsTable() {
                             <SelectValue placeholder="Chọn bệnh phẩm" />
                         </SelectTrigger>
                         <SelectContent>
-                            {/* Ô tìm kiếm bệnh phẩm */}
-                            <div className="px-2 py-1">
+                            {/* Ô tìm kiếm bệnh phẩm - sticky at top */}
+                            <div 
+                                className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
+                                onKeyDown={(e) => {
+                                    // Ngăn tất cả keyboard events lan truyền ra ngoài container
+                                    e.stopPropagation()
+                                }}
+                            >
                                 <Input
-                                    placeholder="Tìm kiếm bệnh phẩm (nhấn Enter)..."
+                                    placeholder="Tìm kiếm bệnh phẩm..."
                                     value={sampleTypeSearch}
                                     onChange={e => setSampleTypeSearch(e.target.value)}
                                     onKeyDown={handleSampleSearchKeyDown}
-                                    className="text-sm mb-2"
+                                    className="text-sm"
+                                    autoComplete="off"
                                 />
                             </div>
                             {filteredSampleTypeItems.length

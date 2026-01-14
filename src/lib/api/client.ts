@@ -541,7 +541,7 @@ export interface SampleType {
     shortName?: string;
     description?: string;
     sortOrder?: number;
-    codePrefix: string;
+    codePrefix?: string;
     codeWidth?: number;
     allowDuplicate?: boolean;
     resetPeriod?: 'DAILY' | 'MONTHLY' | 'YEARLY' | 'NEVER';
@@ -557,7 +557,7 @@ export interface SampleTypeRequest {
     shortName?: string;
     description?: string;
     sortOrder?: number;
-    codePrefix: string;
+    codePrefix?: string | null;
     codeWidth?: number;
     allowDuplicate?: boolean;
     resetPeriod?: 'DAILY' | 'MONTHLY' | 'YEARLY' | 'NEVER';
@@ -2700,6 +2700,10 @@ class ApiClient {
         return this.request(`/sample-types/${id}`, {
             method: "DELETE",
         });
+    }
+
+    async getSampleTypeByTypeName(typeName: string): Promise<ApiResponse<SampleType[]>> {
+        return this.request<SampleType[]>(`/sample-types/by-type-name/${encodeURIComponent(typeName)}`);
     }
 
     // ========== RESULT TEMPLATE ENDPOINTS ==========

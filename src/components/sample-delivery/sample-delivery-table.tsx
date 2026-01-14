@@ -556,6 +556,14 @@ export default function SampleDeliveryTable() {
                                             <RadioGroupItem value="HC" id="flag-hc" />
                                             <Label htmlFor="flag-hc" className="cursor-pointer">HC</Label>
                                         </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="HMMD" id="flag-HMMD" />
+                                            <Label htmlFor="flag-HMMD" className="cursor-pointer">HMMD</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="DB" id="flag-DB" />
+                                            <Label htmlFor="flag-DB" className="cursor-pointer">DB</Label>
+                                        </div>
                                     </RadioGroup>
                                 </div>
                                 <div className="flex flex-col gap-2 md:col-span-2">
