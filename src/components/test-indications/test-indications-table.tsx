@@ -743,6 +743,7 @@ export default function TestIndicationsTable() {
                             {/* Ô tìm kiếm bệnh phẩm - sticky at top */}
                             <div 
                                 className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
+                                role="none"
                                 onKeyDown={(e) => {
                                     // Ngăn tất cả keyboard events lan truyền ra ngoài container
                                     e.stopPropagation()
