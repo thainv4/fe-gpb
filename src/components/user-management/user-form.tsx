@@ -80,7 +80,6 @@ const updateSchema = z.object({
     .union([
       z
         .string()
-        .min(6, "Mật khẩu HIS tối thiểu 6 ký tự")
         .max(100, "Mật khẩu HIS tối đa 100 ký tự"),
       z.literal(""),
     ])

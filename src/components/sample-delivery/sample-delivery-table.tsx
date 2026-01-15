@@ -134,6 +134,8 @@ export default function SampleDeliveryTable() {
     const [receptionCode, setReceptionCode] = useState<string>('')
     // State cho flag (ST, PT, HC)
     const [selectedFlag, setSelectedFlag] = useState<string>('')
+    // State cho phương pháp nhuộm
+    const [selectedStainingMethod, setSelectedStainingMethod] = useState<string>('')
 
     // Tab persistence
     const pathname = usePathname()
@@ -148,6 +150,7 @@ export default function SampleDeliveryTable() {
             handoverNote,
             receptionCode,
             selectedFlag,
+            selectedStainingMethod,
         },
         {
             saveScroll: true,
@@ -160,6 +163,7 @@ export default function SampleDeliveryTable() {
                 if (data.handoverNote !== undefined) setHandoverNote(data.handoverNote)
                 if (data.receptionCode) setReceptionCode(data.receptionCode)
                 if (data.selectedFlag) setSelectedFlag(data.selectedFlag)
+                if (data.selectedStainingMethod) setSelectedStainingMethod(data.selectedStainingMethod)
             },
         }
     )
@@ -171,6 +175,15 @@ export default function SampleDeliveryTable() {
         enabled: !!storedServiceReqId,
         staleTime: 5 * 60 * 1000,
     })
+
+    // Query staining methods
+    const { data: stainingMethodsData } = useQuery({
+        queryKey: ['staining-methods', { limit: 100, offset: 0 }],
+        queryFn: () => apiClient.getStainingMethods({ limit: 100, offset: 0 }),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const stainingMethods = useMemo(() => stainingMethodsData?.data?.stainingMethods ?? [], [stainingMethodsData])
 
     // Lấy receptionCode từ storedServiceRequest
     const receptionCodeFromStored = useMemo(() => {
@@ -285,6 +298,7 @@ export default function SampleDeliveryTable() {
             currentDepartmentId: string;
             currentRoomId: string;
             selectedFlag: string;
+            selectedStainingMethod: string;
         }) => {
             const response = await apiClient.transitionWorkflow({
                 storedServiceReqId: params.storedServiceReqId,
@@ -302,6 +316,30 @@ export default function SampleDeliveryTable() {
             return response
         },
         onSuccess: async (_data, variables) => {
+            // Gọi API staining method với storedServiceReqId từ mutation variables
+            if (variables.storedServiceReqId && variables.selectedStainingMethod) {
+                try {
+                    const stainingResponse = await apiClient.updateStainingMethod(
+                        variables.storedServiceReqId,
+                        variables.selectedStainingMethod
+                    )
+                    if (!stainingResponse.success) {
+                        toast({
+                            title: 'Cảnh báo',
+                            description: stainingResponse.message || 'Đã xác nhận bàn giao nhưng không thể cập nhật phương pháp nhuộm',
+                            variant: 'default',
+                        })
+                    }
+                } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
+                    toast({
+                        title: 'Cảnh báo',
+                        description: `Đã xác nhận bàn giao nhưng không thể cập nhật phương pháp nhuộm: ${errorMessage}`,
+                        variant: 'default',
+                    })
+                }
+            }
+
             // Gọi API flag với storedServiceReqId từ mutation variables
             if (variables.storedServiceReqId && variables.selectedFlag) {
                 try {
@@ -362,18 +400,18 @@ export default function SampleDeliveryTable() {
             })
             return
         }
-        if (!currentUserId || !receiverRoomId || !receiverDepartmentId) {
+        if (!selectedStainingMethod) {
             toast({
                 title: 'Lỗi',
-                description: 'Chưa chọn phòng/khoa nhận mẫu',
+                description: 'Vui lòng chọn phương pháp nhuộm',
                 variant: 'destructive',
             })
             return
         }
-        if (!selectedFlag) {
+        if (!currentUserId || !receiverRoomId || !receiverDepartmentId) {
             toast({
                 title: 'Lỗi',
-                description: 'Vui lòng chọn cờ để đánh dấu',
+                description: 'Chưa chọn phòng/khoa nhận mẫu',
                 variant: 'destructive',
             })
             return
@@ -386,6 +424,7 @@ export default function SampleDeliveryTable() {
             currentDepartmentId: receiverDepartmentId,
             currentRoomId: receiverRoomId,
             selectedFlag,
+            selectedStainingMethod,
         })
     }
 
@@ -541,7 +580,22 @@ export default function SampleDeliveryTable() {
                                     <Label>Thời gian nhận mẫu</Label>
                                     <Input type="datetime-local" value={receiveDateTime} onChange={(e) => setReceiveDateTime(e.target.value)} />
                                 </div>
-                                <div className="flex gap-2 my-2">
+                                <div className="flex flex-col gap-2">
+                                    <Label>Phương pháp nhuộm</Label>
+                                    <Select value={selectedStainingMethod} onValueChange={setSelectedStainingMethod}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Chọn phương pháp nhuộm..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {stainingMethods.map((method: { id: string; methodName: string }) => (
+                                                <SelectItem key={method.id} value={method.id}>
+                                                    {method.methodName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex flex-col gap-2 my-2 ml-2">
                                     <Label>Chọn cờ để đánh dấu: </Label>
                                     <RadioGroup value={selectedFlag} onValueChange={setSelectedFlag} className="flex gap-6">
                                         <div className="flex items-center space-x-2">
@@ -580,7 +634,7 @@ export default function SampleDeliveryTable() {
 
                         {/* Action buttons */}
                         <div className="flex justify-center gap-3 mt-6">
-                            <Button onClick={handleConfirmHandover} disabled={transitionMutation.isPending || !storedServiceReqId || !selectedStateId || !receiverRoomId || !receiverDepartmentId || !selectedFlag}>
+                            <Button onClick={handleConfirmHandover} disabled={transitionMutation.isPending || !storedServiceReqId || !selectedStateId || !receiverRoomId || !receiverDepartmentId || !selectedStainingMethod}>
                                 {transitionMutation.isPending ? 'Đang xử lý...' : 'Xác nhận bàn giao'}
                             </Button>
                             <Button variant="secondary" onClick={() => setReceiveDateTime(getVietnamTime())} disabled={transitionMutation.isPending}>

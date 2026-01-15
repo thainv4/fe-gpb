@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx'
 
 export interface ExportExcelItem {
     serviceReqCode: string
+    receptionCode: string
     patientName: string
     stateName: string
     createdAt: string
@@ -28,6 +29,7 @@ export function exportToExcel(options: ExportExcelOptions): void {
     // Chuẩn bị dữ liệu cho Excel với format đúng
     const excelData = data.map((item) => ({
         'Mã Y lệnh': item.serviceReqCode,
+        'Barcode': item.receptionCode,
         'Tên bệnh nhân': item.patientName,
         'Trạng thái': item.stateName,
         'Thời gian': item.createdAt,
@@ -39,6 +41,7 @@ export function exportToExcel(options: ExportExcelOptions): void {
     // Tự động điều chỉnh độ rộng cột
     const colWidths = [
         { wch: 20 }, // Mã Y lệnh
+        { wch: 20 }, // Barcode
         { wch: 30 }, // Tên bệnh nhân
         { wch: 25 }, // Trạng thái
         { wch: 25 }, // Thời gian

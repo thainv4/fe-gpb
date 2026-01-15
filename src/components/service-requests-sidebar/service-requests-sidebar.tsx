@@ -350,9 +350,11 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                 const patientName = serviceReq?.patientName || ''
                 const stateName = item.toState?.stateName || 'Chưa xác định'
                 const createdAt = formatDateTimeForExcel(item.createdAt)
+                const receptionCode = serviceReq?.receptionCode || ''
 
                 return {
                     serviceReqCode,
+                    receptionCode,
                     patientName,
                     stateName,
                     createdAt,

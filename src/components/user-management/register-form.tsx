@@ -28,7 +28,7 @@ import { apiClient, RegisterWithProfileRequest, Province, Ward, Department } fro
 const registerWithProfileSchema = z.object({
     // User fields (required)
     username: z.string().min(3, 'Tên đăng nhập tối thiểu 3 ký tự').max(50, 'Tên đăng nhập tối đa 50 ký tự'),
-    password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
+    password: z.string(),
     fullName: z.string().min(2, 'Họ tên tối thiểu 2 ký tự').max(100, 'Họ tên tối đa 100 ký tự'),
     
     // Profile fields (optional) - cho phép empty string hoặc giá trị hợp lệ
@@ -49,7 +49,7 @@ const registerWithProfileSchema = z.object({
         z.literal('')
     ]).optional(),
     mappedPassword: z.union([
-        z.string().min(6, 'Mật khẩu HIS tối thiểu 6 ký tự').max(100, 'Mật khẩu HIS tối đa 100 ký tự'),
+        z.string().max(100, 'Mật khẩu HIS tối đa 100 ký tự'),
         z.literal('')
     ]).optional(),
 })

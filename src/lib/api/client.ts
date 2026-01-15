@@ -570,6 +570,22 @@ export interface SampleTypeFilters {
     offset?: number;
 }
 
+export interface StainingMethod {
+    id: string;
+    methodName: string;
+    createdAt: string | null;
+    updatedAt: string | null;
+    createdBy: string;
+    updatedBy: string;
+    version: number;
+}
+
+export interface StainingMethodFilters {
+    limit?: number;
+    offset?: number;
+    search?: string;
+}
+
 export interface ResultTemplate {
     id: string;
     templateName: string;
@@ -794,6 +810,7 @@ export interface StoredService {
     isActive?: number | null;
     documentId?: string | number | null;
     sampleTypeName?: string | null;
+    stainingMethodName?: string | null;
 }
 
 export interface StoreServiceRequestBody {
@@ -2706,6 +2723,43 @@ class ApiClient {
         return this.request<SampleType[]>(`/sample-types/by-type-name/${encodeURIComponent(typeName)}`);
     }
 
+    // Staining Method management methods
+    async getStainingMethods(filters?: StainingMethodFilters): Promise<
+        ApiResponse<{
+            stainingMethods: StainingMethod[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        
+        // Set defaults
+        params.append("limit", "100");
+        params.append("offset", "0");
+        
+        // Apply filters
+        if (filters) {
+            if (filters.limit !== undefined) {
+                params.set("limit", filters.limit.toString());
+            }
+            if (filters.offset !== undefined) {
+                params.set("offset", filters.offset.toString());
+            }
+            if (filters.search) {
+                params.set("search", filters.search);
+            }
+        }
+        
+        const queryString = params.toString();
+        return this.request<{
+            stainingMethods: StainingMethod[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/staining-methods?${queryString}`);
+    }
+
     // ========== RESULT TEMPLATE ENDPOINTS ==========
 
     async getResultTemplates(
@@ -2907,6 +2961,22 @@ class ApiClient {
             {
                 method: 'PATCH',
                 body: JSON.stringify({ flag }),
+            }
+        );
+    }
+
+    /**
+     * Update staining method for a stored service request
+     */
+    async updateStainingMethod(
+        storedServiceReqId: string,
+        stainingMethodId: string
+    ): Promise<ApiResponse<unknown>> {
+        return this.request<unknown>(
+            `/service-requests/stored/${storedServiceReqId}/staining-method`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify({ stainingMethodId }),
             }
         );
     }

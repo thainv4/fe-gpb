@@ -44,7 +44,7 @@ function PageHeader({
   const age = calculateAge(patientDob);
 
   // Lấy sampleTypeName từ specificService
-  const sampleTypeName = specificService?.sampleTypeName || '';
+  const sampleTypeName = specificService?.sampleTypeName || "";
 
   return (
     <div className="print-header" style={{ breakInside: "avoid" }}>
@@ -73,7 +73,7 @@ function PageHeader({
               />
             </div>
           )}
-          
+
           <div>
             <span className="font-semibold text-gray-700">Mã Y lệnh:</span>{" "}
             <span className="font-bold">{serviceReqCode}</span>
@@ -85,6 +85,12 @@ function PageHeader({
           <div>
             <span className="font-semibold text-gray-700">Mã ĐT:</span>{" "}
             <span className="font-bold">{treatmentCode}</span>
+          </div>
+          <div>
+            <span className="font-semibold text-gray-700">Barcode: </span>
+            <span className="font-bold">
+              {specificService?.receptionCode || ""}
+            </span>
           </div>
         </div>
       </div>
@@ -148,16 +154,22 @@ function PageHeader({
             </span>
           </div>
 
-          <div>
+          {/* <div>
             <span className="text-gray-600">Mã bệnh phẩm:</span>
             <span className="ml-2 font-semibold">
               {specificService?.receptionCode || ""}
             </span>
-          </div>
+          </div> */}
 
-          <div>
-            <span className="text-gray-600">Tên bệnh phẩm:</span>
-            <span className="ml-2">{sampleTypeName || '-'}</span>
+          <div className="flex flex-wrap gap-x-16">
+            <div>
+              <span className="text-gray-600">Vị trí:</span>
+              <span className="ml-2">{sampleTypeName || "-"}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">Phương pháp nhuộm:</span>
+              <span className="ml-2">{specificService?.stainingMethodName || '-'}</span>
+            </div>
           </div>
 
           <div>
