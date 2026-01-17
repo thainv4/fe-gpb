@@ -55,24 +55,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     // Tabs store
     const { tabs, activeKey, openTab, closeTab, setActive, reset: resetTabs } = useTabsStore()
 
-    // Tự động mở dialog chọn phòng khi chưa chọn phòng
+    // Tự động mở dialog chọn phòng khi component mount và chưa chọn phòng
     useEffect(() => {
         if (!currentRoomId) {
             setRoomDialogOpen(true)
         }
-    }, [currentRoomId])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Chỉ chạy khi component mount
 
-    // Ngăn dialog đóng khi chưa chọn phòng
+    // Cho phép đóng dialog tự do
     const handleRoomDialogOpenChange = (open: boolean) => {
-        // Chỉ cho phép đóng dialog khi đã chọn phòng
-        if (!open && currentRoomId) {
-            setRoomDialogOpen(false)
-        } else if (!open && !currentRoomId) {
-            // Nếu chưa chọn phòng, giữ dialog mở
-            setRoomDialogOpen(true)
-        } else {
-            setRoomDialogOpen(open)
-        }
+        setRoomDialogOpen(open)
     }
 
     // Navigation config
