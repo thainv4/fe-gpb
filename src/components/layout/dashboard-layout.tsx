@@ -228,11 +228,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: LayoutDashboard,
                     description: 'Tổng quan hệ thống và thống kê'
                 },
-                {
-                    name: 'Xét nghiệm',
-                    icon: TestTube,
-                    description: 'Quy trình xét nghiệm và quản lý mẫu',
-                    children: [
+               
                         {
                             name: 'Chỉ định xét nghiệm',
                             href: '/test-indications',
@@ -251,8 +247,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             icon: NewspaperIcon,
                             description: 'Nhập và quản lý kết quả xét nghiệm'
                         }
-                    ]
-                }
+                    
+                
             ]
         }
         

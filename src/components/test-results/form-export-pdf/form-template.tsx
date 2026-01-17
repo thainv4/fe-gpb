@@ -52,7 +52,7 @@ function PageHeader({
       <div className="flex justify-between items-start mb-2">
         {/* Logo and Hospital Info */}
         <div className="flex flex-1 items-center gap-4">
-          <img src="/logo-bvbm-wh.png" alt="logo-bvbm" className="w-2/12" />
+          <img src="/logo-bvbm-wh.png" alt="logo-bvbm" className="w-3/12" />
           <div className="text-sm text-gray-700 leading-tight space-y-1 text-center">
             <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
             <div className="text-xs">TRUNG TÂM GIẢI PHẪU BỆNH</div>
@@ -75,6 +75,12 @@ function PageHeader({
           )}
 
           <div>
+            <span className="font-semibold text-gray-700">Barcode: </span>
+            <span className="font-bold">
+              {specificService?.receptionCode || ""}
+            </span>
+          </div>
+          <div>
             <span className="font-semibold text-gray-700">Mã Y lệnh:</span>{" "}
             <span className="font-bold">{serviceReqCode}</span>
           </div>
@@ -85,12 +91,6 @@ function PageHeader({
           <div>
             <span className="font-semibold text-gray-700">Mã ĐT:</span>{" "}
             <span className="font-bold">{treatmentCode}</span>
-          </div>
-          <div>
-            <span className="font-semibold text-gray-700">Barcode: </span>
-            <span className="font-bold">
-              {specificService?.receptionCode || ""}
-            </span>
           </div>
         </div>
       </div>
@@ -496,7 +496,7 @@ export function FormTemplate({
                     {new Date().getMonth() + 1} năm {new Date().getFullYear()}
                   </div>
 
-                  <div className="font-bold text-base mb-2">
+                  <div className="font-bold text-base mb-4">
                     Bác sĩ đọc kết quả
                   </div>
 

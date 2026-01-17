@@ -136,6 +136,9 @@ export default function SampleDeliveryTable() {
     const [selectedFlag, setSelectedFlag] = useState<string>('')
     // State cho phương pháp nhuộm
     const [selectedStainingMethod, setSelectedStainingMethod] = useState<string>('')
+    const [stainingMethodSearch, setStainingMethodSearch] = useState<string>('') // Từ khóa đang gõ
+    const [appliedStainingMethodSearch, setAppliedStainingMethodSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
+    const [stainingMethodSelectOpen, setStainingMethodSelectOpen] = useState(false)
 
     // Tab persistence
     const pathname = usePathname()
@@ -176,14 +179,40 @@ export default function SampleDeliveryTable() {
         staleTime: 5 * 60 * 1000,
     })
 
-    // Query staining methods
+    // Query staining methods - danh sách đầy đủ
     const { data: stainingMethodsData } = useQuery({
         queryKey: ['staining-methods', { limit: 100, offset: 0 }],
         queryFn: () => apiClient.getStainingMethods({ limit: 100, offset: 0 }),
         staleTime: 5 * 60 * 1000,
     })
 
-    const stainingMethods = useMemo(() => stainingMethodsData?.data?.stainingMethods ?? [], [stainingMethodsData])
+    // Query staining methods với search
+    const { data: searchedStainingMethodsData } = useQuery({
+        queryKey: ['staining-methods-search', appliedStainingMethodSearch],
+        queryFn: () => apiClient.getStainingMethods({ 
+            limit: 10, 
+            offset: 0,
+            search: appliedStainingMethodSearch
+        }),
+        enabled: !!appliedStainingMethodSearch && appliedStainingMethodSearch.trim().length > 0,
+        retry: false,
+    })
+
+    const allStainingMethods = useMemo(() => stainingMethodsData?.data?.stainingMethods ?? [], [stainingMethodsData])
+
+    // Nếu có search và có kết quả từ API search, dùng kết quả đó. Nếu không có search, dùng danh sách đầy đủ
+    const filteredStainingMethods = useMemo(() => {
+        if (appliedStainingMethodSearch && appliedStainingMethodSearch.trim()) {
+            // Nếu có search term và có kết quả từ API
+            if (searchedStainingMethodsData?.data?.stainingMethods && Array.isArray(searchedStainingMethodsData.data.stainingMethods)) {
+                return searchedStainingMethodsData.data.stainingMethods
+            }
+            // Nếu có search term nhưng không có kết quả, trả về mảng rỗng
+            return []
+        }
+        // Nếu không có search term, trả về tất cả
+        return allStainingMethods
+    }, [appliedStainingMethodSearch, searchedStainingMethodsData, allStainingMethods])
 
     // Lấy receptionCode từ storedServiceRequest
     const receptionCodeFromStored = useMemo(() => {
@@ -582,16 +611,59 @@ export default function SampleDeliveryTable() {
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <Label>Phương pháp nhuộm</Label>
-                                    <Select value={selectedStainingMethod} onValueChange={setSelectedStainingMethod}>
+                                    <Select 
+                                        value={selectedStainingMethod} 
+                                        onValueChange={setSelectedStainingMethod}
+                                        open={stainingMethodSelectOpen}
+                                        onOpenChange={setStainingMethodSelectOpen}
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Chọn phương pháp nhuộm..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {stainingMethods.map((method: { id: string; methodName: string }) => (
-                                                <SelectItem key={method.id} value={method.id}>
-                                                    {method.methodName}
-                                                </SelectItem>
-                                            ))}
+                                            {/* Ô tìm kiếm phương pháp nhuộm - sticky at top */}
+                                            <div 
+                                                className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
+                                                role="none"
+                                                onKeyDown={(e) => {
+                                                    // Ngăn tất cả keyboard events lan truyền ra ngoài container
+                                                    e.stopPropagation()
+                                                }}
+                                            >
+                                                <Input
+                                                    placeholder="Tìm kiếm phương pháp nhuộm..."
+                                                    value={stainingMethodSearch}
+                                                    onChange={(e) => setStainingMethodSearch(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        // Ngăn chặn tất cả keyboard events lan truyền đến Select component
+                                                        // để tránh tự động highlight/chọn items khi đang gõ
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault()
+                                                            e.stopPropagation()
+                                                            setAppliedStainingMethodSearch(stainingMethodSearch)
+                                                            return
+                                                        }
+                                                        
+                                                        // Cho phép Escape để đóng dropdown
+                                                        if (e.key === 'Escape') {
+                                                            return
+                                                        }
+                                                        
+                                                        // Ngăn tất cả các phím khác lan truyền để tránh Select tự động filter/chọn
+                                                        e.stopPropagation()
+                                                    }}
+                                                    className="text-sm"
+                                                    autoComplete="off"
+                                                />
+                                            </div>
+                                            {filteredStainingMethods.length
+                                                ? filteredStainingMethods.map((method: { id: string; methodName: string }) => (
+                                                    <SelectItem key={method.id} value={method.id}>
+                                                        {method.methodName}
+                                                    </SelectItem>
+                                                ))
+                                                : <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>
+                                            }
                                         </SelectContent>
                                     </Select>
                                 </div>

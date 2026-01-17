@@ -611,7 +611,7 @@ export default function TestResultForm() {
                     HeightRectangle: 100,
                     TextPosition: 0,
                     TypeDisplay: 2,
-                    SizeFont: 11,
+                    SizeFont: 12,
                     FormatRectangleText: "{SIGNTIME}"
                 },
                 DocumentName: `${dateStr}-${serviceReqCode}_Signed`,
