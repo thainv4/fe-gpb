@@ -580,6 +580,10 @@ export interface StainingMethod {
     version: number;
 }
 
+export interface StainingMethodRequest {
+    methodName: string;
+}
+
 export interface StainingMethodFilters {
     limit?: number;
     offset?: number;
@@ -589,7 +593,9 @@ export interface StainingMethodFilters {
 export interface ResultTemplate {
     id: string;
     templateName: string;
-    resultTextTemplate: string;
+    resultDescription: string;
+    resultConclude: string;
+    resultNote: string;
     createdAt: string;
     updatedAt: string;
     createdBy?: string;
@@ -598,7 +604,9 @@ export interface ResultTemplate {
 
 export interface ResultTemplateRequest {
     templateName: string;
-    resultTextTemplate: string;
+    resultDescription: string;
+    resultConclude: string;
+    resultNote: string;
 }
 
 export interface ResultTemplateFilters {
@@ -764,6 +772,16 @@ export interface ServiceRequestService {
     serviceTests?: ServiceTest[];
 }
 
+export interface ServiceResult {
+    resultValue?: number | null;
+    resultValueText?: string | null;
+    resultName?: string | null;
+    resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL' | string | null;
+    resultDescription?: string | null;
+    resultConclude?: string | null;
+    resultNote?: string | null;
+}
+
 export interface StoredService {
     id: string;
     parentServiceId?: string | null;
@@ -785,6 +803,9 @@ export interface StoredService {
     shortName?: string | null;
     description?: string | null;
     resultText?: string | null;
+    resultDescription?: string | null;
+    resultConclude?: string | null;
+    resultNote?: string | null;
     resultValue?: number | null;
     resultValueText?: string | null;
     resultStatus?: string | null;
@@ -2760,6 +2781,35 @@ class ApiClient {
         }>(`/staining-methods?${queryString}`);
     }
 
+    async getStainingMethod(id: string): Promise<ApiResponse<StainingMethod>> {
+        return this.request<StainingMethod>(`/staining-methods/${id}`);
+    }
+
+    async createStainingMethod(
+        data: StainingMethodRequest
+    ): Promise<ApiResponse<StainingMethod>> {
+        return this.request<StainingMethod>('/staining-methods', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async updateStainingMethod(
+        id: string,
+        data: Partial<StainingMethodRequest>
+    ): Promise<ApiResponse<StainingMethod>> {
+        return this.request<StainingMethod>(`/staining-methods/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteStainingMethod(id: string): Promise<ApiResponse> {
+        return this.request(`/staining-methods/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     // ========== RESULT TEMPLATE ENDPOINTS ==========
 
     async getResultTemplates(
@@ -2968,7 +3018,7 @@ class ApiClient {
     /**
      * Update staining method for a stored service request
      */
-    async updateStainingMethod(
+    async updateServiceRequestStainingMethod(
         storedServiceReqId: string,
         stainingMethodId: string
     ): Promise<ApiResponse<unknown>> {
@@ -2987,6 +3037,9 @@ class ApiClient {
             resultValue?: number;
             resultValueText?: string;
             resultText?: string;
+            resultDescription?: string;
+            resultConclude?: string;
+            resultNote?: string;
             resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
             resultName?: string;
         }
@@ -3003,12 +3056,12 @@ class ApiClient {
     /**
      * Lấy kết quả dịch vụ bằng GET method
      * @param serviceId ID của service
-     * @returns Promise<ApiResponse<StoredService>>
+     * @returns Promise<ApiResponse<ServiceResult>>
      */
     async getServiceResult(
         serviceId: string
-    ): Promise<ApiResponse<StoredService>> {
-        return this.request<StoredService>(
+    ): Promise<ApiResponse<ServiceResult>> {
+        return this.request<ServiceResult>(
             `/service-requests/stored/services/${serviceId}/result`
         );
     }

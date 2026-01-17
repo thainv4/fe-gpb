@@ -30,7 +30,9 @@ import {
     Stethoscope,
     Package,
     Ruler,
-    TestTube, NewspaperIcon
+    TestTube,
+    NewspaperIcon,
+    Palette
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTabsStore } from '@/lib/stores/tabs'
@@ -52,6 +54,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     // Tabs store
     const { tabs, activeKey, openTab, closeTab, setActive, reset: resetTabs } = useTabsStore()
+
+    // Tự động mở dialog chọn phòng khi chưa chọn phòng
+    useEffect(() => {
+        if (!currentRoomId) {
+            setRoomDialogOpen(true)
+        }
+    }, [currentRoomId])
+
+    // Ngăn dialog đóng khi chưa chọn phòng
+    const handleRoomDialogOpenChange = (open: boolean) => {
+        // Chỉ cho phép đóng dialog khi đã chọn phòng
+        if (!open && currentRoomId) {
+            setRoomDialogOpen(false)
+        } else if (!open && !currentRoomId) {
+            // Nếu chưa chọn phòng, giữ dialog mở
+            setRoomDialogOpen(true)
+        } else {
+            setRoomDialogOpen(open)
+        }
+    }
 
     // Navigation config
     const navigation = [
@@ -162,6 +184,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     href: '/result-templates',
                     icon: TestTube,
                     description: 'Quản lý mẫu kết quả xét nghiệm'
+                },
+                {
+                    name: 'Phương pháp nhuộm',
+                    href: '/staining-methods',
+                    icon: Palette,
+                    description: 'Quản lý phương pháp nhuộm'
                 }
             ]
         },
@@ -679,7 +707,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     {children}
                 </div>
             </main>
-            <RoomPickerDialog open={roomDialogOpen} onOpenChange={setRoomDialogOpen} />
+            <RoomPickerDialog open={roomDialogOpen} onOpenChange={handleRoomDialogOpenChange} />
         </div>
     )
 }

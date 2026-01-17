@@ -319,7 +319,7 @@ export default function SampleDeliveryTable() {
             // Gọi API staining method với storedServiceReqId từ mutation variables
             if (variables.storedServiceReqId && variables.selectedStainingMethod) {
                 try {
-                    const stainingResponse = await apiClient.updateStainingMethod(
+                    const stainingResponse = await apiClient.updateServiceRequestStainingMethod(
                         variables.storedServiceReqId,
                         variables.selectedStainingMethod
                     )

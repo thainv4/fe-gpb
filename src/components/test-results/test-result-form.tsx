@@ -54,27 +54,14 @@ export default function TestResultForm() {
     const [confirmSignDialogOpen, setConfirmSignDialogOpen] = useState(false)
     const [confirmCancelSignDialogOpen, setConfirmCancelSignDialogOpen] = useState(false)
 
-    // Single rich text editor state with template
-    const defaultTemplate = `
-        <h2>NHẬN XÉT ĐẠI THỂ:</h2>
-        <p></p>
-        
-        <h2>MÔ TẢ VI THỂ:</h2>
-        <p></p>
-        
-        <h2>CHẨN ĐOÁN MÔ BỆNH HỌC:</h2>
-        <p className="conclude"></p>
-        
-        <h2>BÀN LUẬN:</h2>
-        <p></p>
-        
-        <h2>KHUYẾN NGHỊ:</h2>
-        <p></p>
-        
-        <h2>HỘI CHẨN:</h2>
-        <p></p>
-    `
-    const [testResult, setTestResult] = useState<string>(defaultTemplate)
+    // Default templates with HTML format (bold titles and indented content)
+    const defaultResultDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
+    const defaultResultConclude = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p><p style="padding-left: 20px;"></p>`
+    const defaultResultNote = `<p style="padding-left: 0; margin-left: 0;"><strong>BÀN LUẬN:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>KHUYẾN NGHỊ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>HỘI CHẨN:</strong></p><p style="padding-left: 20px;"></p>`
+    
+    const [resultDescription, setResultDescription] = useState<string>(defaultResultDescription)
+    const [resultConclude, setResultConclude] = useState<string>(defaultResultConclude)
+    const [resultNote, setResultNote] = useState<string>(defaultResultNote)
     const [resultName, setResultName] = useState<string>('')
     const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set())
     const [isSaving, setIsSaving] = useState(false)
@@ -86,7 +73,9 @@ export default function TestResultForm() {
         {
             selectedServiceReqCode,
             storedServiceReqId,
-            testResult,
+            resultDescription,
+            resultConclude,
+            resultNote,
             resultName,
             selectedServices: Array.from(selectedServices), // Convert Set to Array for serialization
         },
@@ -96,7 +85,9 @@ export default function TestResultForm() {
             onRestore: (data) => {
                 if (data.selectedServiceReqCode) setSelectedServiceReqCode(data.selectedServiceReqCode)
                 if (data.storedServiceReqId) setStoredServiceReqId(data.storedServiceReqId)
-                if (data.testResult) setTestResult(data.testResult)
+                if (data.resultDescription) setResultDescription(data.resultDescription)
+                if (data.resultConclude) setResultConclude(data.resultConclude)
+                if (data.resultNote) setResultNote(data.resultNote)
                 if (data.resultName !== undefined) setResultName(data.resultName)
                 if (data.selectedServices) setSelectedServices(new Set(data.selectedServices))
             },
@@ -160,9 +151,16 @@ export default function TestResultForm() {
         }
     }
 
-    // Handler khi chọn mẫu kết quả
-    const handleTemplateSelect = (templateContent: string, templateName: string) => {
-        setTestResult(templateContent)
+    // Handler khi chọn mẫu kết quả (backward compatibility - không dùng nữa, dùng onSelectFields)
+    const handleTemplateSelect = (_templateContent: string, _templateName: string) => {
+        // Không sử dụng nữa, dùng handleTemplateSelectFields thay thế
+    }
+    
+    // Handler khi chọn mẫu kết quả với 3 fields riêng biệt
+    const handleTemplateSelectFields = (resultDescription: string, resultConclude: string, resultNote: string, templateName: string) => {
+        setResultDescription(resultDescription || defaultResultDescription)
+        setResultConclude(resultConclude || defaultResultConclude)
+        setResultNote(resultNote || defaultResultNote)
         setResultName(templateName)
     }
 
@@ -337,37 +335,20 @@ export default function TestResultForm() {
             .replace(/\n\s+\n/g, '\n\n');
     }
 
-    // Helper function để lấy Conclude từ HTML: ưu tiên thẻ <p className="conclude">, nếu không có thì lấy toàn bộ
-    const getConcludeText = (html: string): string => {
+    // Helper function để lấy Conclude text từ resultConclude state
+    const getConcludeText = (): string => {
+        if (!resultConclude) return '';
+        return htmlToFormattedText(resultConclude);
+    }
+
+    // Helper function để strip HTML tags (sử dụng htmlToFormattedText)
+    const stripHtml = (html: string | null | undefined): string => {
         if (!html) return '';
-        
-        if (typeof globalThis.window !== 'undefined') {
-            const tmp = document.createElement('div');
-            tmp.innerHTML = html;
-            
-            // Tìm thẻ <p className="conclude">
-            const concludeElement = tmp.querySelector('p.conclude');
-            
-            if (concludeElement) {
-                // Nếu có thẻ conclude, lấy nội dung của nó
-                const concludeHtml = concludeElement.innerHTML;
-                return htmlToFormattedText(`<div>${concludeHtml}</div>`);
-            } else {
-                // Nếu không có, lấy toàn bộ HTML
-                return htmlToFormattedText(html);
-            }
-        }
-        
-        // Fallback cho server-side
-        const concludeMatch = html.match(/<p[^>]*class\s*=\s*["']conclude["'][^>]*>([\s\S]*?)<\/p>/i);
-        if (concludeMatch && concludeMatch[1]) {
-            return htmlToFormattedText(`<div>${concludeMatch[1]}</div>`);
-        }
         return htmlToFormattedText(html);
     }
 
     // Handler khi click vào dịch vụ để chọn dịch vụ
-    const handleServiceClick = (serviceId: string) => {
+    const handleServiceClick = async (serviceId: string) => {
         if (!storedServiceReqId) {
             toast({
                 variant: "destructive",
@@ -377,8 +358,33 @@ export default function TestResultForm() {
             return
         }
 
-        // Chỉ chọn dịch vụ, không gọi API getServiceResult
+        // Chọn dịch vụ
         setSelectedServices(new Set([serviceId]))
+        
+        // Load kết quả từ API /api/v1/service-requests/stored/services/{serviceId}/result
+        try {
+            const resultResponse = await apiClient.getServiceResult(serviceId)
+            if (resultResponse.success && resultResponse.data) {
+                const data = resultResponse.data
+                // Set các field từ response, nếu null/empty thì dùng default
+                setResultDescription(data.resultDescription || defaultResultDescription)
+                setResultConclude(data.resultConclude || defaultResultConclude)
+                setResultNote(data.resultNote || defaultResultNote)
+                setResultName(data.resultName || '')
+            } else {
+                // Nếu không có kết quả, reset về default templates
+                setResultDescription(defaultResultDescription)
+                setResultConclude(defaultResultConclude)
+                setResultNote(defaultResultNote)
+                setResultName('')
+            }
+        } catch (error) {
+            // Nếu có lỗi, reset về default templates
+            setResultDescription(defaultResultDescription)
+            setResultConclude(defaultResultConclude)
+            setResultNote(defaultResultNote)
+            setResultName('')
+        }
     }
 
     const handleDownloadPdf = async () => {
@@ -516,7 +522,10 @@ export default function TestResultForm() {
         }
 
         // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả
-        if (!previewServiceData?.data?.resultText) {
+        const hasResult = previewServiceData?.data?.resultText || 
+                         previewServiceData?.data?.resultDescription || 
+                         resultDescription.trim()
+        if (!hasResult) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -652,12 +661,19 @@ export default function TestResultForm() {
 
                             // Sau khi cập nhật documentId thành công, gọi API update HIS-PACS result
                             try {
-                                // Lấy resultText từ stored service request hoặc từ testResult state
-                                const currentStoredServiceResponse = await apiClient.getStoredServiceById(previewServiceId);
-                                const resultTextHtml = currentStoredServiceResponse?.data?.resultText || previewServiceData?.data?.resultText || testResult || '';
-                                
-                                // Lấy Conclude: ưu tiên từ thẻ <p className="conclude">, nếu không có thì lấy toàn bộ
-                                const concludeText = getConcludeText(resultTextHtml);
+                                // Lấy service data từ previewServiceData hoặc gọi API
+                                let serviceData = previewServiceData?.data;
+                                if (!serviceData && previewServiceId) {
+                                    const serviceResponse = await apiClient.getStoredServiceById(previewServiceId);
+                                    if (serviceResponse.success && serviceResponse.data) {
+                                        serviceData = serviceResponse.data;
+                                    }
+                                }
+
+                                // Lấy resultDescription, resultConclude, resultNote từ service data và strip HTML tags
+                                const description = stripHtml(serviceData?.resultDescription || serviceData?.resultText || '');
+                                const conclude = stripHtml(serviceData?.resultConclude || '');
+                                const note = stripHtml(serviceData?.resultNote || '');
 
                                 // Lấy thông tin user hiện tại
                                 const executeLoginname = profileData?.data?.username || '';
@@ -665,7 +681,7 @@ export default function TestResultForm() {
 
                                 // Lấy serviceReqCode và serviceCode
                                 const tdlServiceReqCode = storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode || '';
-                                const tdlServiceCode = currentStoredServiceResponse?.data?.serviceCode || previewServiceData?.data?.serviceCode || '';
+                                const tdlServiceCode = serviceData?.serviceCode || previewServiceData?.data?.serviceCode || '';
 
                                 // Chỉ gọi API nếu có đủ thông tin
                                 if (tdlServiceReqCode && tdlServiceCode && tokenCode) {
@@ -679,9 +695,9 @@ export default function TestResultForm() {
                                                 IsCancel: false,
                                                 BeginTime: null,
                                                 EndTime: formatDateTimeForHisPacs(),
-                                                Description: concludeText,
-                                                Conclude: concludeText,
-                                                Note: '',
+                                                Description: description,
+                                                Conclude: conclude,
+                                                Note: note,
                                                 ExecuteLoginname: executeLoginname,
                                                 ExecuteUsername: executeUsername,
                                                 TechnicianLoginname: '',
@@ -953,11 +969,20 @@ export default function TestResultForm() {
             return
         }
 
-        if (!testResult.trim()) {
+        if (!resultDescription.trim()) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Vui lòng nhập kết quả xét nghiệm"
+                description: "Vui lòng nhập mô tả kết quả xét nghiệm"
+            })
+            return
+        }
+        
+        if (!resultConclude.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng nhập kết luận"
             })
             return
         }
@@ -977,7 +1002,9 @@ export default function TestResultForm() {
                 const response = await apiClient.saveServiceResult(serviceId, {
                     resultValue: 12.5,
                     resultValueText: "12.5",
-                    resultText: testResult,
+                    resultDescription: resultDescription,
+                    resultConclude: resultConclude,
+                    resultNote: resultNote,
                     resultStatus: 'NORMAL',
                     resultName: resultName
                 })
@@ -1076,7 +1103,9 @@ export default function TestResultForm() {
             setRefreshTrigger(prev => prev + 1)
             
             setSelectedServices(new Set())
-            setTestResult(defaultTemplate)
+            setResultDescription(defaultResultDescription)
+            setResultConclude(defaultResultConclude)
+            setResultNote(defaultResultNote)
         } catch (error: any) {
             console.error('Error saving results:', error)
             toast({
@@ -1258,7 +1287,7 @@ export default function TestResultForm() {
                                                                 {service.receptionCode || '-'}
                                                             </td>
                                                             <td className="px-4 py-3 text-sm text-center">
-                                                                {service.resultText ? (
+                                                                {service.resultConclude ? (
                                                                     <span
                                                                         className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                                         <CheckCircle2 className="w-3.5 h-3.5"/>
@@ -1331,13 +1360,45 @@ export default function TestResultForm() {
                                             />
                                         </div>
 
-                                        <div className="w-full">
-                                            <RichTextEditor
-                                                value={testResult}
-                                                onChange={setTestResult}
-                                                placeholder="Nhập kết quả xét nghiệm..."
-                                                minHeight="600px"
-                                            />
+                                        <div className="space-y-4">
+                                            {/* Mô tả kết quả */}
+                                            <div>
+                                                <Label className="text-sm font-medium mb-2 block">Mô tả kết quả *</Label>
+                                                <div className="border rounded-md">
+                                                    <RichTextEditor
+                                                        value={resultDescription}
+                                                        onChange={setResultDescription}
+                                                        placeholder="Nhập mô tả chi tiết về kết quả xét nghiệm..."
+                                                        minHeight="150px"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Kết luận */}
+                                            <div>
+                                                <Label className="text-sm font-medium mb-2 block">Kết luận *</Label>
+                                                <div className="border rounded-md">
+                                                    <RichTextEditor
+                                                        value={resultConclude}
+                                                        onChange={setResultConclude}
+                                                        placeholder="Nhập kết luận về kết quả xét nghiệm..."
+                                                        minHeight="120px"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Ghi chú */}
+                                            <div>
+                                                <Label className="text-sm font-medium mb-2 block">Ghi chú</Label>
+                                                <div className="border rounded-md">
+                                                    <RichTextEditor
+                                                        value={resultNote}
+                                                        onChange={setResultNote}
+                                                        placeholder="Nhập ghi chú về kết quả xét nghiệm (tùy chọn)..."
+                                                        minHeight="150px"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1446,6 +1507,7 @@ export default function TestResultForm() {
                 open={templateSelectorOpen}
                 onOpenChange={setTemplateSelectorOpen}
                 onSelect={handleTemplateSelect}
+                onSelectFields={handleTemplateSelectFields}
             />
 
             {/* Dialog xác nhận ký số */}

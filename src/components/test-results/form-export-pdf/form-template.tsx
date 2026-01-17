@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { StoredServiceRequestResponse, StoredService } from "@/lib/api/client";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -263,8 +263,33 @@ export function FormTemplate({
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [contentPages, setContentPages] = React.useState<string[]>([""]);
 
-  // Chỉ lấy resultText từ specificService
-  const resultText = specificService?.resultText || "";
+  // Lấy resultDescription, resultConclude, resultNote từ specificService theo thứ tự
+  // Ưu tiên sử dụng 3 fields mới, fallback về resultText nếu không có (backward compatibility)
+  const resultText = useMemo(() => {
+    if (!specificService) return "";
+    
+    // Ưu tiên sử dụng 3 fields mới nếu có
+    if (specificService.resultDescription || specificService.resultConclude || specificService.resultNote) {
+      const parts: string[] = [];
+      
+      if (specificService.resultDescription) {
+        parts.push(specificService.resultDescription);
+      }
+      
+      if (specificService.resultConclude) {
+        parts.push(specificService.resultConclude);
+      }
+      
+      if (specificService.resultNote) {
+        parts.push(specificService.resultNote);
+      }
+      
+      return parts.join("");
+    }
+    
+    // Fallback về resultText nếu không có 3 fields mới
+    return specificService.resultText || "";
+  }, [specificService]);
 
   React.useEffect(() => {
     if (!resultText) {
@@ -375,6 +400,33 @@ export function FormTemplate({
                 .prose ul, .prose ol, .prose li, .prose table, .prose blockquote {
                     page-break-inside: avoid;
                     break-inside: avoid;
+                }
+
+                /* Indent nội dung dưới các tiêu đề in đậm */
+                .prose p[style*="padding-left: 20px"],
+                .prose p[style*="padding-left:20px"] {
+                    padding-left: 20px !important;
+                    margin-left: 0 !important;
+                }
+
+                /* Đảm bảo tiêu đề in đậm không indent */
+                .prose p[style*="padding-left: 0"],
+                .prose p[style*="padding-left:0"],
+                .prose p[style*="margin-left: 0"],
+                .prose p[style*="margin-left:0"] {
+                    padding-left: 0 !important;
+                    margin-left: 0 !important;
+                }
+
+                /* Nếu không có style padding-left, mặc định indent cho nội dung không phải tiêu đề */
+                .prose p:not([style*="padding-left: 0"]):not([style*="padding-left:0"]):not([style*="margin-left: 0"]):not([style*="margin-left:0"]):not(:has(strong:only-child)) {
+                    padding-left: 20px;
+                }
+
+                /* Indent tất cả paragraph mặc định, trừ các paragraph chỉ chứa strong (tiêu đề) */
+                .prose p:has(strong:only-child) {
+                    padding-left: 0 !important;
+                    margin-left: 0 !important;
                 }
             `,
         }}

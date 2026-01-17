@@ -26,12 +26,14 @@ interface ResultTemplateSelectorProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onSelect: (template: string, templateName: string) => void
+    onSelectFields?: (resultDescription: string, resultConclude: string, resultNote: string, templateName: string) => void
 }
 
 export function ResultTemplateSelector({
                                            open,
                                            onOpenChange,
                                            onSelect,
+                                           onSelectFields,
                                        }: ResultTemplateSelectorProps) {
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
@@ -64,7 +66,28 @@ export function ResultTemplateSelector({
     const handleConfirmSelection = () => {
         const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
         if (selectedTemplate) {
-            onSelect(selectedTemplate.resultTextTemplate, selectedTemplate.templateName)
+            // Nếu có onSelectFields, gọi với 3 fields riêng biệt
+            if (onSelectFields) {
+                onSelectFields(
+                    selectedTemplate.resultDescription || '',
+                    selectedTemplate.resultConclude || '',
+                    selectedTemplate.resultNote || '',
+                    selectedTemplate.templateName
+                )
+            } else {
+                // Fallback: Combine all fields with HTML format for backward compatibility
+                let templateContent = selectedTemplate.resultDescription || ''
+                
+                if (selectedTemplate.resultConclude && selectedTemplate.resultConclude.trim()) {
+                    templateContent += selectedTemplate.resultConclude
+                }
+                
+                if (selectedTemplate.resultNote && selectedTemplate.resultNote.trim()) {
+                    templateContent += selectedTemplate.resultNote
+                }
+                
+                onSelect(templateContent, selectedTemplate.templateName)
+            }
             onOpenChange(false)
             setSelectedTemplateId(null)
             setSearchTerm('')
@@ -126,7 +149,8 @@ export function ResultTemplateSelector({
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-[50px]"></TableHead>
-                                            <TableHead>Tên mẫu / Nội dung</TableHead>
+                                            <TableHead>Tên mẫu / Mô tả</TableHead>
+                                            <TableHead className="w-[200px]">Kết luận</TableHead>
                                             <TableHead className="w-[150px]">Ngày tạo</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -157,16 +181,20 @@ export function ResultTemplateSelector({
                                                             <div className="text-sm font-semibold text-gray-900 mb-1">
                                                                 {template.templateName}
                                                             </div>
-                                                            <div
-                                                                className="text-xs text-gray-600 line-clamp-2 whitespace-pre-wrap font-mono"
-                                                                dangerouslySetInnerHTML={{
-                                                                    __html: template.resultTextTemplate
-                                                                }}
-                                                            />
-                                                            <div className="text-xs text-muted-foreground mt-1">
-                                                                {template.resultTextTemplate?.length || 0} ký tự
+                                                            <div className="text-xs text-gray-600 line-clamp-3 whitespace-pre-wrap">
+                                                                {template.resultDescription}
                                                             </div>
+                                                            {template.resultNote && (
+                                                                <div className="text-xs text-muted-foreground mt-1 italic">
+                                                                    Ghi chú: {template.resultNote.substring(0, 50)}...
+                                                                </div>
+                                                            )}
                                                         </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="text-xs text-gray-600 line-clamp-2 whitespace-pre-wrap">
+                                                        {template.resultConclude}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>

@@ -194,3 +194,24 @@
   pointer-events: none;
 }
 
+/* Custom styles for result template editor - ensure bold titles have no left padding/margin */
+.ProseMirror p[style*="padding-left: 0"] {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+.ProseMirror p[style*="padding-left: 0"] strong {
+  display: block;
+}
+
+/* Override the default margin-left for paragraphs that contain only strong tags (titles) */
+.ProseMirror p:has(> strong:only-child) {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* More specific rule to override the general .ProseMirror p rule for paragraphs with inline style */
+.ProseMirror p[style*="margin-left: 0"] {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
