@@ -529,10 +529,11 @@ export default function ResultTemplateForm() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[20%]">Tên mẫu</TableHead>
-                      <TableHead className="w-[30%]">Mô tả</TableHead>
-                      <TableHead className="w-[25%]">Kết luận</TableHead>
-                      <TableHead className="w-[15%]">Ngày tạo</TableHead>
+                      <TableHead className="w-[15%]">Mã mẫu</TableHead>
+                      <TableHead className="w-[18%]">Tên mẫu</TableHead>
+                      <TableHead className="w-[27%]">Mô tả</TableHead>
+                      <TableHead className="w-[22%]">Kết luận</TableHead>
+                      <TableHead className="w-[12%]">Ngày tạo</TableHead>
                       <TableHead className="text-right">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -541,6 +542,15 @@ export default function ResultTemplateForm() {
                     templatesData.data.data.length > 0 ? (
                       templatesData.data.data.map((template) => (
                         <TableRow key={template.id}>
+                          <TableCell>
+                            <div className="text-sm font-medium text-gray-700">
+                              {template.resultTemplateCode || (
+                                <span className="text-muted-foreground italic">
+                                  Chưa có mã
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-3">
                               <div className="p-2 bg-medical-100 rounded-full flex-shrink-0">
@@ -617,7 +627,7 @@ export default function ResultTemplateForm() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={6}
                           className="text-center py-8 text-muted-foreground"
                         >
                           {searchTerm
