@@ -59,10 +59,6 @@ export default function DashboardPage() {
                                     <span className="text-sm text-green-600">Hoạt động bình thường</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Cập nhật cuối</span>
-                                    <span className="text-sm text-muted-foreground">14/10/2024</span>
-                                </div>
-                                <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium">Người dùng hiện tại</span>
                                     <span className="text-sm text-muted-foreground">{user?.username}</span>
                                 </div>

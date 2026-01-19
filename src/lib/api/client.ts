@@ -593,6 +593,7 @@ export interface StainingMethodFilters {
 export interface ResultTemplate {
     id: string;
     templateName: string;
+    resultTemplateCode?: string;
     resultDescription: string;
     resultConclude: string;
     resultNote: string;
@@ -604,6 +605,7 @@ export interface ResultTemplate {
 
 export interface ResultTemplateRequest {
     templateName: string;
+    resultTemplateCode?: string;
     resultDescription: string;
     resultConclude: string;
     resultNote: string;

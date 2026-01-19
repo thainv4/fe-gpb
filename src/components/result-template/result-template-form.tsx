@@ -64,6 +64,11 @@ const resultTemplateSchema = z.object({
     .string()
     .min(1, "Tên mẫu kết quả không được để trống")
     .max(200, "Tên mẫu tối đa 200 ký tự"),
+  resultTemplateCode: z
+    .string()
+    .max(100, "Mã mẫu kết quả tối đa 100 ký tự")
+    .optional()
+    .default(""),
   resultDescription: z
     .string()
     .min(1, "Mô tả kết quả không được để trống")
@@ -104,6 +109,7 @@ function TemplateDialog({
     resolver: zodResolver(resultTemplateSchema),
     defaultValues: {
       templateName: initialData?.templateName ?? "",
+      resultTemplateCode: initialData?.resultTemplateCode ?? "",
       resultDescription:
         initialData?.resultDescription ?? defaultResultDescription,
       resultConclude: initialData?.resultConclude ?? defaultResultConclude,
@@ -116,6 +122,7 @@ function TemplateDialog({
     if (open) {
       form.reset({
         templateName: initialData?.templateName ?? "",
+        resultTemplateCode: initialData?.resultTemplateCode ?? "",
         resultDescription:
           initialData?.resultDescription ?? defaultResultDescription,
         resultConclude: initialData?.resultConclude ?? defaultResultConclude,
@@ -130,7 +137,7 @@ function TemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {initialData
@@ -146,8 +153,25 @@ function TemplateDialog({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4"
+            className="flex flex-col flex-1 min-h-0"
           >
+            <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+            <FormField
+              control={form.control}
+              name="resultTemplateCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mã mẫu kết quả</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nhập mã mẫu kết quả (tùy chọn)..." {...field} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    {field.value?.length || 0} / 100 ký tự
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="templateName"
@@ -164,6 +188,7 @@ function TemplateDialog({
                 </FormItem>
               )}
             />
+            
             <FormField
               control={form.control}
               name="resultDescription"
@@ -236,7 +261,8 @@ function TemplateDialog({
                 </FormItem>
               )}
             />
-            <DialogFooter>
+            </div>
+            <DialogFooter className="mt-4 flex-shrink-0">
               <Button
                 type="button"
                 variant="outline"
