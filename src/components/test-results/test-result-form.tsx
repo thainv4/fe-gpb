@@ -63,7 +63,6 @@ export default function TestResultForm() {
     const [resultConclude, setResultConclude] = useState<string>(defaultResultConclude)
     const [resultNote, setResultNote] = useState<string>(defaultResultNote)
     const [resultName, setResultName] = useState<string>('')
-    const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set())
     const [isSaving, setIsSaving] = useState(false)
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -77,7 +76,6 @@ export default function TestResultForm() {
             resultConclude,
             resultNote,
             resultName,
-            selectedServices: Array.from(selectedServices), // Convert Set to Array for serialization
         },
         {
             saveScroll: true,
@@ -89,7 +87,6 @@ export default function TestResultForm() {
                 if (data.resultConclude) setResultConclude(data.resultConclude)
                 if (data.resultNote) setResultNote(data.resultNote)
                 if (data.resultName !== undefined) setResultName(data.resultName)
-                if (data.selectedServices) setSelectedServices(new Set(data.selectedServices))
             },
         }
     )
@@ -164,48 +161,6 @@ export default function TestResultForm() {
         setResultName(templateName)
     }
 
-    // Handler cho checkbox
-    const handleServiceCheck = (serviceId: string, checked: boolean) => {
-        setSelectedServices(prev => {
-            const newSet = new Set(prev)
-            if (checked) {
-                newSet.add(serviceId)
-            } else {
-                newSet.delete(serviceId)
-            }
-            return newSet
-        })
-    }
-
-    // Handler Check All
-    const handleCheckAll = (checked: boolean) => {
-        if (checked) {
-            // Select all services
-            const allServiceIds = new Set(services.map(s => s.id))
-            setSelectedServices(allServiceIds)
-        } else {
-            // Deselect all
-            setSelectedServices(new Set())
-        }
-    }
-
-    // Check if all services are selected
-    const isAllSelected = services.length > 0 && selectedServices.size === services.length
-
-    // Handler mở dialog preview
-    const handleOpenPreview = (serviceId: string) => {
-        if (!storedServiceReqId) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Vui lòng chọn một phiếu xét nghiệm"
-            })
-            return
-        }
-
-        setPreviewServiceId(serviceId)
-        setPreviewDialogOpen(true)
-    }
 
     // Helper function để extract error message từ API response
     const getErrorMessage = (response: any, defaultMessage: string = "Có lỗi xảy ra"): string => {
@@ -347,6 +302,91 @@ export default function TestResultForm() {
         return htmlToFormattedText(html);
     }
 
+    // Helper function để strip HTML cho Description (giữ line breaks)
+    const stripHtmlForDescription = (html: string | null | undefined): string => {
+        if (!html) return '';
+        // Giữ line breaks bằng cách thay thế <p> và <br> trước khi strip HTML
+        let text = html
+            .replace(/<p[^>]*>/gi, '\n')
+            .replace(/<\/p>/gi, '')
+            .replace(/<br[^>]*>/gi, '\n')
+            .replace(/<div[^>]*>/gi, '\n')
+            .replace(/<\/div>/gi, '');
+        // Sau đó strip các HTML tags còn lại
+        text = htmlToFormattedText(text);
+        // Loại bỏ các dòng trống thừa
+        return text.replace(/\n{3,}/g, '\n\n').trim();
+    }
+
+    // Helper function để gọi API updateHisPacsResult cho một dịch vụ
+    const updateHisPacsResultForService = async (service: any, tokenCode: string) => {
+        try {
+            // Lấy resultDescription, resultConclude, resultNote từ service data và strip HTML tags
+            const description = stripHtmlForDescription(service?.resultDescription || service?.resultText || '');
+            const conclude = stripHtml(service?.resultConclude || '');
+            const note = stripHtml(service?.resultNote || '');
+
+            // Lấy thông tin user hiện tại
+            const executeLoginname = profileData?.data?.username || '';
+            const executeUsername = profileData?.data?.fullName || '';
+
+            // Lấy serviceReqCode và serviceCode
+            const tdlServiceReqCode = storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode || '';
+            const tdlServiceCode = service?.serviceCode || '';
+
+            // Chỉ gọi API nếu có đủ thông tin
+            if (tdlServiceReqCode && tdlServiceCode && tokenCode) {
+                const hisPacsUpdateResponse = await apiClient.updateHisPacsResult(
+                    {
+                        tdlServiceReqCode,
+                        tdlServiceCode,
+                    },
+                    {
+                        ApiData: {
+                            IsCancel: false,
+                            BeginTime: null,
+                            EndTime: formatDateTimeForHisPacs(),
+                            Description: description,
+                            Conclude: conclude,
+                            Note: note,
+                            ExecuteLoginname: executeLoginname,
+                            ExecuteUsername: executeUsername,
+                            TechnicianLoginname: '',
+                            TechnicianUsername: '',
+                            MachineCode: '',
+                            NumberOfFilm: null,
+                        },
+                    },
+                    tokenCode
+                );
+
+                if (!hisPacsUpdateResponse.success) {
+                    console.error(`❌ Lỗi cập nhật HIS-PACS result cho dịch vụ ${tdlServiceCode}:`, hisPacsUpdateResponse);
+                    return {
+                        success: false,
+                        serviceCode: tdlServiceCode,
+                        error: getErrorMessage(hisPacsUpdateResponse, 'Không thể cập nhật kết quả HIS-PACS.')
+                    };
+                }
+                return { success: true, serviceCode: tdlServiceCode };
+            } else {
+                console.warn(`⚠️ Thiếu thông tin để gọi API HIS-PACS update cho dịch vụ ${service?.serviceCode}:`, {
+                    tdlServiceReqCode,
+                    tdlServiceCode,
+                    hasTokenCode: !!tokenCode
+                });
+                return { success: false, serviceCode: service?.serviceCode || '', error: 'Thiếu thông tin cần thiết' };
+            }
+        } catch (error: any) {
+            console.error(`❌ Lỗi cập nhật HIS-PACS result cho dịch vụ ${service?.serviceCode}:`, error);
+            return {
+                success: false,
+                serviceCode: service?.serviceCode || '',
+                error: error?.message || 'Lỗi không xác định'
+            };
+        }
+    }
+
     // Handler khi click vào dịch vụ để chọn dịch vụ
     const handleServiceClick = async (serviceId: string) => {
         if (!storedServiceReqId) {
@@ -358,9 +398,6 @@ export default function TestResultForm() {
             return
         }
 
-        // Chọn dịch vụ
-        setSelectedServices(new Set([serviceId]))
-        
         // Load kết quả từ API /api/v1/service-requests/stored/services/{serviceId}/result
         try {
             const resultResponse = await apiClient.getServiceResult(serviceId)
@@ -643,98 +680,76 @@ export default function TestResultForm() {
                 // Lấy documentId từ response
                 const documentId = response.data?.Data?.DocumentId;
 
-                // Nếu có documentId và serviceId, gọi API cập nhật
-                if (documentId && previewServiceId) {
+                // Nếu có documentId, cập nhật cho tất cả dịch vụ
+                if (documentId && services.length > 0) {
                     try {
-                        const updateResponse = await apiClient.patchServiceRequestDocumentId(previewServiceId, documentId);
+                        // Cập nhật documentId cho tất cả dịch vụ
+                        const updatePromises = services.map(async (service) => {
+                            const updateResponse = await apiClient.patchServiceRequestDocumentId(service.id, documentId);
+                            if (!updateResponse.success) {
+                                throw new Error(getErrorMessage(updateResponse, `Không thể cập nhật document ID cho service ${service.id}`));
+                            }
+                            return { success: true, serviceId: service.id };
+                        });
+
+                        const updateResults = await Promise.allSettled(updatePromises);
                         
-                        if (!updateResponse.success) {
-                            console.error('❌ Lỗi cập nhật document ID:', updateResponse);
+                        // Kiểm tra kết quả cập nhật
+                        const updateSuccessful = updateResults.filter(r => r.status === 'fulfilled').length;
+                        const updateFailed = updateResults.filter(r => r.status === 'rejected').length;
+
+                        if (updateFailed > 0) {
+                            const errorMessages = updateResults
+                                .filter(r => r.status === 'rejected')
+                                .map(r => r.status === 'rejected' ? r.reason?.message || 'Lỗi không xác định' : '')
+                                .filter(Boolean);
+                            
                             toast({
                                 variant: "destructive",
                                 title: "Cảnh báo",
-                                description: getErrorMessage(updateResponse, "Đã ký số nhưng không thể cập nhật document ID")
-                            })
-                        } else {
-                            // Refresh danh sách services để hiển thị trạng thái "Đã ký"
-                            await refetchStoredServiceRequest();
+                                description: `Đã ký số nhưng không thể cập nhật document ID cho ${updateFailed}/${services.length} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
+                            });
+                        }
 
-                            // Sau khi cập nhật documentId thành công, gọi API update HIS-PACS result
-                            try {
-                                // Lấy service data từ previewServiceData hoặc gọi API
-                                let serviceData = previewServiceData?.data;
-                                if (!serviceData && previewServiceId) {
-                                    const serviceResponse = await apiClient.getStoredServiceById(previewServiceId);
-                                    if (serviceResponse.success && serviceResponse.data) {
-                                        serviceData = serviceResponse.data;
-                                    }
-                                }
+                        // Refresh danh sách services để hiển thị trạng thái "Đã ký"
+                        await refetchStoredServiceRequest();
 
-                                // Lấy resultDescription, resultConclude, resultNote từ service data và strip HTML tags
-                                const description = stripHtml(serviceData?.resultDescription || serviceData?.resultText || '');
-                                const conclude = stripHtml(serviceData?.resultConclude || '');
-                                const note = stripHtml(serviceData?.resultNote || '');
+                        // Sau khi cập nhật documentId thành công, gọi API update HIS-PACS result cho tất cả dịch vụ
+                        try {
+                            // Refresh lại danh sách dịch vụ để có dữ liệu mới nhất
+                            const refreshedData = await refetchStoredServiceRequest();
+                            const refreshedServices = refreshedData.data?.data?.services || services;
 
-                                // Lấy thông tin user hiện tại
-                                const executeLoginname = profileData?.data?.username || '';
-                                const executeUsername = profileData?.data?.fullName || '';
+                            // Gọi API updateHisPacsResult cho tất cả dịch vụ
+                            const hisPacsPromises = refreshedServices.map((service: any) => 
+                                updateHisPacsResultForService(service, tokenCode!)
+                            );
 
-                                // Lấy serviceReqCode và serviceCode
-                                const tdlServiceReqCode = storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode || '';
-                                const tdlServiceCode = serviceData?.serviceCode || previewServiceData?.data?.serviceCode || '';
+                            const hisPacsResults = await Promise.allSettled(hisPacsPromises);
+                            
+                            const hisPacsSuccessful = hisPacsResults.filter(r => 
+                                r.status === 'fulfilled' && r.value.success
+                            ).length;
+                            const hisPacsFailed = hisPacsResults.length - hisPacsSuccessful;
 
-                                // Chỉ gọi API nếu có đủ thông tin
-                                if (tdlServiceReqCode && tdlServiceCode && tokenCode) {
-                                    const hisPacsUpdateResponse = await apiClient.updateHisPacsResult(
-                                        {
-                                            tdlServiceReqCode,
-                                            tdlServiceCode,
-                                        },
-                                        {
-                                            ApiData: {
-                                                IsCancel: false,
-                                                BeginTime: null,
-                                                EndTime: formatDateTimeForHisPacs(),
-                                                Description: description,
-                                                Conclude: conclude,
-                                                Note: note,
-                                                ExecuteLoginname: executeLoginname,
-                                                ExecuteUsername: executeUsername,
-                                                TechnicianLoginname: '',
-                                                TechnicianUsername: '',
-                                                MachineCode: '',
-                                                NumberOfFilm: null,
-                                            },
-                                        },
-                                        tokenCode
-                                    );
-
-                                    if (!hisPacsUpdateResponse.success) {
-                                        console.error('❌ Lỗi cập nhật HIS-PACS result:', hisPacsUpdateResponse);
-                                        toast({
-                                            variant: 'default',
-                                            title: 'Cảnh báo',
-                                            description: getErrorMessage(hisPacsUpdateResponse, 'Đã ký số nhưng không thể cập nhật kết quả HIS-PACS.')
-                                        });
-                                    }
-                                } else {
-                                    console.warn('⚠️ Thiếu thông tin để gọi API HIS-PACS update:', {
-                                        tdlServiceReqCode,
-                                        tdlServiceCode,
-                                        hasTokenCode: !!tokenCode
-                                    });
-                                }
-                            } catch (hisPacsError: any) {
-                                console.error('❌ Lỗi cập nhật HIS-PACS result:', hisPacsError);
+                            if (hisPacsFailed > 0) {
+                                console.warn(`⚠️ Không thể cập nhật HIS-PACS cho ${hisPacsFailed}/${refreshedServices.length} dịch vụ`);
                                 toast({
                                     variant: 'default',
                                     title: 'Cảnh báo',
-                                    description: hisPacsError?.message || 'Đã ký số nhưng không thể cập nhật kết quả HIS-PACS.'
+                                    description: `Đã ký số nhưng không thể cập nhật kết quả HIS-PACS cho ${hisPacsFailed}/${refreshedServices.length} dịch vụ.`
                                 });
                             }
+                        } catch (hisPacsError: any) {
+                            console.error('❌ Lỗi cập nhật HIS-PACS result cho tất cả dịch vụ:', hisPacsError);
+                            toast({
+                                variant: 'default',
+                                title: 'Cảnh báo',
+                                description: hisPacsError?.message || 'Đã ký số nhưng không thể cập nhật kết quả HIS-PACS.'
+                            });
                         }
                     } catch (docIdError: any) {
-                        console.error('❌ Lỗi cập nhật document ID:', docIdError);
+                        console.error('❌ Lỗi cập nhật document ID cho tất cả dịch vụ:', docIdError);
                         toast({
                             variant: "destructive",
                             title: "Cảnh báo",
@@ -804,16 +819,16 @@ export default function TestResultForm() {
 
     // Handler hủy chữ ký số
     const handleCancelDigitalSign = async () => {
-        // Lọc các service đã chọn có documentId
-        const selectedServicesWithDocumentId = services.filter(
-            service => selectedServices.has(service.id) && service.documentId
+        // Lấy tất cả dịch vụ đã ký số
+        const servicesWithDocumentId = services.filter(
+            (service: any) => service.documentId
         )
 
-        if (selectedServicesWithDocumentId.length === 0) {
+        if (servicesWithDocumentId.length === 0) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Vui lòng chọn ít nhất một dịch vụ đã ký số để hủy"
+                description: "Không có dịch vụ nào đã được ký số"
             })
             return
         }
@@ -849,7 +864,7 @@ export default function TestResultForm() {
             // Gom nhóm các service theo documentId để tránh gọi API nhiều lần cho cùng documentId
             const documentIdMap = new Map<number, string[]>()
             
-            selectedServicesWithDocumentId.forEach(service => {
+            servicesWithDocumentId.forEach((service: any) => {
                 if (service.documentId) {
                     // Convert documentId sang number
                     const docId = typeof service.documentId === 'string' 
@@ -929,7 +944,7 @@ export default function TestResultForm() {
                 
                 toast({
                     title: "Thành công",
-                    description: `Đã hủy chữ ký số cho ${selectedServicesWithDocumentId.length} dịch vụ`,
+                    description: `Đã hủy chữ ký số cho ${servicesWithDocumentId.length} dịch vụ`,
                     variant: "default"
                 })
             } else {
@@ -960,11 +975,11 @@ export default function TestResultForm() {
 
     // Handler lưu kết quả
     const handleSaveResults = async () => {
-        if (selectedServices.size === 0) {
+        if (services.length === 0) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Vui lòng chọn ít nhất một dịch vụ"
+                description: "Không có dịch vụ nào để lưu kết quả"
             })
             return
         }
@@ -998,7 +1013,9 @@ export default function TestResultForm() {
 
         setIsSaving(true)
         try {
-            const savePromises = Array.from(selectedServices).map(async (serviceId) => {
+            // Lưu kết quả cho tất cả dịch vụ
+            const savePromises = services.map(async (service) => {
+                const serviceId = service.id
                 const response = await apiClient.saveServiceResult(serviceId, {
                     resultValue: 12.5,
                     resultValueText: "12.5",
@@ -1036,11 +1053,11 @@ export default function TestResultForm() {
                 toast({
                     variant: "destructive",
                     title: "Lỗi",
-                    description: `Không thể lưu kết quả cho ${saveFailed}/${selectedServices.size} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
+                    description: `Không thể lưu kết quả cho ${saveFailed}/${services.length} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
                 })
                 
                 // Nếu tất cả đều lỗi, dừng lại
-                if (saveFailed === selectedServices.size) {
+                if (saveFailed === services.length) {
                     return
                 }
             }
@@ -1082,8 +1099,8 @@ export default function TestResultForm() {
                 toast({
                     title: "Thành công",
                     description: saveFailed > 0 
-                        ? `Đã lưu kết quả cho ${saveSuccessful}/${selectedServices.size} dịch vụ`
-                        : `Đã lưu kết quả cho ${selectedServices.size} dịch vụ`,
+                        ? `Đã lưu kết quả cho ${saveSuccessful}/${services.length} dịch vụ`
+                        : `Đã lưu kết quả cho ${services.length} dịch vụ`,
                     variant: "default"
                 })
                 
@@ -1097,12 +1114,59 @@ export default function TestResultForm() {
                 
                 // Refresh ngay lập tức để cập nhật bảng dịch vụ
                 await refetchStoredServiceRequest()
+
+                // Sau khi lưu kết quả thành công, gọi API updateHisPacsResult cho tất cả dịch vụ
+                try {
+                    // Lấy HIS token code
+                    let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
+                    if (!tokenCode) {
+                        tokenCode = hisToken?.tokenCode || null;
+                    }
+                    if (!tokenCode) {
+                        const hisStorage = localStorage.getItem('his-storage');
+                        if (hisStorage) {
+                            try {
+                                const parsed = JSON.parse(hisStorage);
+                                tokenCode = parsed.state?.token?.tokenCode || null;
+                            } catch (e) {
+                                console.error('Error parsing HIS storage:', e);
+                            }
+                        }
+                    }
+
+                    if (tokenCode) {
+                        // Lấy danh sách dịch vụ đã lưu thành công (refresh lại để có dữ liệu mới nhất)
+                        const refreshedData = await refetchStoredServiceRequest();
+                        const refreshedServices = refreshedData.data?.data?.services || services;
+
+                        // Gọi API updateHisPacsResult cho tất cả dịch vụ
+                        const hisPacsPromises = refreshedServices.map((service: any) => 
+                            updateHisPacsResultForService(service, tokenCode!)
+                        );
+
+                        const hisPacsResults = await Promise.allSettled(hisPacsPromises);
+                        
+                        const hisPacsSuccessful = hisPacsResults.filter(r => 
+                            r.status === 'fulfilled' && r.value.success
+                        ).length;
+                        const hisPacsFailed = hisPacsResults.length - hisPacsSuccessful;
+
+                        if (hisPacsFailed > 0) {
+                            console.warn(`⚠️ Không thể cập nhật HIS-PACS cho ${hisPacsFailed}/${refreshedServices.length} dịch vụ`);
+                            // Không hiển thị toast vì đây không phải lỗi nghiêm trọng, chỉ log warning
+                        }
+                    } else {
+                        console.warn('⚠️ Không có TokenCode để gọi API HIS-PACS update-result');
+                    }
+                } catch (hisPacsError: any) {
+                    console.error('❌ Lỗi khi gọi API HIS-PACS update-result cho tất cả dịch vụ:', hisPacsError);
+                    // Không hiển thị toast vì đây không phải lỗi nghiêm trọng, chỉ log error
+                }
             }
             
             // Trigger refresh để cập nhật trạng thái dịch vụ (cho sidebar và các components khác)
             setRefreshTrigger(prev => prev + 1)
             
-            setSelectedServices(new Set())
             setResultDescription(defaultResultDescription)
             setResultConclude(defaultResultConclude)
             setResultNote(defaultResultNote)
@@ -1204,33 +1268,41 @@ export default function TestResultForm() {
                                                 <h3 className="text-lg font-semibold">
                                                     Chọn danh sách dịch vụ để trả kết quả
                                                 </h3>
-                                                <Button 
-                                                    onClick={() => setConfirmCancelSignDialogOpen(true)}
-                                                    disabled={isSigning || selectedServices.size === 0}
-                                                    variant="destructive"
-                                                >
-                                                    {isSigning ? (
-                                                        <>
-                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                            Đang xử lý...
-                                                        </>
-                                                    ) : (
-                                                        'Hủy chữ ký số'
-                                                    )}
-                                                </Button>
+                                                <div className="flex gap-2">
+                                                    <Button 
+                                                        onClick={() => {
+                                                            // Mở preview với dịch vụ đầu tiên có kết quả, hoặc dịch vụ đầu tiên
+                                                            const firstServiceWithResult = services.find(s => s.resultConclude) || services[0]
+                                                            if (firstServiceWithResult) {
+                                                                setPreviewServiceId(firstServiceWithResult.id)
+                                                                setPreviewDialogOpen(true)
+                                                            }
+                                                        }}
+                                                        disabled={services.length === 0 || !storedServiceReqId}
+                                                        variant="outline"
+                                                    >
+                                                        Xem kết quả
+                                                    </Button>
+                                                    <Button 
+                                                        onClick={() => setConfirmCancelSignDialogOpen(true)}
+                                                        disabled={isSigning || services.length === 0}
+                                                        variant="destructive"
+                                                    >
+                                                        {isSigning ? (
+                                                            <>
+                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                                Đang xử lý...
+                                                            </>
+                                                        ) : (
+                                                            'Hủy chữ ký số'
+                                                        )}
+                                                    </Button>
+                                                </div>
                                             </div>
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-gray-200">
                                                     <thead className="bg-gray-50">
                                                     <tr>
-                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            <Input
-                                                                type="checkbox"
-                                                                checked={isAllSelected}
-                                                                onChange={(e) => handleCheckAll(e.target.checked)}
-                                                                title="Chọn tất cả"
-                                                            />
-                                                        </th>
                                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             STT
                                                         </th>
@@ -1252,88 +1324,67 @@ export default function TestResultForm() {
                                                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Trạng thái ký
                                                         </th>
-                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Xem phiếu
-                                                        </th>
                                                     </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-200">
-                                                    {services.map((service, index) => (
-                                                        <tr 
-                                                            key={service.id} 
-                                                            className="hover:bg-gray-50 cursor-pointer"
-                                                            onClick={() => handleServiceClick(service.id)}
-                                                        >
-                                                            <td className="px-4 py-3 text-sm text-gray-900" onClick={(e) => e.stopPropagation()}>
-                                                                <Input
-                                                                    type="checkbox"
-                                                                    checked={selectedServices.has(service.id)}
-                                                                    onChange={(e) => handleServiceCheck(service.id, e.target.checked)}
-                                                                />
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-900">
-                                                                {index + 1}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                                {service.serviceCode}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-900">
-                                                                {service.serviceName}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                                                                {service.price.toLocaleString('vi-VN')} đ
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                                                                {service.receptionCode || '-'}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-center">
-                                                                {service.resultConclude ? (
-                                                                    <span
-                                                                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                                        <CheckCircle2 className="w-3.5 h-3.5"/>
-                                                                        Đã có kết quả
-                                                                    </span>
-                                                                ) : (
-                                                                    <span
-                                                                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                                                        <XCircle className="w-3.5 h-3.5"/>
-                                                                        Chưa có kết quả
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-center">
-                                                                {service.documentId ? (
-                                                                    <span
-                                                                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                                        <CheckCircle2 className="w-3.5 h-3.5"/>
-                                                                        Đã ký
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-xs text-gray-400">
-                                                                        Chưa ký
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-sm text-gray-900 text-center" onClick={(e) => e.stopPropagation()}>
-                                                                <button
-                                                                    onClick={() => handleOpenPreview(service.id)}
-                                                                    disabled={!storedServiceReqId}
-                                                                    className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:text-gray-400 disabled:hover:bg-transparent"
-                                                                    title="Xem trước kết quả dịch vụ này"
-                                                                >
-                                                                    <svg className="w-5 h-5" fill="none"
-                                                                         stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round"
-                                                                              strokeLinejoin="round" strokeWidth={2}
-                                                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                                        <path strokeLinecap="round"
-                                                                              strokeLinejoin="round" strokeWidth={2}
-                                                                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                                                    </svg>
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
+                                                    {services.map((service, index) => {
+                                                        // Tính trạng thái dựa trên tất cả dịch vụ - lấy từ dịch vụ đầu tiên làm chuẩn
+                                                        const firstService = services[0]
+                                                        const hasResult = firstService?.resultConclude ? true : false
+                                                        const hasSignature = firstService?.documentId ? true : false
+                                                        
+                                                        return (
+                                                            <tr 
+                                                                key={service.id} 
+                                                                className="hover:bg-gray-50 cursor-pointer"
+                                                                onClick={() => handleServiceClick(service.id)}
+                                                            >
+                                                                <td className="px-4 py-3 text-sm text-gray-900">
+                                                                    {index + 1}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                                    {service.serviceCode}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm text-gray-900">
+                                                                    {service.serviceName}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                                    {service.price.toLocaleString('vi-VN')} đ
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                                    {service.receptionCode || '-'}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm text-center">
+                                                                    {hasResult ? (
+                                                                        <span
+                                                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                            <CheckCircle2 className="w-3.5 h-3.5"/>
+                                                                            Đã có kết quả
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span
+                                                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                                            <XCircle className="w-3.5 h-3.5"/>
+                                                                            Chưa có kết quả
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-sm text-center">
+                                                                    {hasSignature ? (
+                                                                        <span
+                                                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                            <CheckCircle2 className="w-3.5 h-3.5"/>
+                                                                            Đã ký
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-xs text-gray-400">
+                                                                            Chưa ký
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    })}
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -1413,7 +1464,7 @@ export default function TestResultForm() {
                                         <button
                                             type="button"
                                             onClick={handleSaveResults}
-                                            disabled={isSaving || selectedServices.size === 0}
+                                            disabled={isSaving || services.length === 0}
                                             className="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                         >
                                             {isSaving ? 'Đang lưu...' : 'Lưu kết quả'}
@@ -1550,7 +1601,7 @@ export default function TestResultForm() {
                     <DialogHeader>
                         <DialogTitle>Xác nhận hủy chữ ký số</DialogTitle>
                         <DialogDescription>
-                            Bạn có chắc chắn muốn hủy chữ ký số cho {selectedServices.size} dịch vụ đã chọn? Hành động này không thể hoàn tác.
+                            Bạn có chắc chắn muốn hủy chữ ký số cho tất cả {services.length} dịch vụ? Hành động này không thể hoàn tác.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
