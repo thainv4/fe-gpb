@@ -3033,6 +3033,19 @@ class ApiClient {
         );
     }
 
+    async updateStoredServiceRequestNumOfBlock(
+        storedServiceReqId: string,
+        numOfBlock: string | number
+    ): Promise<ApiResponse<unknown>> {
+        return this.request<unknown>(
+            `/service-requests/stored/${storedServiceReqId}/num-of-block`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify({ numOfBlock }),
+            }
+        );
+    }
+
     async saveServiceResult(
         serviceId: string,
         data: {

@@ -63,6 +63,7 @@ export default function TestResultForm() {
     const [resultConclude, setResultConclude] = useState<string>(defaultResultConclude)
     const [resultNote, setResultNote] = useState<string>(defaultResultNote)
     const [resultName, setResultName] = useState<string>('')
+    const [numOfBlock, setNumOfBlock] = useState<string>('')
     const [isSaving, setIsSaving] = useState(false)
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -76,6 +77,7 @@ export default function TestResultForm() {
             resultConclude,
             resultNote,
             resultName,
+            numOfBlock,
         },
         {
             saveScroll: true,
@@ -87,6 +89,7 @@ export default function TestResultForm() {
                 if (data.resultConclude) setResultConclude(data.resultConclude)
                 if (data.resultNote) setResultNote(data.resultNote)
                 if (data.resultName !== undefined) setResultName(data.resultName)
+                if (data.numOfBlock !== undefined) setNumOfBlock(data.numOfBlock)
             },
         }
     )
@@ -1093,6 +1096,39 @@ export default function TestResultForm() {
                     })
                 }
             }
+
+            // Gọi API num-of-block nếu có giá trị (khác null hoặc rỗng)
+            if (saveSuccessful > 0 && storedServiceRequest?.id && numOfBlock !== null && numOfBlock !== undefined && numOfBlock.trim() !== '') {
+                try {
+                    const numOfBlockValue = numOfBlock.trim()
+                    console.log('📦 Gọi API num-of-block:', {
+                        storedServiceReqId: storedServiceRequest.id,
+                        numOfBlock: numOfBlockValue
+                    })
+                    const numOfBlockResponse = await apiClient.updateStoredServiceRequestNumOfBlock(
+                        storedServiceRequest.id,
+                        numOfBlockValue
+                    )
+                    if (!numOfBlockResponse.success) {
+                        console.error('❌ Lỗi cập nhật số lượng block:', numOfBlockResponse)
+                        toast({
+                            title: 'Cảnh báo',
+                            description: numOfBlockResponse.message || 'Đã lưu kết quả nhưng không thể cập nhật số lượng block',
+                            variant: 'default',
+                        })
+                    } else {
+                        console.log('✅ Cập nhật số lượng block thành công')
+                    }
+                } catch (error: unknown) {
+                    console.error('❌ Lỗi khi gọi API num-of-block:', error)
+                    const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
+                    toast({
+                        title: 'Cảnh báo',
+                        description: `Đã lưu kết quả nhưng không thể cập nhật số lượng block: ${errorMessage}`,
+                        variant: 'default',
+                    })
+                }
+            }
             
             // Hiển thị thông báo thành công
             if (saveSuccessful > 0) {
@@ -1390,6 +1426,20 @@ export default function TestResultForm() {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Số block */}
+                                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                                        <div className="mb-4">
+                                            <Label className="text-sm font-medium mb-2 block">Số block</Label>
+                                            <Input 
+                                                type="text" 
+                                                placeholder="Nhập số block..." 
+                                                value={numOfBlock}
+                                                onChange={(e) => setNumOfBlock(e.target.value)}
+                                                className="max-w-xs"
+                                            />
+                                        </div>
+                                    </div>
 
                                     {/* Test Results */}
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
