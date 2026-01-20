@@ -889,10 +889,21 @@ export default function TestResultForm() {
                     // Gọi API hủy chữ ký số (chỉ một lần cho mỗi documentId) - documentId đã là number
                     const deleteResponse = await apiClient.deleteEmrDocument(documentId, tokenCode!, 'EMR')
                     
+                    // Kiểm tra response.success (wrapper) và response.data?.Success (EMR API response)
                     if (!deleteResponse.success) {
                         throw new Error(getErrorMessage(deleteResponse, `Không thể hủy chữ ký số cho document ${documentId}`))
                     }
                     
+                    // Kiểm tra Success field trong response.data (EMR API response structure)
+                    const emrResponse = deleteResponse.data as any
+                    if (!emrResponse?.Success) {
+                        const errorMessage = emrResponse?.Param?.Messages?.join(', ') || 
+                                           emrResponse?.Param?.MessageCodes?.join(', ') ||
+                                           `Không thể hủy chữ ký số cho document ${documentId}`
+                        throw new Error(errorMessage)
+                    }
+                    
+                    // Chỉ chạy các API tiếp theo nếu Success = true
                     // Cập nhật documentId = null cho tất cả các service có documentId này
                     const updateResults = await Promise.allSettled(
                         serviceIds.map(async (serviceId) => {
