@@ -90,7 +90,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         roomType: 'currentRoomId',
         stateType: '',
         timeType: 'actionTimestamp',
-        limit: 15,
+        limit: 20,
         offset: 0,
         order: 'DESC',
         orderBy: 'actionTimestamp',
@@ -327,36 +327,40 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                 : workflowStates.find(s => s.id === selectedStateId)?.stateName || 'Chưa xác định'
 
             // Chuẩn bị dữ liệu cho Excel
-            const excelData: ExportExcelItem[] = serviceRequests.map((item: {
-                id: string;
-                storedServiceReqId?: string;
-                createdAt?: string;
-                toState?: {
-                    id: string;
-                    stateName: string;
-                    stateCode: string;
-                };
-                serviceRequest?: {
-                    id?: string;
-                    hisServiceReqCode?: string;
-                    serviceReqCode?: string;
-                    patientName?: string;
-                    patientCode?: string;
-                    receptionCode?: string;
-                };
-            }) => {
+            const excelData: ExportExcelItem[] = serviceRequests.map((item: any) => {
                 const serviceReq = item.serviceRequest
                 const serviceReqCode = serviceReq?.hisServiceReqCode || serviceReq?.serviceReqCode || ''
                 const patientName = serviceReq?.patientName || ''
                 const stateName = item.toState?.stateName || 'Chưa xác định'
                 const createdAt = formatDateTimeForExcel(item.createdAt)
                 const receptionCode = serviceReq?.receptionCode || ''
+                
+                // Lấy numOfBlock từ nhiều vị trí có thể
+                let numOfBlock = ''
+                if (item.numOfBlock !== undefined && item.numOfBlock !== null && item.numOfBlock !== '') {
+                    numOfBlock = String(item.numOfBlock)
+                } else if (item.storedServiceRequest?.numOfBlock !== undefined && item.storedServiceRequest?.numOfBlock !== null && item.storedServiceRequest?.numOfBlock !== '') {
+                    numOfBlock = String(item.storedServiceRequest.numOfBlock)
+                } else if (serviceReq?.numOfBlock !== undefined && serviceReq?.numOfBlock !== null && serviceReq?.numOfBlock !== '') {
+                    numOfBlock = String(serviceReq.numOfBlock)
+                }
+
+                // Debug log để kiểm tra cấu trúc dữ liệu
+                if (serviceRequests.length > 0 && serviceRequests.indexOf(item) === 0) {
+                    console.log('📦 Debug Excel export - First item structure:', {
+                        item,
+                        itemNumOfBlock: item.numOfBlock,
+                        storedServiceRequest: item.storedServiceRequest,
+                        serviceReq,
+                    })
+                }
 
                 return {
                     serviceReqCode,
                     receptionCode,
                     patientName,
                     stateName,
+                    numOfBlock,
                     createdAt,
                 }
             })

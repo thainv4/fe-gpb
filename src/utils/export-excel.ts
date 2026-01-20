@@ -6,6 +6,7 @@ export interface ExportExcelItem {
     patientName: string
     stateName: string
     createdAt: string
+    numOfBlock?: string | number
 }
 
 export interface ExportExcelOptions {
@@ -32,6 +33,7 @@ export function exportToExcel(options: ExportExcelOptions): void {
         'Barcode': item.receptionCode,
         'Tên bệnh nhân': item.patientName,
         'Trạng thái': item.stateName,
+        'Số block': item.numOfBlock || '',
         'Thời gian': item.createdAt,
     }))
 
@@ -44,6 +46,7 @@ export function exportToExcel(options: ExportExcelOptions): void {
         { wch: 20 }, // Barcode
         { wch: 30 }, // Tên bệnh nhân
         { wch: 25 }, // Trạng thái
+        { wch: 15 }, // Số block
         { wch: 25 }, // Thời gian
     ]
     ws['!cols'] = colWidths

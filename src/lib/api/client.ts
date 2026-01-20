@@ -3160,6 +3160,7 @@ class ApiClient {
             id: string;
             storedServiceReqId: string;
             createdAt?: string;
+            numOfBlock?: string | number;
             serviceRequest?: {
                 id?: string;
                 hisServiceReqCode?: string;
@@ -3167,6 +3168,11 @@ class ApiClient {
                 patientName?: string;
                 patientCode?: string;
                 patientGenderName?: string;
+                receptionCode?: string;
+            };
+            storedServiceRequest?: {
+                id?: string;
+                numOfBlock?: string | number;
             };
         }>;
         pagination: {
