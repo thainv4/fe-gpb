@@ -497,7 +497,7 @@ export function FormTemplate({
                   </div>
 
                   <div className="font-bold text-base mb-4">
-                    Bác sĩ đọc kết quả
+                    T/L GIÁM ĐỐC TRUNG TÂM
                   </div>
 
                   {signatureImageBase64 && (

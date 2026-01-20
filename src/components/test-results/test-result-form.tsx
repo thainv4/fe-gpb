@@ -651,7 +651,7 @@ export default function TestResultForm() {
                     HeightRectangle: 100,
                     TextPosition: 0,
                     TypeDisplay: 2,
-                    SizeFont: 12,
+                    SizeFont: 14,
                     FormatRectangleText: "{SIGNTIME}"
                 },
                 DocumentName: `${dateStr}-${serviceReqCode}_Signed`,
@@ -1151,53 +1151,8 @@ export default function TestResultForm() {
                 // Refresh ngay lập tức để cập nhật bảng dịch vụ
                 await refetchStoredServiceRequest()
 
-                // Sau khi lưu kết quả thành công, gọi API updateHisPacsResult cho tất cả dịch vụ
-                try {
-                    // Lấy HIS token code
-                    let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
-                    if (!tokenCode) {
-                        tokenCode = hisToken?.tokenCode || null;
-                    }
-                    if (!tokenCode) {
-                        const hisStorage = localStorage.getItem('his-storage');
-                        if (hisStorage) {
-                            try {
-                                const parsed = JSON.parse(hisStorage);
-                                tokenCode = parsed.state?.token?.tokenCode || null;
-                            } catch (e) {
-                                console.error('Error parsing HIS storage:', e);
-                            }
-                        }
-                    }
-
-                    if (tokenCode) {
-                        // Lấy danh sách dịch vụ đã lưu thành công (refresh lại để có dữ liệu mới nhất)
-                        const refreshedData = await refetchStoredServiceRequest();
-                        const refreshedServices = refreshedData.data?.data?.services || services;
-
-                        // Gọi API updateHisPacsResult cho tất cả dịch vụ
-                        const hisPacsPromises = refreshedServices.map((service: any) => 
-                            updateHisPacsResultForService(service, tokenCode!)
-                        );
-
-                        const hisPacsResults = await Promise.allSettled(hisPacsPromises);
-                        
-                        const hisPacsSuccessful = hisPacsResults.filter(r => 
-                            r.status === 'fulfilled' && r.value.success
-                        ).length;
-                        const hisPacsFailed = hisPacsResults.length - hisPacsSuccessful;
-
-                        if (hisPacsFailed > 0) {
-                            console.warn(`⚠️ Không thể cập nhật HIS-PACS cho ${hisPacsFailed}/${refreshedServices.length} dịch vụ`);
-                            // Không hiển thị toast vì đây không phải lỗi nghiêm trọng, chỉ log warning
-                        }
-                    } else {
-                        console.warn('⚠️ Không có TokenCode để gọi API HIS-PACS update-result');
-                    }
-                } catch (hisPacsError: any) {
-                    console.error('❌ Lỗi khi gọi API HIS-PACS update-result cho tất cả dịch vụ:', hisPacsError);
-                    // Không hiển thị toast vì đây không phải lỗi nghiêm trọng, chỉ log error
-                }
+                // Không gọi API updateHisPacsResult ở đây nữa
+                // API updateHisPacsResult chỉ được gọi sau khi ký số thành công (trong handleDigitalSign)
             }
             
             // Trigger refresh để cập nhật trạng thái dịch vụ (cho sidebar và các components khác)
@@ -1427,17 +1382,28 @@ export default function TestResultForm() {
                                         </div>
                                     )}
 
-                                    {/* Số block */}
+                                    {/* Số block và Phương pháp nhuộm */}
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                                        <div className="mb-4">
-                                            <Label className="text-sm font-medium mb-2 block">Số block</Label>
-                                            <Input 
-                                                type="text" 
-                                                placeholder="Nhập số block..." 
-                                                value={numOfBlock}
-                                                onChange={(e) => setNumOfBlock(e.target.value)}
-                                                className="max-w-xs"
-                                            />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">Số block</Label>
+                                                <Input 
+                                                    type="text" 
+                                                    placeholder="Nhập số block..." 
+                                                    value={numOfBlock}
+                                                    onChange={(e) => setNumOfBlock(e.target.value)}
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
+                                            <div className="mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">Phương pháp nhuộm</Label>
+                                                <Input 
+                                                    type="text" 
+                                                    value={storedServiceRequest?.stainingMethodName || ''}
+                                                    disabled
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 

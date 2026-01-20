@@ -100,10 +100,10 @@ export function AuthForm() {
         login(result.data.accessToken, result.data.refreshToken, {
           id: result.data.user.id,
           username: result.data.user.username,
-          email: result.data.user.email,
+          email: result.data.user.email || '',
           fullName: result.data.user.fullName,
           role: result.data.user.role,
-          isActive: result.data.user.isActive,
+          isActive: typeof result.data.user.isActive === 'boolean' ? (result.data.user.isActive ? 1 : 0) : result.data.user.isActive,
         });
 
         // Save hisTokenCode to sessionStorage if available

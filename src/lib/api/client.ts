@@ -59,15 +59,34 @@ export interface LoginResponse {
     user: {
         id: string;
         username: string;
-        email: string;
+        email: string | null;
         fullName: string;
         role: string;
-        isActive: number;
+        isActive: boolean | number;
     };
     accessToken: string;
     refreshToken: string;
-    expiresIn: number;
+    expiresIn?: number;
     hisTokenCode?: string;
+    hisRenewCode?: string;
+    hisUserInfo?: {
+        loginName: string;
+        userName: string;
+        applicationCode: string;
+        gCode: string;
+        email: string;
+        mobile: string;
+    };
+    hisSessionInfo?: {
+        validAddress: string;
+        loginTime: string;
+        expireTime: string;
+        loginAddress: string;
+    };
+    hisRoles?: Array<{
+        RoleCode: string;
+        RoleName: string;
+    }>;
 }
 
 export interface HisTokenResponse {
@@ -922,6 +941,7 @@ export interface StoredServiceRequestResponse {
     createdAt: string;
     updatedAt: string;
     deletedAt?: string | null;
+    stainingMethodName?: string | null;
 }
 
 export interface ServiceRequestDetail {
