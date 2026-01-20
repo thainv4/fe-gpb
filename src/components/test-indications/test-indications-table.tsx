@@ -325,15 +325,31 @@ export default function TestIndicationsTable() {
                             page-break-after: avoid;
                             page-break-inside: avoid;
                         }
+                        .qr-code {
+                            width: 50px !important;
+                            height: 50px !important;
+                        }
+                        .qr-code svg {
+                            width: 50px !important;
+                            height: 50px !important;
+                        }
+                        .qr-code {
+                            margin-bottom: 8px !important;
+                        }
+                        .print-container > div:last-child {
+                            margin-top: 8px !important;
+                        }
                     }
                 </style>
             </head>
-            <body class="min-h-screen flex items-center justify-center bg-white p-4">
+            <body class="min-h-screen flex items-center justify-center bg-white p-2">
                 <div class="print-container text-center">
-                    <div class="flex flex-col justify-center items-center mb-2">
-                        ${qrCodeHtml}
+                    <div class="flex flex-col justify-center items-center mb-3">
+                        <div class="qr-code mb-2">
+                            ${qrCodeHtml}
+                        </div>
                     </div>
-                    <div class="text-sm text-gray-700">
+                    <div class="text-xs text-gray-700 mt-2">
                         <p>Ngày in: ${new Date().toLocaleString('vi-VN')}</p>
                     </div>
                 </div>
@@ -837,15 +853,15 @@ export default function TestIndicationsTable() {
                                 In mã QR
                             </Button>
                         </div>
-                        <div ref={barcodeRef} className="flex flex-col items-center">
+                        <div ref={barcodeRef} className="flex flex-col items-start">
                             <QRCodeSVG
                                 key={currentReceptionCode} // Force re-render khi currentReceptionCode thay đổi
                                 value={currentReceptionCode}
-                                size={80}
+                                size={50}
                                 level="M"
                                 includeMargin={false}
                             />
-                            <div className="mt-2 text-sm font-medium text-gray-700">
+                            <div className="mt-1 text-xs font-medium text-gray-700">
                                 {currentReceptionCode}
                             </div>
                         </div>
