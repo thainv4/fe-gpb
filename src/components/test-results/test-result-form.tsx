@@ -25,7 +25,7 @@ import {
 import {FormTemplate} from "@/components/test-results/form-export-pdf/form-template";
 import {Button} from "@/components/ui/button";
 import {useHisStore} from "@/lib/stores/his";
-import {downloadPdfFromContainer, pdfBase64FromContainer} from '@/lib/utils/pdf-export';
+import {downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer} from '@/lib/utils/pdf-export';
 import {ResultTemplateSelector} from "@/components/result-template/result-template-selector";
 
 export default function TestResultForm() {
@@ -432,13 +432,28 @@ export default function TestResultForm() {
 
         try {
             const fileName = `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`;
-            await downloadPdfFromContainer(previewRef.current, fileName);
-        } catch (error) {
+            await downloadPdfFromContainerWithPuppeteer(previewRef.current, fileName);
+            
+            toast({
+                title: "Thành công",
+                description: "Đã tải PDF thành công",
+                variant: "default"
+            });
+        } catch (error: any) {
             console.error('Error downloading PDF:', error);
+            
+            // Extract error message
+            let errorMessage = "Có lỗi xảy ra khi tải PDF";
+            if (error?.message) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+            
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Có lỗi xảy ra khi tải PDF"
+                description: errorMessage
             });
         }
     };
@@ -446,16 +461,31 @@ export default function TestResultForm() {
     const handlePrintPdf = async () => {
         if (!previewRef.current || !storedServiceRequestData?.data) return;
         try {
-            await downloadPdfFromContainer(
+            await downloadPdfFromContainerWithPuppeteer(
                 previewRef.current,
                 `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`
             );
-        } catch (error) {
+            
+            toast({
+                title: "Thành công",
+                description: "Đã tải PDF thành công",
+                variant: "default"
+            });
+        } catch (error: any) {
             console.error('Error printing PDF:', error);
+            
+            // Extract error message
+            let errorMessage = "Có lỗi xảy ra khi in PDF";
+            if (error?.message) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+            
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Có lỗi xảy ra khi in PDF"
+                description: errorMessage
             });
         }
     }
@@ -465,7 +495,7 @@ export default function TestResultForm() {
         if (!previewRef.current || !storedServiceRequestData?.data || !previewServiceData?.data) return null;
 
         try {
-            const {base64, pageCount} = await pdfBase64FromContainer(previewRef.current);
+            const {base64, pageCount} = await pdfBase64FromContainerWithPuppeteer(previewRef.current);
             setSignaturePageTotal(pageCount);
             return base64;
         } catch (error) {
@@ -617,7 +647,7 @@ export default function TestResultForm() {
             }
 
             // Convert PDF to base64 và lấy số trang - SỬ DỤNG BIẾN LOCAL
-            const pdfResult = await pdfBase64FromContainer(previewRef.current);
+            const pdfResult = await pdfBase64FromContainerWithPuppeteer(previewRef.current);
             if (!pdfResult || !pdfResult.base64) {
                 toast({
                     variant: "destructive",
@@ -1399,10 +1429,16 @@ export default function TestResultForm() {
                                             <div className="mb-4">
                                                 <Label className="text-sm font-medium mb-2 block">Số block</Label>
                                                 <Input 
-                                                    type="text" 
+                                                    type="number" 
                                                     placeholder="Nhập số block..." 
                                                     value={numOfBlock}
-                                                    onChange={(e) => setNumOfBlock(e.target.value)}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        // Chỉ cho phép số
+                                                        if (value === '' || /^\d+$/.test(value)) {
+                                                            setNumOfBlock(value);
+                                                        }
+                                                    }}
                                                     className="max-w-xs"
                                                 />
                                             </div>

@@ -226,7 +226,7 @@ export default function SampleDeliveryTable() {
     // Ref cho phần barcode để in
     const barcodeRef = useRef<HTMLDivElement>(null)
 
-    // Function để in QR code - chỉ in QR code và ngày giờ
+    // Function để in QR code - chỉ in QR code
     const handlePrintBarcode = () => {
         if (!barcodeRef.current || !receptionCodeFromStored) return
 
@@ -245,47 +245,59 @@ export default function SampleDeliveryTable() {
                 <script src="https://cdn.tailwindcss.com"></script>
                 <style>
                     @page {
-                        size: auto;
-                        margin: 5mm;
+                        size: 50mm 30mm;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
                     }
                     @media print {
                         html, body {
-                            width: 100%;
-                            height: 100%;
-                            margin: 0;
-                            padding: 0;
-                            overflow: hidden;
+                            width: 50mm !important;
+                            height: 30mm !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            overflow: hidden !important;
+                            page-break-after: avoid !important;
+                            page-break-before: avoid !important;
+                        }
+                        body {
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
                         }
                         .print-container {
-                            page-break-after: avoid;
-                            page-break-inside: avoid;
+                            width: 50mm !important;
+                            height: 30mm !important;
+                            display: flex !important;
+                            flex-direction: column !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            page-break-after: avoid !important;
+                            page-break-inside: avoid !important;
+                            page-break-before: avoid !important;
                         }
                         .qr-code {
                             width: 50px !important;
                             height: 50px !important;
+                            margin: 0 !important;
+                            page-break-inside: avoid !important;
                         }
                         .qr-code svg {
                             width: 50px !important;
                             height: 50px !important;
-                        }
-                        .qr-code {
-                            margin-bottom: 8px !important;
-                        }
-                        .print-container > div:last-child {
-                            margin-top: 8px !important;
+                            display: block !important;
                         }
                     }
                 </style>
             </head>
-            <body class="min-h-screen flex items-center justify-center bg-white p-2">
+            <body class="bg-white">
                 <div class="print-container text-center">
-                    <div class="flex flex-col justify-center items-center mb-3">
-                        <div class="qr-code mb-2">
-                            ${qrCodeHtml}
-                        </div>
-                    </div>
-                    <div class="text-xs text-gray-700 mt-2">
-                        <p>Ngày in: ${new Date().toLocaleString('vi-VN')}</p>
+                    <div class="qr-code">
+                        ${qrCodeHtml}
                     </div>
                 </div>
                 <script>
