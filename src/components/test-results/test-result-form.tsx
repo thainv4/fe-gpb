@@ -14,6 +14,7 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import {useToast} from "@/hooks/use-toast";
 import {CheckCircle2, XCircle, Loader2} from "lucide-react";
+import {LoadingSpinner} from "@/components/ui/loading";
 import {
     Dialog,
     DialogContent,
@@ -434,11 +435,6 @@ export default function TestResultForm() {
             const fileName = `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`;
             await downloadPdfFromContainerWithPuppeteer(previewRef.current, fileName);
             
-            toast({
-                title: "Thành công",
-                description: "Đã tải PDF thành công",
-                variant: "default"
-            });
         } catch (error: any) {
             console.error('Error downloading PDF:', error);
             
@@ -465,12 +461,7 @@ export default function TestResultForm() {
                 previewRef.current,
                 `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`
             );
-            
-            toast({
-                title: "Thành công",
-                description: "Đã tải PDF thành công",
-                variant: "default"
-            });
+
         } catch (error: any) {
             console.error('Error printing PDF:', error);
             
@@ -1322,7 +1313,7 @@ export default function TestResultForm() {
                                                     >
                                                         {isSigning ? (
                                                             <>
-                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                                <LoadingSpinner size="small" className="mr-2" />
                                                                 Đang xử lý...
                                                             </>
                                                         ) : (
@@ -1582,11 +1573,20 @@ export default function TestResultForm() {
                                     disabled={!storedServiceRequestData?.data || !previewServiceData?.data || isSigning}
                                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                                    </svg>
-                                    Ký số
+                                    {isSigning ? (
+                                        <>
+                                            <LoadingSpinner size="small" className="text-white" />
+                                            Đang ký số...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                            </svg>
+                                            Ký số
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </div>
@@ -1647,8 +1647,8 @@ export default function TestResultForm() {
                         >
                             {isSigning ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Đang xử lý...
+                                    <LoadingSpinner size="small" className="mr-2" />
+                                    Đang ký số...
                                 </>
                             ) : (
                                 'Xác nhận ký số'
@@ -1681,7 +1681,7 @@ export default function TestResultForm() {
                         >
                             {isSigning ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <LoadingSpinner size="small" className="mr-2" />
                                     Đang xử lý...
                                 </>
                             ) : (

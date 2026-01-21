@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
 
         // Launch Puppeteer browser with error handling
         try {
+            // Try to launch with default settings first
             browser = await puppeteer.launch({
                 headless: true,
                 args: [
@@ -58,13 +59,78 @@ export async function POST(request: NextRequest) {
             console.log('Puppeteer browser launched successfully');
         } catch (launchError: any) {
             console.error('Failed to launch Puppeteer:', launchError);
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: `Failed to launch browser: ${launchError?.message || 'Unknown error'}. Make sure Puppeteer is properly installed.`,
-                },
-                { status: 500 }
-            );
+            
+            // Check if it's a Chrome not found error
+            const errorMessage = launchError?.message || '';
+            if (errorMessage.includes('Could not find Chrome') || errorMessage.includes('Chrome')) {
+                // Try to find Chrome in common Windows locations
+                const chromePaths = [
+                    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                    process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
+                    process.env.PROGRAMFILES + '\\Google\\Chrome\\Application\\chrome.exe',
+                    process.env['PROGRAMFILES(X86)'] + '\\Google\\Chrome\\Application\\chrome.exe',
+                ];
+                
+                let chromePath: string | undefined;
+                const fs = await import('fs');
+                for (const chromePathOption of chromePaths) {
+                    try {
+                        if (chromePathOption && fs.existsSync(chromePathOption)) {
+                            chromePath = chromePathOption;
+                            console.log('Found Chrome at:', chromePath);
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue searching
+                    }
+                }
+                
+                if (chromePath) {
+                    // Retry with found Chrome path
+                    try {
+                        browser = await puppeteer.launch({
+                            executablePath: chromePath,
+                            headless: true,
+                            args: [
+                                '--no-sandbox',
+                                '--disable-setuid-sandbox',
+                                '--disable-dev-shm-usage',
+                                '--disable-accelerated-2d-canvas',
+                                '--no-first-run',
+                                '--no-zygote',
+                                '--disable-gpu',
+                            ],
+                            timeout: 30000,
+                        });
+                        console.log('Puppeteer browser launched successfully with system Chrome');
+                    } catch (retryError: any) {
+                        return NextResponse.json(
+                            {
+                                success: false,
+                                error: `Chrome browser not found. Please run: npx puppeteer browsers install chrome\n\nOr install Chrome manually. Error: ${retryError?.message || 'Unknown error'}`,
+                            },
+                            { status: 500 }
+                        );
+                    }
+                } else {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            error: `Chrome browser not found. Please run: npx puppeteer browsers install chrome\n\nOr install Chrome manually and set PUPPETEER_EXECUTABLE_PATH environment variable.`,
+                        },
+                        { status: 500 }
+                    );
+                }
+            } else {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: `Failed to launch browser: ${errorMessage}. Make sure Puppeteer is properly installed.`,
+                    },
+                    { status: 500 }
+                );
+            }
         }
 
         const page = await browser.newPage();
@@ -130,7 +196,13 @@ export async function POST(request: NextRequest) {
             });
         } catch (pageError: any) {
             console.error('Error during PDF generation:', pageError);
-            await browser.close();
+            if (browser) {
+                try {
+                    await browser.close();
+                } catch (closeError) {
+                    console.error('Error closing browser:', closeError);
+                }
+            }
             browser = null;
             throw pageError;
         }
