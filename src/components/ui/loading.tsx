@@ -123,15 +123,15 @@ export function LoadingOverlay({ isLoading, text, size = 'large' }: {
     if (!isLoading) return null;
 
     return (
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions
         <div 
+            role="presentation"
+            aria-live="polite"
+            aria-label={text || "Đang tải"}
             className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-[9999]"
             style={{ 
                 pointerEvents: 'auto',
                 touchAction: 'none',
-            }}
-            onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
             }}
             onMouseDown={(e) => {
                 e.preventDefault();
@@ -145,12 +145,18 @@ export function LoadingOverlay({ isLoading, text, size = 'large' }: {
                 e.preventDefault();
                 e.stopPropagation();
             }}
+            onKeyDown={(e) => {
+                // Prevent keyboard interactions
+                e.preventDefault();
+                e.stopPropagation();
+            }}
         >
             <div 
+                role="status"
+                aria-live="polite"
                 className="flex flex-col items-center gap-4 bg-white/90 rounded-lg shadow-lg px-8 py-6"
-                onClick={(e) => e.stopPropagation()}
             >
-                <Loader2 className={cn('animate-spin text-blue-600', spinnerSize)} />
+                <Loader2 className={cn('animate-spin text-blue-600', spinnerSize)} aria-hidden="true" />
                 {text && (
                     <p className="text-sm text-gray-700 font-medium">{text}</p>
                 )}
