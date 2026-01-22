@@ -114,7 +114,8 @@ function TemplateDialog({
   // Helper function to parse resultDescription to extract microscopic part
   const parseResultDescription = (description: string) => {
     // Tìm phần MÔ TẢ VI THỂ (bao gồm cả tiêu đề)
-    const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>(.*?)$/s);
+    // Dùng [\s\S] thay vì . với flag s để tương thích ES5
+    const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>([\s\S]*?)$/);
     
     let microscopic = defaultMicroscopicDescription;
     

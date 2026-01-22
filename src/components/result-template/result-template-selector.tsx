@@ -69,7 +69,8 @@ export function ResultTemplateSelector({
     // Helper function to extract microscopic description from resultDescription
     const extractMicroscopicDescription = (description: string): string => {
         // Tìm phần MÔ TẢ VI THỂ (bao gồm cả tiêu đề)
-        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>(.*?)$/s);
+        // Dùng [\s\S] thay vì . với flag s để tương thích ES5
+        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>([\s\S]*?)$/);
         
         if (microscopicMatch) {
             const content = microscopicMatch[1].trim();

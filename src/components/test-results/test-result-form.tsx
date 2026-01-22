@@ -65,9 +65,10 @@ export default function TestResultForm() {
     // Helper function to parse resultDescription into macroscopic and microscopic parts
     const parseResultDescription = (description: string) => {
         // Tìm phần NHẬN XÉT ĐẠI THỂ (bao gồm cả tiêu đề)
-        const macroscopicMatch = description.match(/(<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:<\/strong><\/p>.*?)(?=<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>|$)/s);
+        // Dùng [\s\S] thay vì . với flag s để tương thích ES5
+        const macroscopicMatch = description.match(/(<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:<\/strong><\/p>[\s\S]*?)(?=<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>|$)/);
         // Tìm phần MÔ TẢ VI THỂ (bao gồm cả tiêu đề)
-        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>(.*?)$/s);
+        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>([\s\S]*?)$/);
         
         let macroscopic = defaultMacroscopicComment;
         let microscopic = defaultMicroscopicDescription;
@@ -113,7 +114,8 @@ export default function TestResultForm() {
     const syncResultDescription = (description: string) => {
         // Chỉ gán resultDescription vào Mô tả vi thể, không gán vào Nhận xét đại thể
         // Nếu description có chứa "MÔ TẢ VI THỂ", extract phần đó
-        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>(.*?)$/s);
+        // Dùng [\s\S] thay vì . với flag s để tương thích ES5
+        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>([\s\S]*?)$/);
         
         if (microscopicMatch) {
             const content = microscopicMatch[1].trim();
