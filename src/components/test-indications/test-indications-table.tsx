@@ -1,12 +1,12 @@
-﻿import React, {useEffect, useRef, useState, useMemo} from "react";
-import {Label} from "@/components/ui/label";
-import {Input} from "@/components/ui/input";
-import {Textarea} from "@/components/ui/textarea";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {Checkbox} from "@/components/ui/checkbox";
-import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
-import {apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest} from "@/lib/api/client";
-import {formatDobFromHis} from "@/lib/utils";
+﻿import React, { useEffect, useRef, useState, useMemo } from "react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest } from "@/lib/api/client";
+import { formatDobFromHis } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -17,13 +17,13 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Printer } from "lucide-react";
-import {useTabsStore} from "@/lib/stores/tabs";
-import {usePathname} from "next/navigation";
+import { useTabsStore } from "@/lib/stores/tabs";
+import { usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import {useTabPersistence} from "@/hooks/use-tab-persistence";
+import { useTabPersistence } from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { QRCodeSVG } from 'qrcode.react';
-import {useHisStore} from "@/lib/stores/his";
+import { useHisStore } from "@/lib/stores/his";
 
 export default function TestIndicationsTable() {
 
@@ -91,7 +91,7 @@ export default function TestIndicationsTable() {
         }
     )
 
-    const {data: serviceRequestData, isLoading, isError, error} = useQuery({
+    const { data: serviceRequestData, isLoading, isError, error } = useQuery({
         queryKey: ['service-request', searchCode],
         queryFn: () => apiClient.getServiceRequestByCode(searchCode),
         enabled: !!searchCode, // Chỉ gọi API khi có searchCode
@@ -99,7 +99,7 @@ export default function TestIndicationsTable() {
     })
 
     // Gọi API để lấy danh sách bệnh phẩm
-    const {data: sampleTypesData} = useQuery({
+    const { data: sampleTypesData } = useQuery({
         queryKey: ['sample-types'],
         queryFn: () => apiClient.getSampleTypes(),
         staleTime: 5 * 60 * 1000,
@@ -118,14 +118,14 @@ export default function TestIndicationsTable() {
         try {
             const last = localStorage.getItem('lastSampleTypeId')
             if (last) setSelectedSampleType(last)
-        } catch {}
+        } catch { }
     }, [])
 
     // Persist last selected sample type
     useEffect(() => {
         try {
             if (selectedSampleType) localStorage.setItem('lastSampleTypeId', selectedSampleType)
-        } catch {}
+        } catch { }
     }, [selectedSampleType])
 
     const triggerSearch = () => {
@@ -155,12 +155,12 @@ export default function TestIndicationsTable() {
             setAppliedSearch(sampleTypeSearch)
             return
         }
-        
+
         // Cho phép Escape để đóng dropdown
         if (e.key === 'Escape') {
             return
         }
-        
+
         // Ngăn tất cả các phím khác lan truyền để tránh Select tự động filter/chọn
         e.stopPropagation()
     }
@@ -172,7 +172,7 @@ export default function TestIndicationsTable() {
             const receptionCode = manualBarcode.trim()
             try {
                 const response = await apiClient.querySampleTypeByReceptionCode(receptionCode)
-                
+
                 if (response.success && response.data?.sampleTypeId) {
                     // Set sampleTypeId vào dropdown
                     setSelectedSampleType(response.data.sampleTypeId)
@@ -310,8 +310,14 @@ export default function TestIndicationsTable() {
                 <script src="https://cdn.tailwindcss.com"></script>
                                 <style>
                     @page {
-                        size: auto;
-                        margin: 5mm;
+                        size: 50mm 30mm;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
                     }
                     @media print {
                         html, body {
@@ -416,8 +422,8 @@ export default function TestIndicationsTable() {
 
     // Mutation để update receptionCode
     const updateReceptionCodeMutation = useMutation({
-        mutationFn: ({ serviceId, receptionCode, sampleTypeName }: { 
-            serviceId: string; 
+        mutationFn: ({ serviceId, receptionCode, sampleTypeName }: {
+            serviceId: string;
             receptionCode?: string;
             sampleTypeName?: string;
         }) =>
@@ -489,7 +495,7 @@ export default function TestIndicationsTable() {
             // Bước 1: Kiểm tra xem đã có stored service request chưa
             if (storedServiceReqId && storedServiceRequestData?.data) {
                 const services = storedServiceRequestData.data.services || []
-                
+
                 if (services.length === 0) {
                     toast({
                         title: "Lỗi",
@@ -503,7 +509,7 @@ export default function TestIndicationsTable() {
                 if (!selectedSampleType || (!isManualInput && !selectedPrefix) || (isManualInput && !manualBarcode.trim())) {
                     toast({
                         title: "Lỗi",
-                        description: isManualInput 
+                        description: isManualInput
                             ? "❌ Vui lòng chọn cả bệnh phẩm và nhập barcode thủ công để cập nhật"
                             : "❌ Vui lòng chọn cả bệnh phẩm và prefix để cập nhật",
                         variant: "destructive",
@@ -513,7 +519,7 @@ export default function TestIndicationsTable() {
 
                 // Sử dụng barcode thủ công nếu checkbox được chọn, nếu không thì tạo từ prefix
                 let receptionCode: string;
-                
+
                 if (isManualInput) {
                     // Sử dụng barcode nhập thủ công - KHÔNG gọi API
                     receptionCode = manualBarcode.trim();
@@ -542,7 +548,7 @@ export default function TestIndicationsTable() {
                 }
 
                 // Update cả receptionCode và sampleTypeName
-                const updatePromises = services.map(service => 
+                const updatePromises = services.map(service =>
                     updateReceptionCodeMutation.mutateAsync({
                         serviceId: service.id,
                         receptionCode: receptionCode,
@@ -575,7 +581,7 @@ export default function TestIndicationsTable() {
 
             // Sử dụng barcode thủ công nếu checkbox được chọn, nếu không thì tạo từ prefix
             let receptionCode: string;
-            
+
             if (isManualInput) {
                 // Sử dụng barcode nhập thủ công - KHÔNG gọi API
                 receptionCode = manualBarcode.trim();
@@ -715,154 +721,154 @@ export default function TestIndicationsTable() {
                 {/* Controls area: keep SID and specimen select isolated from patient inputs */}
                 <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-end gap-3 md:gap-6 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                    <Label className="text-sm font-medium">Nhập mã y lệnh</Label>
-                    <div className="flex gap-2">
-                        <Input
-                            ref={sidInputRef}
-                            type="text"
-                            value={serviceReqCode}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setServiceReqCode(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Nhập mã y lệnh và nhấn Enter"
-                        />
-                        <Button type="button" onClick={triggerSearch} disabled={!serviceReqCode?.trim()}>
-                            Tìm
-                        </Button>
-                        <Button type="button" variant="secondary" onClick={clearAll}>
-                            Xóa
-                        </Button>
-                    </div>
-                    {isLoading && <span className="text-xs text-gray-500">Đang tải...</span>}
-                    {isError && (
-                        <div className="text-xs space-y-1">
-                            <div className="text-red-600">Không tìm thấy hoặc lỗi: {errorMessage}</div>
-                            <div className="text-gray-500">Endpoint: /service-requests/code/{searchCode}</div>
-                        </div>
-                    )}
-                    {!isLoading && !isError && serviceRequestData && !serviceRequest && (
-                        <span className="text-xs text-orange-600">API trả về nhưng không có serviceRequest</span>
-                    )}
-                </div>
-
-                <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                    <Label className="text-sm font-medium">Chọn bệnh phẩm</Label>
-                    <Select value={selectedSampleType} onValueChange={setSelectedSampleType} open={selectOpen} onOpenChange={setSelectOpen}>
-                        <SelectTrigger ref={sampleTriggerRef}>
-                            <SelectValue placeholder="Chọn bệnh phẩm" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {/* Ô tìm kiếm bệnh phẩm - sticky at top */}
-                            <div 
-                                className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
-                                role="none"
-                                onKeyDown={(e) => {
-                                    // Ngăn tất cả keyboard events lan truyền ra ngoài container
-                                    e.stopPropagation()
-                                }}
-                            >
-                                <Input
-                                    placeholder="Tìm kiếm bệnh phẩm..."
-                                    value={sampleTypeSearch}
-                                    onChange={e => setSampleTypeSearch(e.target.value)}
-                                    onKeyDown={handleSampleSearchKeyDown}
-                                    className="text-sm"
-                                    autoComplete="off"
-                                />
-                            </div>
-                            {filteredSampleTypeItems.length
-                                ? filteredSampleTypeItems.map((sampleType) => (
-                                    <SelectItem key={sampleType.id} value={sampleType.id}>
-                                        {sampleType.typeName}
-                                    </SelectItem>
-                                  ))
-                                : <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>
-                            }
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Label className="text-sm font-medium">Chọn tiền tố sinh barcode</Label>
-                        <div className="flex items-center gap-2 ml-4">
-                            <Checkbox
-                                id="manual-input"
-                                checked={isManualInput}
-                                onCheckedChange={(checked) => {
-                                    setIsManualInput(checked === true)
-                                    if (checked) {
-                                        // Khi bật checkbox, clear prefix và focus vào input
-                                        setSelectedPrefix('')
-                                    } else {
-                                        // Khi tắt checkbox, clear manual barcode
-                                        setManualBarcode('')
-                                    }
-                                }}
+                        <Label className="text-sm font-medium">Nhập mã y lệnh</Label>
+                        <div className="flex gap-2">
+                            <Input
+                                ref={sidInputRef}
+                                type="text"
+                                value={serviceReqCode}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setServiceReqCode(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Nhập mã y lệnh và nhấn Enter"
                             />
-                            <Label
-                                htmlFor="manual-input"
-                                className="text-sm font-normal cursor-pointer"
-                            >
-                                Nhập thủ công
-                            </Label>
-                        </div>
-                    </div>
-                    {isManualInput ? (
-                        <Input
-                            type="text"
-                            placeholder="Nhấn Enter để tìm bệnh phẩm"
-                            value={manualBarcode}
-                            onChange={(e) => setManualBarcode(e.target.value)}
-                            onKeyDown={handleManualBarcodeKeyDown}
-                            className="text-sm"
-                        />
-                    ) : (
-                        <Select 
-                            value={selectedPrefix} 
-                            onValueChange={setSelectedPrefix}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Chọn tiền tố" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="T">T</SelectItem>
-                                <SelectItem value="C">C</SelectItem>
-                                <SelectItem value="F">F</SelectItem>
-                                <SelectItem value="S">S</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    )}
-                </div>
-
-                {storedServiceReqId && currentReceptionCode && (
-                    <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                        <div className="flex items-center gap-6 mb-2">
-                            <Label className="text-sm font-medium text-blue-600">Mã bệnh phẩm</Label>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handlePrintBarcode}
-                                className="h-7"
-                            >
-                                <Printer className="h-4 w-4 mr-1"/>
-                                In mã QR
+                            <Button type="button" onClick={triggerSearch} disabled={!serviceReqCode?.trim()}>
+                                Tìm
+                            </Button>
+                            <Button type="button" variant="secondary" onClick={clearAll}>
+                                Xóa
                             </Button>
                         </div>
-                        <div ref={barcodeRef} className="flex flex-col items-start">
-                            <QRCodeSVG
-                                key={currentReceptionCode} // Force re-render khi currentReceptionCode thay đổi
-                                value={currentReceptionCode}
-                                size={50}
-                                level="M"
-                                includeMargin={false}
-                            />
-                            <div className="mt-1 text-xs font-medium text-gray-700">
-                                {currentReceptionCode}
+                        {isLoading && <span className="text-xs text-gray-500">Đang tải...</span>}
+                        {isError && (
+                            <div className="text-xs space-y-1">
+                                <div className="text-red-600">Không tìm thấy hoặc lỗi: {errorMessage}</div>
+                                <div className="text-gray-500">Endpoint: /service-requests/code/{searchCode}</div>
+                            </div>
+                        )}
+                        {!isLoading && !isError && serviceRequestData && !serviceRequest && (
+                            <span className="text-xs text-orange-600">API trả về nhưng không có serviceRequest</span>
+                        )}
+                    </div>
+
+                    <div className="w-full md:w-1/3 flex flex-col gap-1.5">
+                        <Label className="text-sm font-medium">Chọn bệnh phẩm</Label>
+                        <Select value={selectedSampleType} onValueChange={setSelectedSampleType} open={selectOpen} onOpenChange={setSelectOpen}>
+                            <SelectTrigger ref={sampleTriggerRef}>
+                                <SelectValue placeholder="Chọn bệnh phẩm" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {/* Ô tìm kiếm bệnh phẩm - sticky at top */}
+                                <div
+                                    className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
+                                    role="none"
+                                    onKeyDown={(e) => {
+                                        // Ngăn tất cả keyboard events lan truyền ra ngoài container
+                                        e.stopPropagation()
+                                    }}
+                                >
+                                    <Input
+                                        placeholder="Tìm kiếm bệnh phẩm..."
+                                        value={sampleTypeSearch}
+                                        onChange={e => setSampleTypeSearch(e.target.value)}
+                                        onKeyDown={handleSampleSearchKeyDown}
+                                        className="text-sm"
+                                        autoComplete="off"
+                                    />
+                                </div>
+                                {filteredSampleTypeItems.length
+                                    ? filteredSampleTypeItems.map((sampleType) => (
+                                        <SelectItem key={sampleType.id} value={sampleType.id}>
+                                            {sampleType.typeName}
+                                        </SelectItem>
+                                    ))
+                                    : <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>
+                                }
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="w-full md:w-1/3 flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Label className="text-sm font-medium">Chọn tiền tố sinh barcode</Label>
+                            <div className="flex items-center gap-2 ml-4">
+                                <Checkbox
+                                    id="manual-input"
+                                    checked={isManualInput}
+                                    onCheckedChange={(checked) => {
+                                        setIsManualInput(checked === true)
+                                        if (checked) {
+                                            // Khi bật checkbox, clear prefix và focus vào input
+                                            setSelectedPrefix('')
+                                        } else {
+                                            // Khi tắt checkbox, clear manual barcode
+                                            setManualBarcode('')
+                                        }
+                                    }}
+                                />
+                                <Label
+                                    htmlFor="manual-input"
+                                    className="text-sm font-normal cursor-pointer"
+                                >
+                                    Nhập thủ công
+                                </Label>
                             </div>
                         </div>
+                        {isManualInput ? (
+                            <Input
+                                type="text"
+                                placeholder="Nhấn Enter để tìm bệnh phẩm"
+                                value={manualBarcode}
+                                onChange={(e) => setManualBarcode(e.target.value)}
+                                onKeyDown={handleManualBarcodeKeyDown}
+                                className="text-sm"
+                            />
+                        ) : (
+                            <Select
+                                value={selectedPrefix}
+                                onValueChange={setSelectedPrefix}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Chọn tiền tố" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="T">T</SelectItem>
+                                    <SelectItem value="C">C</SelectItem>
+                                    <SelectItem value="F">F</SelectItem>
+                                    <SelectItem value="S">S</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        )}
                     </div>
-                )}
-            </div>
+
+                    {storedServiceReqId && currentReceptionCode && (
+                        <div className="w-full md:w-1/3 flex flex-col gap-1.5">
+                            <div className="flex items-center gap-6 mb-2">
+                                <Label className="text-sm font-medium text-blue-600">Mã bệnh phẩm</Label>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handlePrintBarcode}
+                                    className="h-7"
+                                >
+                                    <Printer className="h-4 w-4 mr-1" />
+                                    In mã QR
+                                </Button>
+                            </div>
+                            <div ref={barcodeRef} className="flex flex-col items-start">
+                                <QRCodeSVG
+                                    key={currentReceptionCode} // Force re-render khi currentReceptionCode thay đổi
+                                    value={currentReceptionCode}
+                                    size={50}
+                                    level="M"
+                                    includeMargin={false}
+                                />
+                                <div className="mt-1 text-xs font-medium text-gray-700">
+                                    {currentReceptionCode}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 <h3 className="text-lg font-semibold my-2">Thông tin bệnh nhân</h3>
                 <div className="patient-info grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 pt-3 pb-4 border-b border-gray-300">
@@ -870,29 +876,29 @@ export default function TestIndicationsTable() {
                     <div className="space-y-6">
                         <div className="flex flex-col gap-2">
                             <Label>Họ và tên</Label>
-                            <Input type="text" value={patient?.name ?? ''} disabled/>
+                            <Input type="text" value={patient?.name ?? ''} disabled />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <Label>Số điện thoại</Label>
-                            <Input type="text" value={patient?.mobile ?? ''} disabled/>
+                            <Input type="text" value={patient?.mobile ?? ''} disabled />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <Label>CMND/CCCD</Label>
-                            <Input type='text' value={patient?.cmndNumber ?? ''} disabled/>
+                            <Input type='text' value={patient?.cmndNumber ?? ''} disabled />
                         </div>
                     </div>
 
                     <div className="space-y-6">
                         <div className="flex flex-col gap-2">
                             <Label>Mã bệnh nhân (PID)</Label>
-                            <Input type='text' value={patient?.code ?? ''} disabled/>
+                            <Input type='text' value={patient?.code ?? ''} disabled />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <Label>Ngày sinh</Label>
-                            <Input type='date' value={patient?.dob ? formatDobFromHis(patient.dob) : ''} disabled/>
+                            <Input type='date' value={patient?.dob ? formatDobFromHis(patient.dob) : ''} disabled />
                         </div>
 
                         <div className="flex flex-col gap-2">
@@ -924,12 +930,12 @@ export default function TestIndicationsTable() {
 
                         <div className="flex flex-col gap-2">
                             <Label>Địa chỉ</Label>
-                            <Input type='text' value={patient?.address ?? ''} disabled/>
+                            <Input type='text' value={patient?.address ?? ''} disabled />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <Label>Chẩn đoán</Label>
-                            <Textarea value={serviceRequest?.icdName ?? ''} disabled/>
+                            <Textarea value={serviceRequest?.icdName ?? ''} disabled />
                         </div>
                     </div>
                 </div>
@@ -942,51 +948,51 @@ export default function TestIndicationsTable() {
                     <div className="border rounded-lg overflow-hidden">
                         <table className="w-full">
                             <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-4 py-3 text-left text-sm font-semibold border-r">STT</th>
-                                <th className="px-4 py-3 text-left text-sm font-semibold border-r">Mã dịch vụ</th>
-                                <th className="px-4 py-3 text-left text-sm font-semibold border-r">Tên dịch vụ</th>
-                                <th className="px-4 py-3 text-left text-sm font-semibold">Giá</th>
-                            </tr>
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold border-r">STT</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold border-r">Mã dịch vụ</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold border-r">Tên dịch vụ</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold">Giá</th>
+                                </tr>
                             </thead>
                             <tbody>
-                            {serviceRequest?.services?.map((service: ServiceRequestService, serviceIndex: number) => {
-                                const currentPrice: number | string = service?.lisService?.currentPrice ?? service?.price ?? '-'
-                                const rowKey = service.hisSereServId ?? service.serviceId ?? service.lisService?.id ?? service.serviceCode ?? service.serviceName ?? serviceIndex
+                                {serviceRequest?.services?.map((service: ServiceRequestService, serviceIndex: number) => {
+                                    const currentPrice: number | string = service?.lisService?.currentPrice ?? service?.price ?? '-'
+                                    const rowKey = service.hisSereServId ?? service.serviceId ?? service.lisService?.id ?? service.serviceCode ?? service.serviceName ?? serviceIndex
 
-                                return (
-                                    <React.Fragment key={rowKey}>
-                                        {/* Parent Service Row */}
-                                        <tr className="border-t bg-blue-50">
-                                            <td className="px-4 py-2 text-sm border-r font-semibold">{serviceIndex + 1}</td>
-                                            <td className="px-4 py-2 text-sm border-r font-semibold">{service?.serviceCode || '-'}</td>
-                                            <td className="px-4 py-2 text-sm border-r font-semibold">{service?.serviceName || '-'}</td>
-                                            <td className="px-4 py-2 text-sm font-semibold">{typeof currentPrice === 'number' ? currentPrice.toLocaleString() : currentPrice}</td>
-                                        </tr>
+                                    return (
+                                        <React.Fragment key={rowKey}>
+                                            {/* Parent Service Row */}
+                                            <tr className="border-t bg-blue-50">
+                                                <td className="px-4 py-2 text-sm border-r font-semibold">{serviceIndex + 1}</td>
+                                                <td className="px-4 py-2 text-sm border-r font-semibold">{service?.serviceCode || '-'}</td>
+                                                <td className="px-4 py-2 text-sm border-r font-semibold">{service?.serviceName || '-'}</td>
+                                                <td className="px-4 py-2 text-sm font-semibold">{typeof currentPrice === 'number' ? currentPrice.toLocaleString() : currentPrice}</td>
+                                            </tr>
 
-                                        {/* Child ServiceTests Rows */}
-                                        {service?.serviceTests?.map((test, testIndex) => {
-                                            const testPrice: number | string = test?.price ?? '-'
-                                            const testKey = `${rowKey}-test-${test.id || testIndex}`
-                                            return (
-                                                <tr key={testKey} className="border-t hover:bg-gray-50">
-                                                    <td className="px-4 py-2 text-sm border-r"></td>
-                                                    <td className="px-4 py-2 text-sm border-r pl-8">{test?.testCode || '-'}</td>
-                                                    <td className="px-4 py-2 text-sm border-r">{test?.testName || '-'}</td>
-                                                    <td className="px-4 py-2 text-sm">{typeof testPrice === 'number' ? testPrice.toLocaleString() : testPrice}</td>
-                                                </tr>
-                                            )
-                                        })}
-                                    </React.Fragment>
-                                )
-                            })}
-                            {!isLoading && !isError && (!serviceRequest?.services || serviceRequest.services.length === 0) && (
-                                <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
-                                        Không có dịch vụ nào.
-                                    </td>
-                                </tr>
-                            )}
+                                            {/* Child ServiceTests Rows */}
+                                            {service?.serviceTests?.map((test, testIndex) => {
+                                                const testPrice: number | string = test?.price ?? '-'
+                                                const testKey = `${rowKey}-test-${test.id || testIndex}`
+                                                return (
+                                                    <tr key={testKey} className="border-t hover:bg-gray-50">
+                                                        <td className="px-4 py-2 text-sm border-r"></td>
+                                                        <td className="px-4 py-2 text-sm border-r pl-8">{test?.testCode || '-'}</td>
+                                                        <td className="px-4 py-2 text-sm border-r">{test?.testName || '-'}</td>
+                                                        <td className="px-4 py-2 text-sm">{typeof testPrice === 'number' ? testPrice.toLocaleString() : testPrice}</td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </React.Fragment>
+                                    )
+                                })}
+                                {!isLoading && !isError && (!serviceRequest?.services || serviceRequest.services.length === 0) && (
+                                    <tr>
+                                        <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                                            Không có dịch vụ nào.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -998,8 +1004,8 @@ export default function TestIndicationsTable() {
                             onClick={handleConfirmSave}
                             disabled={
                                 // Cần cả bệnh phẩm và (prefix hoặc barcode thủ công) (cho cả update và tạo mới)
-                                !selectedSampleType || 
-                                (!isManualInput && !selectedPrefix) || 
+                                !selectedSampleType ||
+                                (!isManualInput && !selectedPrefix) ||
                                 (isManualInput && !manualBarcode.trim()) ||
                                 !tabRoomId ||
                                 !tabDepartmentId ||
@@ -1010,9 +1016,9 @@ export default function TestIndicationsTable() {
                                 updateReceptionCodeMutation.isPending
                             }
                         >
-                            {(createSampleReceptionMutation.isPending || 
-                              storeServiceRequestMutation.isPending || 
-                              updateReceptionCodeMutation.isPending) ? (
+                            {(createSampleReceptionMutation.isPending ||
+                                storeServiceRequestMutation.isPending ||
+                                updateReceptionCodeMutation.isPending) ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 </>
@@ -1031,7 +1037,7 @@ export default function TestIndicationsTable() {
                     <DialogHeader>
                         <DialogTitle>Xác nhận lưu</DialogTitle>
                         <DialogDescription>
-                            {storedServiceReqId 
+                            {storedServiceReqId
                                 ? 'Bạn có chắc chắn muốn cập nhật chỉ định xét nghiệm này?'
                                 : 'Bạn có chắc chắn muốn lưu chỉ định xét nghiệm này?'
                             }
@@ -1052,9 +1058,9 @@ export default function TestIndicationsTable() {
                                 updateReceptionCodeMutation.isPending
                             }
                         >
-                            {(createSampleReceptionMutation.isPending || 
-                              storeServiceRequestMutation.isPending || 
-                              updateReceptionCodeMutation.isPending) ? (
+                            {(createSampleReceptionMutation.isPending ||
+                                storeServiceRequestMutation.isPending ||
+                                updateReceptionCodeMutation.isPending) ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Đang xử lý...

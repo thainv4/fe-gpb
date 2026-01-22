@@ -245,8 +245,14 @@ export default function SampleDeliveryTable() {
                 <script src="https://cdn.tailwindcss.com"></script>
                                 <style>
                     @page {
-                        size: auto;
-                        margin: 5mm;
+                        size: 50mm 30mm;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
                     }
                     @media print {
                         html, body {

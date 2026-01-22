@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo } from "react";
 import { StoredServiceRequestResponse, StoredService } from "@/lib/api/client";
@@ -263,15 +263,21 @@ export function FormTemplate({
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [contentPages, setContentPages] = React.useState<string[]>([""]);
 
-  // Lấy resultDescription, resultConclude, resultNote từ specificService theo thứ tự
-  // Ưu tiên sử dụng 3 fields mới, fallback về resultText nếu không có (backward compatibility)
+  // Lấy resultComment, resultDescription, resultConclude, resultNote từ specificService theo thứ tự
+  // Ưu tiên sử dụng các fields mới, fallback về resultText nếu không có (backward compatibility)
   const resultText = useMemo(() => {
     if (!specificService) return "";
     
-    // Ưu tiên sử dụng 3 fields mới nếu có
-    if (specificService.resultDescription || specificService.resultConclude || specificService.resultNote) {
+    // Ưu tiên sử dụng các fields mới nếu có
+    if (specificService.resultComment || specificService.resultDescription || specificService.resultConclude || specificService.resultNote) {
       const parts: string[] = [];
       
+      // Nhận xét đại thể (resultComment) hiển thị đầu tiên
+      if (specificService.resultComment) {
+        parts.push(specificService.resultComment);
+      }
+      
+      // Mô tả vi thể (resultDescription) hiển thị sau nhận xét đại thể
       if (specificService.resultDescription) {
         parts.push(specificService.resultDescription);
       }
@@ -287,7 +293,7 @@ export function FormTemplate({
       return parts.join("");
     }
     
-    // Fallback về resultText nếu không có 3 fields mới
+    // Fallback về resultText nếu không có các fields mới
     return specificService.resultText || "";
   }, [specificService]);
 

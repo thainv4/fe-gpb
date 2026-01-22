@@ -415,8 +415,20 @@ export default function TestResultForm() {
     // Helper function để gọi API updateHisPacsResult cho một dịch vụ
     const updateHisPacsResultForService = async (service: any, tokenCode: string) => {
         try {
-            // Lấy resultDescription, resultConclude, resultNote từ service data và strip HTML tags
-            const description = stripHtmlForDescription(service?.resultDescription || service?.resultText || '');
+            // Lấy resultComment và resultDescription, kết hợp lại để tạo Description
+            const resultCommentText = stripHtmlForDescription(service?.resultComment || '');
+            const resultDescriptionText = stripHtmlForDescription(service?.resultDescription || service?.resultText || '');
+            
+            // Kết hợp resultComment và resultDescription để tạo Description
+            const descriptionParts: string[] = [];
+            if (resultCommentText) {
+                descriptionParts.push(resultCommentText);
+            }
+            if (resultDescriptionText) {
+                descriptionParts.push(resultDescriptionText);
+            }
+            const description = descriptionParts.join('\n\n');
+            
             const conclude = stripHtml(service?.resultConclude || '');
             const note = stripHtml(service?.resultNote || '');
 

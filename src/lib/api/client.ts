@@ -830,6 +830,7 @@ export interface StoredService {
     resultDescription?: string | null;
     resultConclude?: string | null;
     resultNote?: string | null;
+    resultComment?: string | null;
     resultValue?: number | null;
     resultValueText?: string | null;
     resultStatus?: string | null;
