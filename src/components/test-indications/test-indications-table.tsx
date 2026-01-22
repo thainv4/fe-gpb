@@ -308,58 +308,63 @@ export default function TestIndicationsTable() {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>In mã QR - ${currentReceptionCode}</title>
                 <script src="https://cdn.tailwindcss.com"></script>
-                <style>
+                                <style>
                     @page {
-                        size: 50mm 30mm;
-                        margin: 0;
-                        padding: 0;
-                    }
-                    * {
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
+                        size: auto;
+                        margin: 5mm;
+
+
+
+
+
+
                     }
                     @media print {
                         html, body {
-                            width: 50mm !important;
-                            height: 30mm !important;
-                            margin: 0 !important;
-                            padding: 0 !important;
-                            overflow: hidden !important;
-                            page-break-after: avoid !important;
-                            page-break-before: avoid !important;
-                        }
-                        body {
-                            display: flex !important;
-                            align-items: center !important;
-                            justify-content: center !important;
+                            width: 100%;
+                            height: 100%;
+                            margin: 0;
+                            padding: 0;
+                            overflow: hidden;
+
+
+
+
+
+
+
                         }
                         .print-container {
-                            width: 50mm !important;
-                            height: 30mm !important;
-                            display: flex !important;
-                            flex-direction: column !important;
-                            align-items: center !important;
-                            justify-content: center !important;
-                            page-break-after: avoid !important;
-                            page-break-inside: avoid !important;
-                            page-break-before: avoid !important;
+                            page-break-after: avoid;
+                            page-break-inside: avoid;
+
+
+
+
+
+
+
                         }
                         .qr-code {
                             width: 50px !important;
                             height: 50px !important;
-                            margin: 0 !important;
-                            page-break-inside: avoid !important;
+
+
                         }
                         .qr-code svg {
                             width: 50px !important;
                             height: 50px !important;
-                            display: block !important;
+                        }
+                        .qr-code {
+                            margin-bottom: 8px !important;
+                        }
+                        .print-container > div:last-child {
+                            margin-top: 8px !important;
                         }
                     }
                 </style>
             </head>
-            <body class="bg-white">
+            <body class="min-h-screen flex items-center justify-center bg-white p-2">
                 <div class="print-container text-center">
                     <div class="qr-code">
                         ${qrCodeHtml}
