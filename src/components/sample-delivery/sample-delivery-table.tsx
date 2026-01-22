@@ -247,12 +247,6 @@ export default function SampleDeliveryTable() {
                     @page {
                         size: auto;
                         margin: 5mm;
-
-
-
-
-
-
                     }
                     @media print {
                         html, body {
@@ -261,39 +255,13 @@ export default function SampleDeliveryTable() {
                             margin: 0;
                             padding: 0;
                             overflow: hidden;
-
-
-
-
-
-
                         }
                         .print-container {
                             page-break-after: avoid;
                             page-break-inside: avoid;
-
-
-
-
-
-
                         }
-                        .qr-code {
-                            width: 50px !important;
-                            height: 50px !important;
-
-
-                        }
-                        .qr-code svg {
-                            width: 50px !important;
-                            height: 50px !important;
-                        }
-                        .qr-code {
-                            margin-bottom: 8px !important;
-                        }
-                        .print-container > div:last-child {
-                            margin-top: 8px !important;
-                        }
+                       
+                    
                     }
                 </style>
             </head>

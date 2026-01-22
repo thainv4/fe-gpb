@@ -616,6 +616,7 @@ export interface ResultTemplate {
     resultDescription: string;
     resultConclude: string;
     resultNote: string;
+    resultComment?: string;
     createdAt: string;
     updatedAt: string;
     createdBy?: string;
@@ -628,6 +629,7 @@ export interface ResultTemplateRequest {
     resultDescription: string;
     resultConclude: string;
     resultNote: string;
+    resultComment?: string;
 }
 
 export interface ResultTemplateFilters {
@@ -801,6 +803,7 @@ export interface ServiceResult {
     resultDescription?: string | null;
     resultConclude?: string | null;
     resultNote?: string | null;
+    resultComment?: string | null;
 }
 
 export interface StoredService {
@@ -2875,7 +2878,7 @@ class ApiClient {
         template: Partial<ResultTemplateRequest>
     ): Promise<ApiResponse<ResultTemplate>> {
         return this.request<ResultTemplate>(`/result-templates/${id}`, {
-            method: "PUT",
+            method: "PATCH",
             body: JSON.stringify(template),
         });
     }

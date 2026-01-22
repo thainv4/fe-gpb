@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import {useEffect, useState, useRef} from "react";
 import {useTabsStore} from "@/lib/stores/tabs";
@@ -56,13 +56,96 @@ export default function TestResultForm() {
     const [confirmCancelSignDialogOpen, setConfirmCancelSignDialogOpen] = useState(false)
 
     // Default templates with HTML format (bold titles and indented content)
+    const defaultMacroscopicComment = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
+    const defaultMicroscopicDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultConclude = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultNote = `<p style="padding-left: 0; margin-left: 0;"><strong>BÀN LUẬN:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>KHUYẾN NGHỊ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>HỘI CHẨN:</strong></p><p style="padding-left: 20px;"></p>`
     
+    // Helper function to parse resultDescription into macroscopic and microscopic parts
+    const parseResultDescription = (description: string) => {
+        // Tìm phần NHẬN XÉT ĐẠI THỂ (bao gồm cả tiêu đề)
+        const macroscopicMatch = description.match(/(<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:<\/strong><\/p>.*?)(?=<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>|$)/s);
+        // Tìm phần MÔ TẢ VI THỂ (bao gồm cả tiêu đề)
+        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>(.*?)$/s);
+        
+        let macroscopic = defaultMacroscopicComment;
+        let microscopic = defaultMicroscopicDescription;
+        
+        if (macroscopicMatch) {
+            macroscopic = macroscopicMatch[1].trim();
+            // Đảm bảo có tiêu đề
+            if (!macroscopic.includes('NHẬN XÉT ĐẠI THỂ')) {
+                macroscopic = defaultMacroscopicComment;
+            }
+        }
+        
+        if (microscopicMatch) {
+            const content = microscopicMatch[1].trim();
+            // Thêm lại tiêu đề nếu chưa có
+            microscopic = `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p>${content}`;
+        }
+        
+        return { macroscopic, microscopic };
+    };
+
+    // Helper function to combine macroscopic and microscopic into resultDescription
+    const combineResultDescription = (macroscopic: string, microscopic: string) => {
+        // Đảm bảo mỗi phần đã có tiêu đề, nếu chưa thì thêm vào
+        let macro = macroscopic;
+        let micro = microscopic;
+        
+        if (!macro.includes('NHẬN XÉT ĐẠI THỂ')) {
+            macro = defaultMacroscopicComment;
+        }
+        
+        if (!micro.includes('MÔ TẢ VI THỂ')) {
+            micro = defaultMicroscopicDescription;
+        }
+        
+        return `${macro}${micro}`;
+    };
+    
+    const [macroscopicComment, setMacroscopicComment] = useState<string>(defaultMacroscopicComment)
+    const [microscopicDescription, setMicroscopicDescription] = useState<string>(defaultMicroscopicDescription)
+    
+    // Helper function to sync resultDescription with macroscopic and microscopic states
+    const syncResultDescription = (description: string) => {
+        // Chỉ gán resultDescription vào Mô tả vi thể, không gán vào Nhận xét đại thể
+        // Nếu description có chứa "MÔ TẢ VI THỂ", extract phần đó
+        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>(.*?)$/s);
+        
+        if (microscopicMatch) {
+            const content = microscopicMatch[1].trim();
+            setMicroscopicDescription(`<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p>${content}`);
+        } else {
+            // Nếu không tìm thấy phần "MÔ TẢ VI THỂ", gán toàn bộ description vào Mô tả vi thể
+            // Đảm bảo có tiêu đề
+            if (description.includes('MÔ TẢ VI THỂ')) {
+                setMicroscopicDescription(description);
+            } else {
+                setMicroscopicDescription(`<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p>${description}`);
+            }
+        }
+        
+        // Giữ Nhận xét đại thể ở giá trị mặc định (rỗng)
+        setMacroscopicComment(defaultMacroscopicComment)
+    }
+    
+    // Helper function to get combined resultDescription
+    const getResultDescription = () => {
+        return combineResultDescription(macroscopicComment, microscopicDescription)
+    }
+    
     const [resultDescription, setResultDescription] = useState<string>(defaultResultDescription)
     const [resultConclude, setResultConclude] = useState<string>(defaultResultConclude)
     const [resultNote, setResultNote] = useState<string>(defaultResultNote)
+    
+    // Sync when macroscopic or microscopic changes
+    useEffect(() => {
+        const combined = combineResultDescription(macroscopicComment, microscopicDescription)
+        setResultDescription(combined)
+    }, [macroscopicComment, microscopicDescription])
     const [resultName, setResultName] = useState<string>('')
     const [numOfBlock, setNumOfBlock] = useState<string>('')
     const [isSaving, setIsSaving] = useState(false)
@@ -86,7 +169,10 @@ export default function TestResultForm() {
             onRestore: (data) => {
                 if (data.selectedServiceReqCode) setSelectedServiceReqCode(data.selectedServiceReqCode)
                 if (data.storedServiceReqId) setStoredServiceReqId(data.storedServiceReqId)
-                if (data.resultDescription) setResultDescription(data.resultDescription)
+                if (data.resultDescription) {
+                    setResultDescription(data.resultDescription)
+                    syncResultDescription(data.resultDescription)
+                }
                 if (data.resultConclude) setResultConclude(data.resultConclude)
                 if (data.resultNote) setResultNote(data.resultNote)
                 if (data.resultName !== undefined) setResultName(data.resultName)
@@ -159,7 +245,9 @@ export default function TestResultForm() {
     
     // Handler khi chọn mẫu kết quả với 3 fields riêng biệt
     const handleTemplateSelectFields = (resultDescription: string, resultConclude: string, resultNote: string, templateName: string) => {
-        setResultDescription(resultDescription || defaultResultDescription)
+        const desc = resultDescription || defaultResultDescription
+        setResultDescription(desc)
+        syncResultDescription(desc)
         setResultConclude(resultConclude || defaultResultConclude)
         setResultNote(resultNote || defaultResultNote)
         setResultName(templateName)
@@ -408,23 +496,36 @@ export default function TestResultForm() {
             if (resultResponse.success && resultResponse.data) {
                 const data = resultResponse.data
                 // Set các field từ response, nếu null/empty thì dùng default
-                setResultDescription(data.resultDescription || defaultResultDescription)
+                const desc = data.resultDescription || defaultResultDescription
+                setResultDescription(desc)
+                syncResultDescription(desc)
                 setResultConclude(data.resultConclude || defaultResultConclude)
                 setResultNote(data.resultNote || defaultResultNote)
                 setResultName(data.resultName || '')
+                
+                // Gán resultComment vào input Nhận xét đại thể
+                if (data.resultComment) {
+                    setMacroscopicComment(data.resultComment)
+                } else {
+                    setMacroscopicComment(defaultMacroscopicComment)
+                }
             } else {
                 // Nếu không có kết quả, reset về default templates
                 setResultDescription(defaultResultDescription)
+                syncResultDescription(defaultResultDescription)
                 setResultConclude(defaultResultConclude)
                 setResultNote(defaultResultNote)
                 setResultName('')
+                setMacroscopicComment(defaultMacroscopicComment)
             }
         } catch (error) {
             // Nếu có lỗi, reset về default templates
             setResultDescription(defaultResultDescription)
+            syncResultDescription(defaultResultDescription)
             setResultConclude(defaultResultConclude)
             setResultNote(defaultResultNote)
             setResultName('')
+            setMacroscopicComment(defaultMacroscopicComment)
         }
     }
 
@@ -1019,11 +1120,12 @@ export default function TestResultForm() {
             return
         }
 
-        if (!resultDescription.trim()) {
+        const combinedDescription = combineResultDescription(macroscopicComment, microscopicDescription)
+        if (!combinedDescription.trim() || (!macroscopicComment.trim() && !microscopicDescription.trim())) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Vui lòng nhập mô tả kết quả xét nghiệm"
+                description: "Vui lòng nhập nhận xét đại thể hoặc mô tả vi thể"
             })
             return
         }
@@ -1048,15 +1150,23 @@ export default function TestResultForm() {
 
         setIsSaving(true)
         try {
+            // resultDescription chỉ lấy từ microscopicDescription (Mô tả vi thể), không bao gồm macroscopicComment (Nhận xét đại thể)
+            // Đảm bảo có tiêu đề "MÔ TẢ VI THỂ"
+            let templateResultDescription = microscopicDescription || defaultMicroscopicDescription
+            if (!templateResultDescription.includes('MÔ TẢ VI THỂ')) {
+                templateResultDescription = defaultMicroscopicDescription
+            }
+            
             // Lưu kết quả cho tất cả dịch vụ
             const savePromises = services.map(async (service) => {
                 const serviceId = service.id
                 const response = await apiClient.saveServiceResult(serviceId, {
                     resultValue: 12.5,
                     resultValueText: "12.5",
-                    resultDescription: resultDescription,
+                    resultDescription: templateResultDescription,
                     resultConclude: resultConclude,
                     resultNote: resultNote,
+                    resultComment: macroscopicComment || '',
                     resultStatus: 'NORMAL',
                     resultName: resultName
                 })
@@ -1191,6 +1301,7 @@ export default function TestResultForm() {
             setRefreshTrigger(prev => prev + 1)
             
             setResultDescription(defaultResultDescription)
+            syncResultDescription(defaultResultDescription)
             setResultConclude(defaultResultConclude)
             setResultNote(defaultResultNote)
         } catch (error: any) {
@@ -1466,15 +1577,28 @@ export default function TestResultForm() {
                                         </div>
 
                                         <div className="space-y-4">
-                                            {/* Mô tả kết quả */}
+                                            {/* Nhận xét đại thể */}
                                             <div>
-                                                <Label className="text-sm font-medium mb-2 block">Mô tả kết quả *</Label>
+                                                <Label className="text-sm font-medium mb-2 block">Nhận xét đại thể *</Label>
                                                 <div className="border rounded-md">
                                                     <RichTextEditor
-                                                        value={resultDescription}
-                                                        onChange={setResultDescription}
-                                                        placeholder="Nhập mô tả chi tiết về kết quả xét nghiệm..."
-                                                        minHeight="150px"
+                                                        value={macroscopicComment}
+                                                        onChange={setMacroscopicComment}
+                                                        placeholder="Nhập nhận xét đại thể..."
+                                                        minHeight="120px"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Mô tả vi thể */}
+                                            <div>
+                                                <Label className="text-sm font-medium mb-2 block">Mô tả vi thể *</Label>
+                                                <div className="border rounded-md">
+                                                    <RichTextEditor
+                                                        value={microscopicDescription}
+                                                        onChange={setMicroscopicDescription}
+                                                        placeholder="Nhập mô tả vi thể..."
+                                                        minHeight="120px"
                                                     />
                                                 </div>
                                             </div>

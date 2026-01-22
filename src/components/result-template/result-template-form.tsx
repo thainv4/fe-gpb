@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -82,6 +82,11 @@ const resultTemplateSchema = z.object({
     .max(2000, "Ghi chú tối đa 2000 ký tự")
     .optional()
     .default(""),
+  resultComment: z
+    .string()
+    .max(2000, "Nhận xét tối đa 2000 ký tự")
+    .optional()
+    .default(""),
 });
 
 type ResultTemplateFormData = z.infer<typeof resultTemplateSchema>;
@@ -101,17 +106,50 @@ function TemplateDialog({
   isLoading: boolean;
 }) {
   // Default templates with HTML format (bold titles and indented content)
-  const defaultResultDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`;
+  const defaultMicroscopicDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`;
+  const defaultResultDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`;
   const defaultResultConclude = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p><p style="padding-left: 20px;"></p>`;
   const defaultResultNote = `<p style="padding-left: 0; margin-left: 0;"><strong>BÀN LUẬN:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>KHUYẾN NGHỊ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>HỘI CHẨN:</strong></p><p style="padding-left: 20px;"></p>`;
+
+  // Helper function to parse resultDescription to extract microscopic part
+  const parseResultDescription = (description: string) => {
+    // Tìm phần MÔ TẢ VI THỂ (bao gồm cả tiêu đề)
+    const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>(.*?)$/s);
+    
+    let microscopic = defaultMicroscopicDescription;
+    
+    if (microscopicMatch) {
+      const content = microscopicMatch[1].trim();
+      // Thêm lại tiêu đề nếu chưa có
+      microscopic = `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p>${content}`;
+    }
+    
+    return microscopic;
+  };
+
+  // Helper function to get resultDescription from microscopic
+  const getResultDescription = (microscopic: string) => {
+    // Đảm bảo có tiêu đề
+    if (!microscopic.includes('MÔ TẢ VI THỂ')) {
+      return defaultMicroscopicDescription;
+    }
+    
+    return microscopic;
+  };
+
+  // Parse initial data
+  const parsedDescription = initialData?.resultDescription 
+    ? parseResultDescription(initialData.resultDescription)
+    : defaultMicroscopicDescription;
+
+  const [microscopicDescription, setMicroscopicDescription] = useState<string>(parsedDescription);
 
   const form = useForm<ResultTemplateFormData>({
     resolver: zodResolver(resultTemplateSchema),
     defaultValues: {
       templateName: initialData?.templateName ?? "",
       resultTemplateCode: initialData?.resultTemplateCode ?? "",
-      resultDescription:
-        initialData?.resultDescription ?? defaultResultDescription,
+      resultDescription: initialData?.resultDescription ?? defaultResultDescription,
       resultConclude: initialData?.resultConclude ?? defaultResultConclude,
       resultNote: initialData?.resultNote ?? defaultResultNote,
     },
@@ -120,11 +158,16 @@ function TemplateDialog({
   // Reset form when dialog opens or initialData changes
   useEffect(() => {
     if (open) {
+      const parsed = initialData?.resultDescription 
+        ? parseResultDescription(initialData.resultDescription)
+        : defaultMicroscopicDescription;
+      
+      setMicroscopicDescription(parsed);
+      
       form.reset({
         templateName: initialData?.templateName ?? "",
         resultTemplateCode: initialData?.resultTemplateCode ?? "",
-        resultDescription:
-          initialData?.resultDescription ?? defaultResultDescription,
+        resultDescription: initialData?.resultDescription ?? defaultResultDescription,
         resultConclude: initialData?.resultConclude ?? defaultResultConclude,
         resultNote: initialData?.resultNote ?? defaultResultNote,
       });
@@ -132,7 +175,21 @@ function TemplateDialog({
   }, [open, initialData, form]);
 
   function handleSubmit(data: ResultTemplateFormData) {
-    onSubmit(data);
+    // Get resultDescription from microscopic
+    const combinedDescription = getResultDescription(microscopicDescription);
+    const requestData: ResultTemplateRequest = {
+      templateName: data.templateName,
+      resultDescription: combinedDescription,
+      resultConclude: data.resultConclude,
+      resultNote: data.resultNote || "",
+    };
+    
+    // Include optional fields if they have values
+    if (data.resultTemplateCode) {
+      requestData.resultTemplateCode = data.resultTemplateCode;
+    }
+    
+    onSubmit(requestData);
   }
 
   return (
@@ -189,30 +246,21 @@ function TemplateDialog({
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="resultDescription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mô tả kết quả *</FormLabel>
-                  <FormControl>
-                    <div className="border rounded-md">
-                      <RichTextEditor
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        placeholder="Nhập mô tả chi tiết về kết quả xét nghiệm..."
-                        minHeight="150px"
-                      />
-                    </div>
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    {(field.value || "").replace(/<[^>]*>/g, "").length} / 5000
-                    ký tự
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Mô tả vi thể */}
+            <div>
+              <FormLabel className="text-sm font-medium mb-2 block">Mô tả vi thể *</FormLabel>
+              <div className="border rounded-md">
+                <RichTextEditor
+                  value={microscopicDescription}
+                  onChange={setMicroscopicDescription}
+                  placeholder="Nhập mô tả vi thể..."
+                  minHeight="120px"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {(microscopicDescription || "").replace(/<[^>]*>/g, "").length} / 2500 ký tự
+              </p>
+            </div>
             <FormField
               control={form.control}
               name="resultConclude"
@@ -533,7 +581,6 @@ export default function ResultTemplateForm() {
                       <TableHead className="w-[18%]">Tên mẫu</TableHead>
                       <TableHead className="w-[27%]">Mô tả</TableHead>
                       <TableHead className="w-[22%]">Kết luận</TableHead>
-                      <TableHead className="w-[12%]">Ngày tạo</TableHead>
                       <TableHead className="text-right">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -581,18 +628,6 @@ export default function ResultTemplateForm() {
                                 ...
                               </div>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {new Date(template.createdAt).toLocaleDateString(
-                                "vi-VN"
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(template.createdAt).toLocaleTimeString(
-                                "vi-VN"
-                              )}
-                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">

@@ -312,12 +312,6 @@ export default function TestIndicationsTable() {
                     @page {
                         size: auto;
                         margin: 5mm;
-
-
-
-
-
-
                     }
                     @media print {
                         html, body {
@@ -326,30 +320,14 @@ export default function TestIndicationsTable() {
                             margin: 0;
                             padding: 0;
                             overflow: hidden;
-
-
-
-
-
-
-
                         }
                         .print-container {
                             page-break-after: avoid;
                             page-break-inside: avoid;
-
-
-
-
-
-
-
                         }
                         .qr-code {
                             width: 50px !important;
                             height: 50px !important;
-
-
                         }
                         .qr-code svg {
                             width: 50px !important;

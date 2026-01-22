@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -59,34 +59,63 @@ export function ResultTemplateSelector({
 
     const templates = templatesData?.data?.data || []
 
+    // Fetch template detail when a template is selected
+    const { data: templateDetailData, isLoading: isLoadingDetail } = useQuery({
+        queryKey: ['result-template', selectedTemplateId],
+        queryFn: () => apiClient.getResultTemplate(selectedTemplateId!),
+        enabled: !!selectedTemplateId,
+    })
+
+    // Helper function to extract microscopic description from resultDescription
+    const extractMicroscopicDescription = (description: string): string => {
+        // Tìm phần MÔ TẢ VI THỂ (bao gồm cả tiêu đề)
+        const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>(.*?)$/s);
+        
+        if (microscopicMatch) {
+            const content = microscopicMatch[1].trim();
+            // Trả về với tiêu đề
+            return `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p>${content}`;
+        }
+        
+        // Nếu không tìm thấy, trả về toàn bộ description hoặc default
+        return description || `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`;
+    }
+
     const handleSelectTemplate = (template: ResultTemplate) => {
         setSelectedTemplateId(template.id)
     }
 
     const handleConfirmSelection = () => {
-        const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
-        if (selectedTemplate) {
+        if (!selectedTemplateId) return
+
+        // Sử dụng template detail từ API nếu có, nếu không thì dùng từ danh sách
+        const templateToUse = templateDetailData?.data || templates.find(t => t.id === selectedTemplateId)
+        
+        if (templateToUse) {
+            // Extract microscopic description từ resultDescription
+            const microscopicDescription = extractMicroscopicDescription(templateToUse.resultDescription || '')
+            
             // Nếu có onSelectFields, gọi với 3 fields riêng biệt
             if (onSelectFields) {
                 onSelectFields(
-                    selectedTemplate.resultDescription || '',
-                    selectedTemplate.resultConclude || '',
-                    selectedTemplate.resultNote || '',
-                    selectedTemplate.templateName
+                    microscopicDescription, // Gán mô tả vi thể cho resultDescription
+                    templateToUse.resultConclude || '',
+                    templateToUse.resultNote || '',
+                    templateToUse.templateName
                 )
             } else {
                 // Fallback: Combine all fields with HTML format for backward compatibility
-                let templateContent = selectedTemplate.resultDescription || ''
+                let templateContent = microscopicDescription
 
-                if (selectedTemplate.resultConclude && selectedTemplate.resultConclude.trim()) {
-                    templateContent += selectedTemplate.resultConclude
+                if (templateToUse.resultConclude && templateToUse.resultConclude.trim()) {
+                    templateContent += templateToUse.resultConclude
                 }
 
-                if (selectedTemplate.resultNote && selectedTemplate.resultNote.trim()) {
-                    templateContent += selectedTemplate.resultNote
+                if (templateToUse.resultNote && templateToUse.resultNote.trim()) {
+                    templateContent += templateToUse.resultNote
                 }
 
-                onSelect(templateContent, selectedTemplate.templateName)
+                onSelect(templateContent, templateToUse.templateName)
             }
             onOpenChange(false)
             setSelectedTemplateId(null)
@@ -130,7 +159,6 @@ export function ResultTemplateSelector({
                         <TableHead className="w-[120px]">Mã mẫu</TableHead>
                         <TableHead>Tên mẫu / Mô tả</TableHead>
                         <TableHead className="w-[200px]">Kết luận</TableHead>
-                        <TableHead className="w-[150px]">Ngày tạo</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -184,17 +212,6 @@ export function ResultTemplateSelector({
                                     {template.resultConclude}
                                 </div>
                             </TableCell>
-                            <TableCell>
-                                <div className="text-sm text-gray-600">
-                                    {new Date(template.createdAt).toLocaleDateString('vi-VN')}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                    {new Date(template.createdAt).toLocaleTimeString('vi-VN', {
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                    })}
-                                </div>
-                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -244,10 +261,17 @@ export function ResultTemplateSelector({
                         </Button>
                         <Button
                             onClick={handleConfirmSelection}
-                            disabled={!selectedTemplateId}
+                            disabled={!selectedTemplateId || isLoadingDetail}
                             className="medical-gradient"
                         >
-                            Chọn mẫu này
+                            {isLoadingDetail ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Đang tải...
+                                </>
+                            ) : (
+                                'Chọn mẫu này'
+                            )}
                         </Button>
                     </div>
                 </div>
