@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { useToast } from "@/hooks/use-toast";
@@ -684,30 +683,22 @@ export default function SampleDeliveryTable() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="flex flex-col gap-2 my-2 ml-2">
-                                    <Label>Chọn cờ để đánh dấu: </Label>
-                                    <RadioGroup value={selectedFlag} onValueChange={setSelectedFlag} className="flex gap-6">
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="ST" id="flag-st" />
-                                            <Label htmlFor="flag-st" className="cursor-pointer">ST</Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="PT" id="flag-pt" />
-                                            <Label htmlFor="flag-pt" className="cursor-pointer">PT</Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="HC" id="flag-hc" />
-                                            <Label htmlFor="flag-hc" className="cursor-pointer">HC</Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="HMMD" id="flag-HMMD" />
-                                            <Label htmlFor="flag-HMMD" className="cursor-pointer">HMMD</Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="DB" id="flag-DB" />
-                                            <Label htmlFor="flag-DB" className="cursor-pointer">DB</Label>
-                                        </div>
-                                    </RadioGroup>
+                                <div className="flex flex-col gap-2">
+                                    <Label>Chọn cờ để đánh dấu</Label>
+                                    <Select value={selectedFlag} onValueChange={setSelectedFlag}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Chọn cờ..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ST">ST</SelectItem>
+                                            <SelectItem value="PT">PT</SelectItem>
+                                            <SelectItem value="HMMD">HMMD</SelectItem>
+                                            <SelectItem value="CL">CL</SelectItem>
+                                            <SelectItem value="HC">HC</SelectItem>
+                                            <SelectItem value="DB">DB</SelectItem>
+                                            <SelectItem value="HQMD">HQMD</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 
                                 <div className="flex flex-col gap-2 md:col-span-2">

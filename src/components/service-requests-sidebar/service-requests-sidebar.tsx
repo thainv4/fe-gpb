@@ -1,4 +1,4 @@
-﻿// src/components/service-requests-sidebar/service-requests-sidebar.tsx
+// src/components/service-requests-sidebar/service-requests-sidebar.tsx
 import {useState, useMemo, useEffect} from 'react'
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {apiClient} from '@/lib/api/client'
@@ -493,40 +493,25 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                             placeholder="Đến ngày"
                         />
                     </div>
-
-                    <div className="flex gap-2 py-1">
-                        <Label className="text-sm font-medium">Bệnh phẩm:</Label>
-                        <RadioGroup value={selectedFlag} onValueChange={(value) => {
+                        <Select value={selectedFlag} onValueChange={(value) => {
                             setSelectedFlag(value)
                             setFilters(prev => ({...prev, offset: 0}))
-                        }} className="flex gap-4">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="all" id="flag-all" />
-                                <Label htmlFor="flag-all" className="cursor-pointer text-xs">Tất cả</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="ST" id="flag-st-filter" />
-                                <Label htmlFor="flag-st-filter" className="cursor-pointer text-xs">ST</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="PT" id="flag-pt-filter" />
-                                <Label htmlFor="flag-pt-filter" className="cursor-pointer text-xs">PT</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="HC" id="flag-hc-filter" />
-                                <Label htmlFor="flag-hc-filter" className="cursor-pointer text-xs">HC</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="HMMD" id="flag-hmmd-filter" />
-                                <Label htmlFor="flag-hmmd-filter" className="cursor-pointer text-xs">HMMD</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="DB" id="flag-db-filter" />
-                                <Label htmlFor="flag-db-filter" className="cursor-pointer text-xs">DB</Label>
-                            </div>
-                        </RadioGroup>
+                        }}>
+                            <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Chọn bệnh phẩm..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tất cả</SelectItem>
+                                <SelectItem value="ST">ST</SelectItem>
+                                <SelectItem value="PT">PT</SelectItem>
+                                <SelectItem value="HMMD">HMMD</SelectItem>
+                                <SelectItem value="CL">CL</SelectItem>
+                                <SelectItem value="HC">HC</SelectItem>
+                                <SelectItem value="DB">DB</SelectItem>
+                                <SelectItem value="HQMD">HQMD</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                </div>
 
             </div>
 

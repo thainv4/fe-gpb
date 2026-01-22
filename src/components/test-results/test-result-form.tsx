@@ -247,9 +247,16 @@ export default function TestResultForm() {
     
     // Handler khi chọn mẫu kết quả với 3 fields riêng biệt
     const handleTemplateSelectFields = (resultDescription: string, resultConclude: string, resultNote: string, templateName: string) => {
+        // Lưu giá trị hiện tại của nhận xét đại thể trước khi chọn mẫu để giữ nguyên
+        const currentMacroscopicComment = macroscopicComment
+        
         const desc = resultDescription || defaultResultDescription
         setResultDescription(desc)
         syncResultDescription(desc)
+        
+        // Luôn giữ nguyên giá trị nhận xét đại thể sau khi chọn mẫu
+        setMacroscopicComment(currentMacroscopicComment)
+        
         setResultConclude(resultConclude || defaultResultConclude)
         setResultNote(resultNote || defaultResultNote)
         setResultName(templateName)
