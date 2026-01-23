@@ -7,6 +7,7 @@ import {useTabPersistence} from "@/hooks/use-tab-persistence";
 import {ServiceRequestsSidebar} from "@/components/service-requests-sidebar/service-requests-sidebar";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
 import {apiClient} from "@/lib/api/client";
+import {useCurrentRoomStore} from "@/lib/stores/current-room";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
@@ -154,6 +155,9 @@ export default function TestResultForm() {
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
 
+    // Lấy currentRoomId từ store để detect khi đổi phòng
+    const { currentRoomId: storeCurrentRoomId } = useCurrentRoomStore()
+
     // Tab persistence hook
     const { scrollContainerRef } = useTabPersistence(
         {
@@ -232,6 +236,16 @@ export default function TestResultForm() {
     const currentRoomId = currentTab?.roomId as string | undefined
     const currentDepartmentId = currentTab?.departmentId as string | undefined
     const currentUserId = profileData?.data?.id as string | undefined
+
+    // Reset state khi đổi phòng (detect qua storeCurrentRoomId) để làm mới trang
+    useEffect(() => {
+        if (storeCurrentRoomId && storeCurrentRoomId !== currentRoomId) {
+            setSelectedServiceReqCode('')
+            setStoredServiceReqId('')
+            // Trigger refresh sidebar
+            queryClient.invalidateQueries({ queryKey: ['workflow-history'] })
+        }
+    }, [storeCurrentRoomId, currentRoomId, queryClient])
 
     const handleSelect = (serviceReqCode: string, storedServiceReqId?: string) => {
         setSelectedServiceReqCode(serviceReqCode)

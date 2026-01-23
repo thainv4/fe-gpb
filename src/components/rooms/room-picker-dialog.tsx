@@ -1,6 +1,6 @@
 'use client';
 import {useEffect, useMemo, useState} from 'react'
-import {useQuery} from '@tanstack/react-query'
+import {useQuery, useQueryClient} from '@tanstack/react-query'
 import {apiClient, type UserRoom} from '@/lib/api/client'
 import {useCurrentRoomStore} from '@/lib/stores/current-room'
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog'
@@ -15,6 +15,7 @@ interface RoomPickerDialogProps {
 
 export function RoomPickerDialog({open: openProp, onOpenChange}: RoomPickerDialogProps) {
     const {currentRoomId, setRoom} = useCurrentRoomStore()
+    const queryClient = useQueryClient()
     const isControlled = typeof openProp === 'boolean'
     const [internalOpen, setInternalOpen] = useState(false)
     const open = isControlled ? (openProp as boolean) : internalOpen
@@ -46,6 +47,10 @@ export function RoomPickerDialog({open: openProp, onOpenChange}: RoomPickerDialo
     const handleConfirm = () => {
         const r = rooms.find(r => r.roomId === selectedId)
         if (!r) return
+        
+        // Lưu roomId cũ để so sánh
+        const oldRoomId = currentRoomId
+        
         setRoom({
             roomId: r.roomId,
             departmentId: r.departmentId,
@@ -54,6 +59,12 @@ export function RoomPickerDialog({open: openProp, onOpenChange}: RoomPickerDialo
             departmentCode: r.departmentCode,
             departmentName: r.departmentName,
         })
+        
+        // Nếu đổi phòng (roomId khác), invalidate tất cả queries để làm mới các tab đang mở
+        if (oldRoomId && oldRoomId !== r.roomId) {
+            queryClient.invalidateQueries()
+        }
+        
         if (isControlled) {
             onOpenChange?.(false)
         } else {

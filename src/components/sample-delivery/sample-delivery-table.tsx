@@ -54,7 +54,7 @@ export default function SampleDeliveryTable() {
     // State để control việc mở Select "Đơn vị thực hiện"
     const [executeRoomSelectOpen, setExecuteRoomSelectOpen] = useState(false)
 
-    // Query rooms từ API /api/v1/rooms khi mở Select "Đơn vị thực hiện"
+    // Query rooms từ API /api/v1/rooms - luôn load để có thể auto-select phòng hiện tại
     const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
         queryKey: ['rooms', { isActive: true, limit: 100 }],
         queryFn: () => apiClient.getRooms({
@@ -62,7 +62,6 @@ export default function SampleDeliveryTable() {
             limit: 100,
             offset: 0,
         }),
-        enabled: executeRoomSelectOpen, // Chỉ gọi API khi mở Select
         staleTime: 5 * 60 * 1000,
     })
 
@@ -508,6 +507,12 @@ export default function SampleDeliveryTable() {
             setReceiveDateTime(getVietnamTime())
         }
     }, [selectedServiceReqCode])
+
+    // Reset state khi đổi phòng để làm mới trang
+    useEffect(() => {
+        setSelectedServiceReqCode('')
+        setRefreshTrigger(prev => prev + 1)
+    }, [currentRoomId])
 
     return (
         <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>} className="flex h-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
