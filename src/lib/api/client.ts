@@ -55,6 +55,11 @@ export interface RegisterWithProfileRequest {
     mappedPassword?: string;
 }
 
+export interface ChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
+}
+
 export interface LoginResponse {
     user: {
         id: string;
@@ -1552,6 +1557,13 @@ class ApiClient {
 
     async getProfile(): Promise<ApiResponse<LoginResponse["user"]>> {
         return this.request<LoginResponse["user"]>("/auth/profile");
+    }
+
+    async changePassword(passwordData: ChangePasswordRequest): Promise<ApiResponse> {
+        return this.request("/auth/change-password", {
+            method: "POST",
+            body: JSON.stringify(passwordData),
+        });
     }
 
     async createProfile(profileData: {

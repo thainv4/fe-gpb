@@ -25,7 +25,8 @@ const userAllowedRoutes = [
     '/dashboard',
     '/test-indications',
     '/sample-delivery',
-    '/test-results'
+    '/test-results',
+    '/change-password'
 ]
 
 export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {

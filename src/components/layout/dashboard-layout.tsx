@@ -32,7 +32,8 @@ import {
     Ruler,
     TestTube,
     NewspaperIcon,
-    Palette
+    Palette,
+    Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTabsStore } from '@/lib/stores/tabs'
@@ -504,10 +505,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                             {user?.email}
                                         </p>
                                         <p className="text-xs leading-none text-muted-foreground">
-                                            Role: Admin
+                                            Vai trò: {user?.role || 'N/A'}
                                         </p>
                                     </div>
                                 </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => router.push('/change-password')}>
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    <span>Đổi mật khẩu</span>
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleSignOut}>
                                     <LogOut className="mr-2 h-4 w-4" />
