@@ -559,6 +559,83 @@ export default function SampleDeliveryTable() {
                             </div>
                         </div>
 
+                        {/* Thông tin bệnh nhân */}
+                        {storedServiceRequestData?.data && (
+                            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                                <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
+                                    Thông tin bệnh nhân
+                                </h3>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <Label className="text-sm text-gray-600">Mã bệnh nhân</Label>
+                                        <Input 
+                                            value={storedServiceRequestData.data.patientCode || ''} 
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm text-gray-600">Họ và tên bệnh nhân</Label>
+                                        <Input 
+                                            value={storedServiceRequestData.data.patientName || ''} 
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm text-gray-600">Ngày sinh</Label>
+                                        <Input
+                                            value={storedServiceRequestData.data.patientDob 
+                                                ? `${String(storedServiceRequestData.data.patientDob).substring(6, 8)}/${String(storedServiceRequestData.data.patientDob).substring(4, 6)}/${String(storedServiceRequestData.data.patientDob).substring(0, 4)}` 
+                                                : ''}
+                                            disabled 
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm text-gray-600">Giới tính</Label>
+                                        <Input 
+                                            value={storedServiceRequestData.data.patientGenderName || ''} 
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm text-gray-600">Số điện thoại</Label>
+                                        <Input 
+                                            value={storedServiceRequestData.data.patientMobile || storedServiceRequestData.data.patientPhone || ''} 
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm text-gray-600">CMND/CCCD</Label>
+                                        <Input 
+                                            value={storedServiceRequestData.data.patientCmndNumber || ''} 
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                    <div className="col-span-3">
+                                        <Label className="text-sm text-gray-600">Địa chỉ</Label>
+                                        <Input 
+                                            value={storedServiceRequestData.data.patientAddress || ''} 
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                    <div className="col-span-3">
+                                        <Label className="text-sm text-gray-600">Chẩn đoán</Label>
+                                        <Input 
+                                            value={storedServiceRequestData.data.icdName || ''} 
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Phần 2: Đơn vị nhận mẫu */}
                         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                             <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">

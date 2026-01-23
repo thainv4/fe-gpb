@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +16,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Printer } from "lucide-react";
+import { Loader2, Printer, Plus } from "lucide-react";
 import { useTabsStore } from "@/lib/stores/tabs";
 import { usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,8 @@ import { useTabPersistence } from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { QRCodeSVG } from 'qrcode.react';
 import { useHisStore } from "@/lib/stores/his";
+import { SampleTypeForm } from "@/components/sample-type-management/sample-type-form";
+import { SampleTypeRequest } from "@/lib/api/client";
 
 export default function TestIndicationsTable() {
 
@@ -56,6 +58,7 @@ export default function TestIndicationsTable() {
     const [isManualInput, setIsManualInput] = useState<boolean>(false) // Checkbox "Nhập thủ công"
     const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
+    const [isCreateSampleTypeDialogOpen, setIsCreateSampleTypeDialogOpen] = useState(false)
 
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
@@ -241,6 +244,40 @@ export default function TestIndicationsTable() {
     })
 
     const sampleTypeItems: SampleType[] = (sampleTypesData?.data?.sampleTypes ?? []) as SampleType[]
+
+    // Mutation để tạo loại mẫu mới
+    const createSampleTypeMutation = useMutation({
+        mutationFn: async (newSampleType: SampleTypeRequest) => {
+            const response = await apiClient.createSampleType(newSampleType)
+            if (!response.success) {
+                const errorMessage = typeof response.error === 'string'
+                    ? response.error
+                    : (response.error as any)?.message || response.message || 'Không thể tạo loại mẫu'
+                throw new Error(errorMessage)
+            }
+            return response
+        },
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: ['sample-types'] })
+            queryClient.invalidateQueries({ queryKey: ['sample-type-search'] })
+            toast({
+                title: 'Thành công',
+                description: response.message || 'Loại mẫu đã được tạo thành công',
+            })
+            setIsCreateSampleTypeDialogOpen(false)
+        },
+        onError: (error: Error) => {
+            toast({
+                title: 'Lỗi',
+                description: error.message || 'Không thể tạo loại mẫu',
+                variant: 'destructive',
+            })
+        },
+    })
+
+    const handleCreateSampleType = (data: SampleTypeRequest) => {
+        createSampleTypeMutation.mutate(data)
+    }
 
     // Nếu có search và có kết quả từ API search, dùng kết quả đó. Nếu không có search, dùng danh sách đầy đủ
     const filteredSampleTypeItems = useMemo(() => {
@@ -751,7 +788,19 @@ export default function TestIndicationsTable() {
                     </div>
 
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                        <Label className="text-sm font-medium">Chọn bệnh phẩm</Label>
+                        <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium">Chọn bệnh phẩm</Label>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => setIsCreateSampleTypeDialogOpen(true)}
+                                title="Tạo loại mẫu mới"
+                            >
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
                         <Select value={selectedSampleType} onValueChange={setSelectedSampleType} open={selectOpen} onOpenChange={setSelectOpen}>
                             <SelectTrigger ref={sampleTriggerRef}>
                                 <SelectValue placeholder="Chọn bệnh phẩm" />
@@ -1070,6 +1119,22 @@ export default function TestIndicationsTable() {
                             )}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog tạo loại mẫu mới */}
+            <Dialog open={isCreateSampleTypeDialogOpen} onOpenChange={setIsCreateSampleTypeDialogOpen}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>Tạo loại mẫu mới</DialogTitle>
+                        <DialogDescription>
+                            Điền thông tin để tạo loại mẫu mới.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <SampleTypeForm
+                        onSubmit={handleCreateSampleType}
+                        isLoading={createSampleTypeMutation.isPending}
+                    />
                 </DialogContent>
             </Dialog>
         </div>

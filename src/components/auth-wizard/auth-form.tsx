@@ -31,6 +31,8 @@ import {
   Building2,
   CheckCircle,
   UserPlus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -51,6 +53,8 @@ type HisLoginFormData = z.infer<typeof hisLoginSchema>;
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("jwt");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showHisPassword, setShowHisPassword] = useState(false);
   const { toast } = useToast();
   const { login } = useAuthStore();
   const {
@@ -199,7 +203,10 @@ export function AuthForm() {
                             </TabsTrigger>
                         </TabsList> */}
 
-            <TabsContent value="jwt" className="space-y-4 mt-6">
+            <TabsContent value="jwt">
+              <div className="text-center mb-4">
+                <h2 className="text-xl font-semibold text-medical-900">Đăng nhập</h2>
+              </div>
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
@@ -229,12 +236,27 @@ export function AuthForm() {
                       <FormItem>
                         <FormLabel>Mật khẩu</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Nhập mật khẩu"
-                            {...field}
-                            disabled={isLoading}
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Nhập mật khẩu"
+                              {...field}
+                              disabled={isLoading}
+                              className="pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                              disabled={isLoading}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -329,12 +351,27 @@ export function AuthForm() {
                         <FormItem>
                           <FormLabel>Mật khẩu HIS</FormLabel>
                           <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="Nhập mật khẩu HIS"
-                              {...field}
-                              disabled={isHisLoggingInWithCredentials}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showHisPassword ? "text" : "password"}
+                                placeholder="Nhập mật khẩu HIS"
+                                {...field}
+                                disabled={isHisLoggingInWithCredentials}
+                                className="pr-10"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowHisPassword(!showHisPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                disabled={isHisLoggingInWithCredentials}
+                              >
+                                {showHisPassword ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>

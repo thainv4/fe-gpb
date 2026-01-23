@@ -78,12 +78,21 @@ export function SampleTypeTable() {
     })
 
     const createMutation = useMutation({
-        mutationFn: (newSampleType: SampleTypeRequest) => apiClient.createSampleType(newSampleType),
-        onSuccess: () => {
+        mutationFn: async (newSampleType: SampleTypeRequest) => {
+            const response = await apiClient.createSampleType(newSampleType)
+            if (!response.success) {
+                const errorMessage = typeof response.error === 'string'
+                    ? response.error
+                    : (response.error as any)?.message || response.message || 'Không thể tạo loại mẫu'
+                throw new Error(errorMessage)
+            }
+            return response
+        },
+        onSuccess: (response) => {
             queryClient.invalidateQueries({queryKey: ['sample-types']})
             toast({
                 title: 'Thành công',
-                description: 'Loại mẫu đã được tạo thành công',
+                description: response.message || 'Loại mẫu đã được tạo thành công',
             })
             setIsCreateDialogOpen(false)
         },
@@ -97,13 +106,21 @@ export function SampleTypeTable() {
     })
 
     const updateMutation = useMutation({
-        mutationFn: ({id, data}: { id: string; data: Partial<SampleTypeRequest> }) =>
-            apiClient.updateSampleType(id, data),
-        onSuccess: () => {
+        mutationFn: async ({id, data}: { id: string; data: Partial<SampleTypeRequest> }) => {
+            const response = await apiClient.updateSampleType(id, data)
+            if (!response.success) {
+                const errorMessage = typeof response.error === 'string'
+                    ? response.error
+                    : (response.error as any)?.message || response.message || 'Không thể cập nhật loại mẫu'
+                throw new Error(errorMessage)
+            }
+            return response
+        },
+        onSuccess: (response) => {
             queryClient.invalidateQueries({queryKey: ['sample-types']})
             toast({
                 title: 'Thành công',
-                description: 'Loại mẫu đã được cập nhật thành công',
+                description: response.message || 'Loại mẫu đã được cập nhật thành công',
             })
             setIsCreateDialogOpen(false)
             setEditingSampleType(null)
@@ -118,12 +135,21 @@ export function SampleTypeTable() {
     })
 
     const deleteMutation = useMutation({
-        mutationFn: (id: string) => apiClient.deleteSampleType(id),
-        onSuccess: () => {
+        mutationFn: async (id: string) => {
+            const response = await apiClient.deleteSampleType(id)
+            if (!response.success) {
+                const errorMessage = typeof response.error === 'string'
+                    ? response.error
+                    : (response.error as any)?.message || response.message || 'Không thể xóa loại mẫu'
+                throw new Error(errorMessage)
+            }
+            return response
+        },
+        onSuccess: (response) => {
             queryClient.invalidateQueries({queryKey: ['sample-types']})
             toast({
                 title: 'Thành công',
-                description: 'Loại mẫu đã được xóa thành công',
+                description: response.message || 'Loại mẫu đã được xóa thành công',
             })
         },
         onError: (error: Error) => {

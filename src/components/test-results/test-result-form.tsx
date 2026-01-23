@@ -1325,6 +1325,7 @@ export default function TestResultForm() {
             syncResultDescription(defaultResultDescription)
             setResultConclude(defaultResultConclude)
             setResultNote(defaultResultNote)
+            setResultName('')
         } catch (error: any) {
             console.error('Error saving results:', error)
             toast({

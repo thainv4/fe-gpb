@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuthStore } from '@/lib/stores/auth'
-import { redirect } from 'next/navigation'
+import { redirect, useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,8 +43,9 @@ const changePasswordSchema = z.object({
 type ChangePasswordFormData = z.infer<typeof changePasswordSchema>
 
 export default function ChangePasswordPage() {
-    const { isAuthenticated } = useAuthStore()
+    const { isAuthenticated, logout } = useAuthStore()
     const { toast } = useToast()
+    const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
     const [showCurrentPassword, setShowCurrentPassword] = useState(false)
     const [showNewPassword, setShowNewPassword] = useState(false)
@@ -86,12 +87,18 @@ export default function ChangePasswordPage() {
             if (response.success) {
                 toast({
                     title: 'Thành công',
-                    description: 'Đổi mật khẩu thành công',
+                    description: 'Đổi mật khẩu thành công. Bạn sẽ được đăng xuất để đăng nhập lại.',
                     variant: 'default',
                 })
                 // Reset form sau khi đổi mật khẩu thành công
                 form.reset()
                 setPendingData(null)
+                
+                // Đăng xuất và redirect về trang login sau 1 giây
+                setTimeout(() => {
+                    logout()
+                    router.push('/auth/login')
+                }, 1000)
             } else {
                 toast({
                     title: 'Lỗi',
