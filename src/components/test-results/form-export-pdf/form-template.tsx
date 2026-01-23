@@ -56,7 +56,7 @@ function PageHeader({
           <div className="text-sm text-gray-700 leading-tight space-y-1 text-center">
             <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
             <div className="text-xs">TRUNG TÂM GIẢI PHẪU BỆNH</div>
-            <div className="text-xs font-semibold">KHOA TẾ BÀO HỌC</div>
+            <div className="text-xs font-semibold">TẾ BÀO BỆNH HỌC</div>
           </div>
         </div>
 
@@ -290,7 +290,8 @@ export function FormTemplate({
         parts.push(specificService.resultNote);
       }
       
-      return parts.join("");
+      // Thêm khoảng cách một dòng giữa các phần
+      return parts.join('<div style="margin-bottom: 1em;"></div>');
     }
     
     // Fallback về resultText nếu không có các fields mới
@@ -503,7 +504,7 @@ export function FormTemplate({
                   </div>
 
                   <div className="font-bold text-base mb-4">
-                    T/L GIÁM ĐỐC TRUNG TÂM
+                    BÁC SĨ ĐỌC KẾT QUẢ
                   </div>
 
                   {signatureImageBase64 && (

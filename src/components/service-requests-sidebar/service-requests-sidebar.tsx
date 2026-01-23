@@ -429,7 +429,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                         </SelectTrigger>
                         <SelectContent>
                             {/* All option: when selected we won't pass stateId to the API */}
-                            <SelectItem value="all">Tất cả</SelectItem>
+                            <SelectItem value="all">Tất cả trạng thái</SelectItem>
                             {workflowStates.map((state) => (
                                 <SelectItem key={state.id} value={state.id}>
                                     {state.stateName}
