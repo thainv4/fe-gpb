@@ -222,6 +222,15 @@ export default function SampleDeliveryTable() {
         return storedServiceRequestData.data.services[0]?.receptionCode || receptionCode
     }, [storedServiceRequestData, receptionCode])
 
+    // Lấy sampleTypeName từ storedServiceRequest
+    const sampleTypeNameFromStored = useMemo(() => {
+        if (!storedServiceRequestData?.data?.services || storedServiceRequestData.data.services.length === 0) {
+            return ''
+        }
+        // Lấy sampleTypeName từ service đầu tiên
+        return storedServiceRequestData.data.services[0]?.sampleTypeName || ''
+    }, [storedServiceRequestData])
+
     // Ref cho phần barcode để in
     const barcodeRef = useRef<HTMLDivElement>(null)
 
@@ -278,6 +287,10 @@ export default function SampleDeliveryTable() {
                         }
                         .print-container > div:last-child {
                             margin-top: 8px !important;
+                        }
+                        .print-text-xs {
+                            font-size: 0.75rem !important;
+                            line-height: 1rem !important;
                         }
                     }
                 </style>
@@ -542,7 +555,7 @@ export default function SampleDeliveryTable() {
                                                     level="M"
                                                     includeMargin={false}
                                                 />
-                                                <div className="mt-1 text-xs font-medium text-gray-700">
+                                                <div className="mt-1 text-base font-medium text-gray-700 print-text-xs">
                                                     {receptionCodeFromStored}
                                                 </div>
                                             </div>
@@ -684,6 +697,16 @@ export default function SampleDeliveryTable() {
                                 <div className="flex flex-col gap-2">
                                     <Label>Người nhận mẫu</Label>
                                     <Input type="text" value={currentUserName} disabled className="font-semibold" />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label>Tên mẫu bệnh phẩm</Label>
+                                    <Input 
+                                        type="text" 
+                                        value={sampleTypeNameFromStored} 
+                                        disabled 
+                                        className="font-semibold" 
+                                        placeholder="Chưa có thông tin loại mẫu"
+                                    />
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <Label>Trạng thái chuyển tiếp</Label>

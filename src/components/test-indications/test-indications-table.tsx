@@ -382,6 +382,10 @@ export default function TestIndicationsTable() {
                         .print-container > div:last-child {
                             margin-top: 8px !important;
                         }
+                        .print-text-xs {
+                            font-size: 0.75rem !important;
+                            line-height: 1rem !important;
+                        }
                     }
                 </style>
             </head>
@@ -771,9 +775,6 @@ export default function TestIndicationsTable() {
                             <Button type="button" onClick={triggerSearch} disabled={!serviceReqCode?.trim()}>
                                 Tìm
                             </Button>
-                            <Button type="button" variant="secondary" onClick={clearAll}>
-                                Xóa
-                            </Button>
                         </div>
                         {isLoading && <span className="text-xs text-gray-500">Đang tải...</span>}
                         {isError && (
@@ -796,7 +797,7 @@ export default function TestIndicationsTable() {
                                 size="sm"
                                 className="h-6 w-6 p-0"
                                 onClick={() => setIsCreateSampleTypeDialogOpen(true)}
-                                title="Tạo loại mẫu mới"
+                                title="Tạo mẫu bệnh phẩm mới"
                             >
                                 <Plus className="h-4 w-4" />
                             </Button>
@@ -911,7 +912,7 @@ export default function TestIndicationsTable() {
                                     level="M"
                                     includeMargin={false}
                                 />
-                                <div className="mt-1 text-xs font-medium text-gray-700">
+                                <div className="mt-1 text-base font-medium text-gray-700 print-text-xs">
                                     {currentReceptionCode}
                                 </div>
                             </div>
@@ -1126,10 +1127,7 @@ export default function TestIndicationsTable() {
             <Dialog open={isCreateSampleTypeDialogOpen} onOpenChange={setIsCreateSampleTypeDialogOpen}>
                 <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                        <DialogTitle>Tạo loại mẫu mới</DialogTitle>
-                        <DialogDescription>
-                            Điền thông tin để tạo loại mẫu mới.
-                        </DialogDescription>
+                        <DialogTitle>Tạo mẫu bệnh phẩm mới</DialogTitle>
                     </DialogHeader>
                     <SampleTypeForm
                         onSubmit={handleCreateSampleType}

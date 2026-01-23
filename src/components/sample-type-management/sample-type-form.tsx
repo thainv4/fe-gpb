@@ -74,9 +74,9 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                     name="typeName"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Tên loại mẫu *</FormLabel>
+                            <FormLabel>Tên mẫu *</FormLabel>
                             <FormControl>
-                                <Input placeholder="Nhập tên loại mẫu" {...field} />
+                                <Input placeholder="Nhập tên mẫu bệnh phẩm" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -91,7 +91,7 @@ export function SampleTypeForm({ initialData, onSubmit, isLoading = false }: Sam
                         <FormItem>
                             <FormLabel>Mô tả</FormLabel>
                             <FormControl>
-                                <Textarea placeholder="Nhập mô tả loại mẫu" {...field} rows={3} />
+                                <Textarea placeholder="Nhập mô tả mẫu bệnh phẩm" {...field} rows={3} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

@@ -218,9 +218,9 @@ export function SampleTypeTable() {
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[600px]">
                             <DialogHeader>
-                                <DialogTitle>{editingSampleType ? 'Cập nhật loại mẫu' : 'Tạo loại mẫu mới'}</DialogTitle>
+                                <DialogTitle>{editingSampleType ? 'Cập nhật mẫu bệnh phẩm' : 'Tạo mẫu bệnh phẩm mới'}</DialogTitle>
                                 <DialogDescription>
-                                    {editingSampleType ? 'Chỉnh sửa thông tin loại mẫu.' : 'Điền thông tin để tạo loại mẫu mới.'}
+                                    {editingSampleType ? 'Chỉnh sửa thông tin mẫu bệnh phẩm.' : 'Điền thông tin để tạo mẫu bệnh phẩm mới.'}
                                 </DialogDescription>
                             </DialogHeader>
                             {editingSampleType ? (
@@ -243,7 +243,7 @@ export function SampleTypeTable() {
                         <div className="relative flex-1">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
                             <Input
-                                placeholder="Tìm kiếm theo tên loại mẫu..."
+                                placeholder="Tìm kiếm theo tên mẫu..."
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value)
