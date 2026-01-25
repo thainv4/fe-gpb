@@ -3189,8 +3189,10 @@ class ApiClient {
         offset?: number;
         order?: 'ASC' | 'DESC';
         orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
-        hisServiceReqCode?: string;
+        code?: string; // Gộp receptionCode và hisServiceReqCode thành một trường
         flag?: string;
+        // Deprecated: sử dụng code thay thế
+        hisServiceReqCode?: string;
         receptionCode?: string;
     }): Promise<ApiResponse<{
         items: Array<{
@@ -3237,10 +3239,18 @@ class ApiClient {
         if (params.offset) queryParams.append('offset', params.offset.toString());
         if (params.order) queryParams.append('order', params.order);
         if (params.orderBy) queryParams.append('orderBy', params.orderBy);
-        // Thêm hisServiceReqCode với giá trị mặc định là '' nếu không có
-        queryParams.append('hisServiceReqCode', params.hisServiceReqCode ?? '');
+        // Gộp receptionCode và hisServiceReqCode thành code
+        if (params.code) {
+            queryParams.append('code', params.code);
+        } else {
+            // Backward compatibility: nếu không có code, gộp từ hisServiceReqCode và receptionCode
+            const code = [params.hisServiceReqCode, params.receptionCode].filter(Boolean).join(',') || '';
+            if (code) {
+                queryParams.append('code', code);
+            }
+            // Không gửi hisServiceReqCode và receptionCode riêng nữa vì API không chấp nhận
+        }
         if (params.flag) queryParams.append('flag', params.flag);
-        if (params.receptionCode) queryParams.append('receptionCode', params.receptionCode);
 
         return this.request(
             `/workflow-history/by-room-and-state?${queryParams.toString()}`

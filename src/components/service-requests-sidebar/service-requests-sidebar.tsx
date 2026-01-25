@@ -41,8 +41,10 @@ interface FilterParams {
     offset: number
     order: 'ASC' | 'DESC'
     orderBy: 'actionTimestamp' | 'createdAt' | 'startedAt'
-    hisServiceReqCode?: string
+    code?: string // Gộp receptionCode và hisServiceReqCode thành một trường
     flag?: string
+    // Deprecated: sử dụng code thay thế
+    hisServiceReqCode?: string
     receptionCode?: string
 }
 
@@ -76,10 +78,11 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     // selectedStateId: 'all' means show all states (no state filter)
     // Default to 'all' to show all states, or use defaultStateId if provided
     const [selectedStateId, setSelectedStateId] = useState<string | undefined>(defaultStateId ?? 'all')
+    // State để quản lý phòng được chọn từ dropdown
+    const [selectedRoomId, setSelectedRoomId] = useState<string>('')
     // State tạm thời cho input tìm kiếm (chỉ update filters khi nhấn Enter)
+    // Gộp cả mã Y lệnh và mã barcode vào một input
     const [searchInput, setSearchInput] = useState<string>(serviceReqCode ?? '')
-    // State tạm thời cho input tìm kiếm barcode (chỉ update filters khi nhấn Enter)
-    const [barcodeInput, setBarcodeInput] = useState<string>('')
     // State để quản lý radio được chọn (chỉ một)
     const [selectedId, setSelectedId] = useState<string | null>(null)
     // State để quản lý dialog xác nhận xóa
@@ -94,7 +97,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         offset: 0,
         order: 'DESC',
         orderBy: 'actionTimestamp',
-        hisServiceReqCode: serviceReqCode
+        code: serviceReqCode || undefined
     })
 
     // Query workflow states
@@ -111,12 +114,51 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
     const workflowStates = useMemo(() => statesData?.data?.items ?? [], [statesData?.data?.items])
 
+    // Query user rooms
+    const {data: userRoomsData, isLoading: isLoadingUserRooms} = useQuery({
+        queryKey: ['my-rooms'],
+        queryFn: () => apiClient.getMyUserRooms(),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const userRooms = useMemo(() => {
+        const raw = (userRoomsData?.data as unknown) ?? []
+        return Array.isArray(raw) ? (raw as any[]) : []
+    }, [userRoomsData])
+
+    // Auto-select phòng làm việc hiện tại nếu chưa chọn
+    useEffect(() => {
+        if (selectedRoomId) {
+            // Đã chọn phòng, không cần làm gì
+            return
+        }
+        // Ưu tiên chọn phòng làm việc hiện tại từ store
+        if (currentRoomId && userRooms.length > 0) {
+            // Kiểm tra xem currentRoomId có trong danh sách phòng của user không
+            const currentRoomExists = userRooms.some((room: any) => room.roomId === currentRoomId)
+            if (currentRoomExists) {
+                setSelectedRoomId(currentRoomId)
+                return
+            }
+        }
+        // Nếu không có phòng làm việc hiện tại hoặc không có trong danh sách, chọn phòng đầu tiên
+        if (userRooms.length > 0) {
+            setSelectedRoomId(userRooms[0].roomId)
+        } else {
+            // Nếu không có phòng nào, chọn "Tất cả các phòng"
+            setSelectedRoomId('all')
+        }
+    }, [userRooms, selectedRoomId, currentRoomId])
+
     // Query service requests
     const {data, isLoading, refetch} = useQuery({
-        queryKey: ['workflow-history', currentRoomId, selectedStateId, selectedFlag, filters, refreshTrigger],
+        queryKey: ['workflow-history', selectedRoomId, selectedStateId, selectedFlag, filters, refreshTrigger],
         queryFn: () => {
             // build params: include stateId only when a concrete state is selected
-            const params: any = {roomId: currentRoomId!, ...filters}
+            // Loại bỏ hisServiceReqCode và receptionCode khỏi filters để tránh gửi các trường deprecated
+            const { hisServiceReqCode, receptionCode, ...filtersWithoutDeprecated } = filters
+            // Nếu selectedRoomId là "all", truyền "" cho roomId, ngược lại truyền selectedRoomId
+            const params: any = {roomId: selectedRoomId === 'all' ? '' : selectedRoomId, ...filtersWithoutDeprecated}
             if (selectedStateId && selectedStateId !== 'all') {
                 params.stateId = selectedStateId
             }
@@ -124,18 +166,21 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
             if (selectedFlag && selectedFlag !== 'all') {
                 params.flag = selectedFlag
             }
-            // Thêm hisServiceReqCode với giá trị mặc định là '' nếu không có
-            if (!params.hisServiceReqCode) {
-                params.hisServiceReqCode = ''
-            }
-            // Thêm receptionCode nếu có
-            if (filters.receptionCode) {
-                params.receptionCode = filters.receptionCode
+            // Sử dụng code (gộp từ hisServiceReqCode và receptionCode)
+            if (filters.code) {
+                params.code = filters.code
+            } else {
+                // Backward compatibility: nếu không có code, gộp từ hisServiceReqCode và receptionCode
+                const code = [hisServiceReqCode, receptionCode].filter(Boolean).join(',') || undefined
+                if (code) {
+                    params.code = code
+                }
             }
             return apiClient.getWorkflowHistory(params)
         },
-        // enabled when room selected and we've initialized state selection (can be 'all')
-        enabled: !!currentRoomId && selectedStateId !== undefined,
+        // enabled when state selection is initialized (can be 'all')
+        // selectedRoomId có thể là rỗng để chọn tất cả phòng
+        enabled: selectedStateId !== undefined,
         // Prevent refetch when clicking rows or switching focus
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
@@ -166,17 +211,11 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         setFilters(prev => ({...prev, [key]: value, offset: 0}))
     }
 
-    // Xử lý tìm kiếm khi nhấn Enter
+    // Xử lý tìm kiếm khi nhấn Enter - gộp cả mã Y lệnh và mã barcode
     const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            updateFilter('hisServiceReqCode', searchInput || undefined)
-        }
-    }
-
-    // Xử lý tìm kiếm barcode khi nhấn Enter
-    const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            updateFilter('receptionCode', barcodeInput || undefined)
+            // Gộp searchInput thành code
+            updateFilter('code', searchInput || undefined)
         }
     }
 
@@ -415,6 +454,31 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                     </div>
                 </div>
 
+                {/* Room Selector */}
+                <div className="mb-3">
+                    <Select 
+                        value={selectedRoomId} 
+                        onValueChange={(value) => {
+                            setSelectedRoomId(value)
+                            // Reset to first page when changing room
+                            setFilters(prev => ({...prev, offset: 0}))
+                        }}
+                        disabled={isLoadingUserRooms}
+                    >
+                        <SelectTrigger className="text-sm">
+                            <SelectValue placeholder={isLoadingUserRooms ? "Đang tải..." : "Chọn phòng..."}/>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tất cả các phòng</SelectItem>
+                            {userRooms.map((room: any) => (
+                                <SelectItem key={room.roomId} value={room.roomId}>
+                                    {room.roomName} ({room.roomCode})
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
                 {/* Workflow State Selector */}
                 <div className="mb-3">
                     <Select value={selectedStateId ?? 'all'}
@@ -445,16 +509,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         onKeyDown={handleSearchKeyDown}
-                        placeholder="Tìm theo mã Y lệnh (nhấn Enter)..."
-                        className="text-sm"
-                    />
-
-                    <Input
-                        type="text"
-                        value={barcodeInput}
-                        onChange={(e) => setBarcodeInput(e.target.value)}
-                        onKeyDown={handleBarcodeKeyDown}
-                        placeholder="Tìm theo mã barcode (nhấn Enter)..."
+                        placeholder="Tìm theo mã Y lệnh hoặc mã barcode (nhấn Enter)..."
                         className="text-sm"
                     />
 
@@ -517,31 +572,31 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
             {/* Table Content */}
             <div className="flex-1 overflow-y-auto">
-                {!currentRoomId && (
+                {!selectedRoomId && (
                     <div className="p-4 text-center text-sm text-gray-500">
                         Vui lòng chọn phòng làm việc
                     </div>
                 )}
 
-                {currentRoomId && !selectedStateId && (
+                {selectedRoomId && !selectedStateId && (
                     <div className="p-4 text-center text-sm text-gray-500">
                         Vui lòng chọn trạng thái
                     </div>
                 )}
 
-                {currentRoomId && selectedStateId && isLoading && filters.offset === 0 && (
+                {selectedRoomId && selectedStateId && isLoading && filters.offset === 0 && (
                     <div className="flex items-center justify-center p-8">
                         <Loader2 className="h-6 w-6 animate-spin text-gray-400"/>
                     </div>
                 )}
 
-                {currentRoomId && selectedStateId && !isLoading && serviceRequests.length === 0 && (
+                {selectedRoomId && selectedStateId && !isLoading && serviceRequests.length === 0 && (
                     <div className="p-4 text-center text-sm text-gray-500">
                         Không tìm thấy kết quả
                     </div>
                 )}
 
-                {currentRoomId && selectedStateId && serviceRequests.length > 0 && (
+                {selectedRoomId && selectedStateId && serviceRequests.length > 0 && (
                     <div className="bg-white">
                         <RadioGroup value={selectedId || ''} onValueChange={setSelectedId} className="w-full">
                             <table className="w-full border-collapse">
@@ -657,7 +712,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
             </div>
 
             {/* Pagination controls: Fixed at bottom, outside scroll area */}
-            {currentRoomId && selectedStateId && serviceRequests.length > 0 && (
+            {selectedRoomId && selectedStateId && serviceRequests.length > 0 && (
                 <div className="p-3 text-center border-t bg-white">
                     <div className="flex items-center justify-between gap-2">
                         <Button size="sm" variant="outline" onClick={() => goToPage(currentPage - 1)} disabled={isLoading || currentPage <= 1}>
