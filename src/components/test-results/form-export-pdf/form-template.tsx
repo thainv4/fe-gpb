@@ -55,8 +55,9 @@ function PageHeader({
           <img src="/logo-bvbm-wh.png" alt="logo-bvbm" className="w-3/12" />
           <div className="text-sm text-gray-700 leading-tight space-y-1 text-center">
             <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
-            <div className="text-xs">TRUNG TÂM GIẢI PHẪU BỆNH</div>
-            <div className="text-xs font-semibold">TẾ BÀO BỆNH HỌC</div>
+            <div className="text-xs font-semibold">VIỆN XÉT NGHIỆM Y HỌC</div>
+            <div className="text-xs font-semibold">TRUNG TÂM GIẢI PHẪU BỆNH</div>
+            <div className="text-xs font-semibold">TẾ BÀO HỌC</div>
           </div>
         </div>
 

@@ -23,7 +23,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 const storedUser = localStorage.getItem('auth-user')
 
                 if (storedToken && storedUser) {
-                    // Token tồn tại, khôi phục trạng thái
+                    // Kiểm tra hisTokenCode trong sessionStorage
+                    // Nếu không có (tức là đã đóng trình duyệt), yêu cầu đăng nhập lại
+                    const hisTokenCode = typeof window !== 'undefined' 
+                        ? sessionStorage.getItem('hisTokenCode') 
+                        : null
+
+                    if (!hisTokenCode) {
+                        // Không có hisTokenCode trong sessionStorage, yêu cầu đăng nhập lại
+                        console.log('⚠️ Không có hisTokenCode trong sessionStorage, yêu cầu đăng nhập lại')
+                        useAuthStore.getState().logout()
+                        return
+                    }
+
+                    // Token tồn tại và có hisTokenCode, khôi phục trạng thái
                     const { apiClient } = await import('@/lib/api/client')
                     apiClient.setToken(storedToken)
 
