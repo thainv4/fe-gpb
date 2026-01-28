@@ -3192,6 +3192,7 @@ class ApiClient {
         orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
         code?: string; // Gộp receptionCode và hisServiceReqCode thành một trường
         flag?: string;
+        patientName?: string;
         // Deprecated: sử dụng code thay thế
         hisServiceReqCode?: string;
         receptionCode?: string;
@@ -3201,6 +3202,7 @@ class ApiClient {
             storedServiceReqId: string;
             createdAt?: string;
             numOfBlock?: string | number;
+            roomName?: string;
             serviceRequest?: {
                 id?: string;
                 hisServiceReqCode?: string;
@@ -3252,6 +3254,7 @@ class ApiClient {
             // Không gửi hisServiceReqCode và receptionCode riêng nữa vì API không chấp nhận
         }
         if (params.flag) queryParams.append('flag', params.flag);
+        if (params.patientName) queryParams.append('patientName', params.patientName);
 
         return this.request(
             `/workflow-history/by-room-and-state?${queryParams.toString()}`

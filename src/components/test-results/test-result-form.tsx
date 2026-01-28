@@ -332,6 +332,8 @@ export default function TestResultForm() {
             setResultNote(defaultResultNote)
             setResultName('')
             setMacroscopicComment(defaultMacroscopicComment)
+            // Reset số block mỗi khi chọn bản ghi mới từ sidebar
+            setNumOfBlock('')
         }
     }
 

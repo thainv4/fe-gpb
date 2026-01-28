@@ -43,6 +43,7 @@ interface FilterParams {
     orderBy: 'actionTimestamp' | 'createdAt' | 'startedAt'
     code?: string // Gộp receptionCode và hisServiceReqCode thành một trường
     flag?: string
+    patientName?: string
     // Deprecated: sử dụng code thay thế
     hisServiceReqCode?: string
     receptionCode?: string
@@ -83,12 +84,47 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     // State tạm thời cho input tìm kiếm (chỉ update filters khi nhấn Enter)
     // Gộp cả mã Y lệnh và mã barcode vào một input
     const [searchInput, setSearchInput] = useState<string>(serviceReqCode ?? '')
+    // State tạm thời cho input tên bệnh nhân (chỉ update filters khi nhấn Enter)
+    const [patientNameInput, setPatientNameInput] = useState<string>('')
     // State để quản lý radio được chọn (chỉ một)
     const [selectedId, setSelectedId] = useState<string | null>(null)
     // State để quản lý dialog xác nhận xóa
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     // State để quản lý filter flag
     const [selectedFlag, setSelectedFlag] = useState<string>('all')
+    
+    // Helper function để format ISO string sang YYYY-MM-DD cho input type="date"
+    const formatDateForInput = (isoString: string) => {
+        const date = new Date(isoString)
+        // Lấy UTC date components để hiển thị đúng ngày từ UTC time
+        const year = date.getUTCFullYear()
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+        const day = String(date.getUTCDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+    
+    // Helper function để lấy ngày hôm nay (0h00 UTC của ngày hôm nay)
+    const getTodayDate = () => {
+        const today = new Date()
+        const year = today.getUTCFullYear()
+        const month = today.getUTCMonth()
+        const day = today.getUTCDate()
+        // Tạo date với UTC constructor - đây là UTC midnight của ngày hôm nay
+        const utcDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0))
+        return utcDate.toISOString()
+    }
+    
+    // Helper function để lấy cuối ngày hôm nay (23:59:59 UTC của ngày hôm nay)
+    const getTodayEndDate = () => {
+        const today = new Date()
+        const year = today.getUTCFullYear()
+        const month = today.getUTCMonth()
+        const day = today.getUTCDate()
+        // Tạo date với UTC constructor - đây là UTC end of day của ngày hôm nay
+        const utcDate = new Date(Date.UTC(year, month, day, 23, 59, 59, 999))
+        return utcDate.toISOString()
+    }
+    
     const [filters, setFilters] = useState<FilterParams>({
         roomType: 'currentRoomId',
         stateType: '',
@@ -97,7 +133,9 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         offset: 0,
         order: 'DESC',
         orderBy: 'actionTimestamp',
-        code: serviceReqCode || undefined
+        code: serviceReqCode || undefined,
+        fromDate: getTodayDate(),
+        toDate: getTodayEndDate()
     })
 
     // Query workflow states
@@ -166,6 +204,10 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
             if (selectedFlag && selectedFlag !== 'all') {
                 params.flag = selectedFlag
             }
+            // Thêm patientName nếu có
+            if (filters.patientName) {
+                params.patientName = filters.patientName
+            }
             // Sử dụng code (gộp từ hisServiceReqCode và receptionCode)
             if (filters.code) {
                 params.code = filters.code
@@ -216,6 +258,13 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         if (e.key === 'Enter') {
             // Gộp searchInput thành code
             updateFilter('code', searchInput || undefined)
+        }
+    }
+
+    // Xử lý tìm kiếm tên bệnh nhân khi nhấn Enter
+    const handlePatientNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            updateFilter('patientName', patientNameInput || undefined)
         }
     }
 
@@ -479,8 +528,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                     </Select>
                 </div>
 
-                {/* Workflow State Selector */}
-                <div className="mb-3">
+                {/* Workflow State Selector and Flag Selector on same row */}
+                <div className="mb-3 grid grid-cols-2 gap-2">
                     <Select value={selectedStateId ?? 'all'}
                             onValueChange={(v) => {
                                 const val = v === 'all' ? 'all' : v
@@ -501,29 +550,56 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                             ))}
                         </SelectContent>
                     </Select>
+                    <Select value={selectedFlag} onValueChange={(value) => {
+                        setSelectedFlag(value)
+                        setFilters(prev => ({...prev, offset: 0}))
+                    }}>
+                        <SelectTrigger className="text-sm">
+                            <SelectValue placeholder="Chọn bệnh phẩm..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tất cả</SelectItem>
+                            <SelectItem value="ST">ST</SelectItem>
+                            <SelectItem value="PT">PT</SelectItem>
+                            <SelectItem value="HMMD">HMMD</SelectItem>
+                            <SelectItem value="CL">CL</SelectItem>
+                            <SelectItem value="HC">HC</SelectItem>
+                            <SelectItem value="DB">DB</SelectItem>
+                            <SelectItem value="HQMD">HQMD</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <div className="space-y-2 pt-2 border-t">
-                    <Input
-                        type="text"
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        onKeyDown={handleSearchKeyDown}
-                        placeholder="Tìm theo mã Y lệnh hoặc mã barcode (nhấn Enter)..."
-                        className="text-sm"
-                    />
-
-                    {/* Filter by Flag */}
-                    
+                    <div className="grid grid-cols-2 gap-2">
+                        <Input
+                            type="text"
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            onKeyDown={handleSearchKeyDown}
+                            placeholder="Mã Y lệnh hoặc Barcode"
+                            className="text-sm"
+                        />
+                        <Input
+                            type="text"
+                            value={patientNameInput}
+                            onChange={(e) => setPatientNameInput(e.target.value)}
+                            onKeyDown={handlePatientNameKeyDown}
+                            placeholder="Tên bệnh nhân"
+                            className="text-sm"
+                        />
+                    </div>
 
                     <div className="grid grid-cols-2 gap-2">
                         <Input
                             type="date"
-                            value={filters.fromDate?.slice(0, 10) ?? ''}
+                            value={filters.fromDate ? formatDateForInput(filters.fromDate) : ''}
                             onChange={(e) => {
                                 if (e.target.value) {
-                                    const date = new Date(e.target.value)
-                                    date.setHours(0, 0, 0, 0)
+                                    // Parse date string (YYYY-MM-DD) và tạo UTC date với 0h00
+                                    const [year, month, day] = e.target.value.split('-').map(Number)
+                                    // Tạo date với UTC constructor để đảm bảo là 0h00 UTC
+                                    const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
                                     updateFilter('fromDate', date.toISOString())
                                 } else {
                                     updateFilter('fromDate', undefined)
@@ -534,11 +610,13 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                         />
                         <Input
                             type="date"
-                            value={filters.toDate?.slice(0, 10) ?? ''}
+                            value={filters.toDate ? formatDateForInput(filters.toDate) : ''}
                             onChange={(e) => {
                                 if (e.target.value) {
-                                    const date = new Date(e.target.value)
-                                    date.setHours(23, 59, 59, 999)
+                                    // Parse date string (YYYY-MM-DD) và tạo UTC date với 23:59:59
+                                    const [year, month, day] = e.target.value.split('-').map(Number)
+                                    // Tạo date với UTC constructor để đảm bảo là 23:59:59 UTC
+                                    const date = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999))
                                     updateFilter('toDate', date.toISOString())
                                 } else {
                                     updateFilter('toDate', undefined)
@@ -548,25 +626,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                             placeholder="Đến ngày"
                         />
                     </div>
-                        <Select value={selectedFlag} onValueChange={(value) => {
-                            setSelectedFlag(value)
-                            setFilters(prev => ({...prev, offset: 0}))
-                        }}>
-                            <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Chọn bệnh phẩm..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Tất cả</SelectItem>
-                                <SelectItem value="ST">ST</SelectItem>
-                                <SelectItem value="PT">PT</SelectItem>
-                                <SelectItem value="HMMD">HMMD</SelectItem>
-                                <SelectItem value="CL">CL</SelectItem>
-                                <SelectItem value="HC">HC</SelectItem>
-                                <SelectItem value="DB">DB</SelectItem>
-                                <SelectItem value="HQMD">HQMD</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                </div>
 
             </div>
 
@@ -604,15 +664,17 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                 <tr>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200 w-12">
                                     </th>
-                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
-                                        Mã Y lệnh
-                                    </th>
+                            
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Barcode</th>
-                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200 min-w-[130px]">
                                         Tên bệnh nhân
                                     </th>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Trạng thái</th>
-                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Người tạo</th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200 min-w-[100px]">Phòng làm việc</th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">
+                                        Mã Y lệnh
+                                    </th>
+                                    <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200 min-w-[90px]">Người tạo</th>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2">Thời gian</th>
                                 </tr>
                                 </thead>
@@ -621,6 +683,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                     id: string;
                                     storedServiceReqId?: string;
                                     createdAt?: string;
+                                    roomName?: string;
                                     toState?: {
                                         id: string;
                                         stateName: string;
@@ -674,13 +737,11 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                             >
                                                 <RadioGroupItem value={item.id} />
                                             </td>
-                                            <td className="p-2 text-xs font-medium text-gray-900 border-r border-gray-100">
-                                                {serviceReqCode}
-                                            </td>
-                                            <td className="p-2 text-xs text-gray-700 border-r border-gray-100">
+                                            
+                                            <td className="p-2 text-xs font-medium border-r border-gray-100">
                                                 {receptionCode || <span className="text-gray-400">-</span>}
                                             </td>
-                                            <td className="p-2 text-xs text-gray-700 border-r border-gray-100">
+                                            <td className="p-2 text-xs font-bold text-gray-700 border-r border-gray-100 min-w-[130px]">
                                                 {serviceReq?.patientName}
                                             </td>
                                             <td className="p-2 text-xs border-r border-gray-100">
@@ -688,7 +749,13 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                                     {stateName}
                                                 </span>
                                             </td>
-                                            <td className="p-2 text-xs text-gray-700 border-r border-gray-100">
+                                            <td className="text-xs text-gray-700 border-r border-gray-100 min-w-[100px]">
+                                                {item.roomName || <span className="text-gray-400">-</span>}
+                                            </td>
+                                            <td className="p-2 text-xs font-medium text-gray-900 border-r border-gray-100">
+                                                {serviceReqCode}
+                                            </td>
+                                            <td className="p-2 text-xs text-gray-700 border-r border-gray-100 min-w-[90px]">
                                                 {item.creator ? (
                                                     <div className="flex flex-col">
                                                         <span className="font-medium">{item.creator.userName || '-'}</span>
