@@ -214,8 +214,10 @@ export async function POST(request: NextRequest) {
             // If pageCount was not determined from DOM, try parsing PDF buffer as fallback
             if (pageCount === 1) {
                 try {
-                    // Convert buffer to string for parsing
-                    const pdfString = pdfBuffer.toString('latin1'); // Use latin1 to preserve binary data
+                    // Ensure pdfBuffer is a Node.js Buffer
+                    const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
+                    // Convert buffer to string for parsing (latin1 encoding preserves binary data)
+                    const pdfString = buffer.toString('latin1');
                     
                     // Method 1: Look for /Type /Page or /Type/Page (most reliable)
                     const pageTypeMatches = pdfString.match(/\/Type[\s\/]*\/Page[^a-zA-Z]/g);
