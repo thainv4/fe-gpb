@@ -107,9 +107,8 @@ function PageHeader({
               {lines.map((line, index) => (
                 <h1
                   key={index}
-                  className={`font-bold ${
-                    index === 0 ? "text-2xl" : "text-xl"
-                  }`}
+                  className={`font-bold ${index === 0 ? "text-2xl" : "text-xl"
+                    }`}
                 >
                   {line}
                 </h1>
@@ -161,6 +160,12 @@ function PageHeader({
               {specificService?.receptionCode || ""}
             </span>
           </div> */}
+          <div>
+            <span className="text-gray-600">Chẩn đoán lâm sàng:</span>
+            <span className="ml-2 font-semibold text-red-700">
+              {icdCode} - {icdName}
+            </span>
+          </div>
 
           <div className="flex flex-wrap gap-x-16">
             <div>
@@ -173,12 +178,14 @@ function PageHeader({
             </div>
           </div>
 
-          <div>
-            <span className="text-gray-600">Chẩn đoán lâm sàng:</span>
-            <span className="ml-2 font-semibold text-red-700">
-              {icdCode} - {icdName}
-            </span>
-          </div>
+          {/* Ghi chú bàn giao (resultNotes) */}
+          {specificService?.resultNotes && (
+            <div className="mt-2">
+              <span className="text-gray-600">Ghi chú:</span>
+              <span className="ml-2">{specificService.resultNotes}</span>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
@@ -289,33 +296,33 @@ export function FormTemplate({
   // Ưu tiên sử dụng các fields mới, fallback về resultText nếu không có (backward compatibility)
   const resultText = useMemo(() => {
     if (!specificService) return "";
-    
+
     // Ưu tiên sử dụng các fields mới nếu có
     if (specificService.resultComment || specificService.resultDescription || specificService.resultConclude || specificService.resultNote) {
       const parts: string[] = [];
-      
+
       // Nhận xét đại thể (resultComment) hiển thị đầu tiên
       if (specificService.resultComment) {
         parts.push(specificService.resultComment);
       }
-      
+
       // Mô tả vi thể (resultDescription) hiển thị sau nhận xét đại thể
       if (specificService.resultDescription) {
         parts.push(specificService.resultDescription);
       }
-      
+
       if (specificService.resultConclude) {
         parts.push(specificService.resultConclude);
       }
-      
+
       if (specificService.resultNote) {
         parts.push(specificService.resultNote);
       }
-      
+
       // Thêm khoảng cách một dòng giữa các phần
       return parts.join('<div style="margin-bottom: 1em;"></div>');
     }
-    
+
     // Fallback về resultText nếu không có các fields mới
     return specificService.resultText || "";
   }, [specificService]);
@@ -444,6 +451,26 @@ export function FormTemplate({
                     bottom: 20mm !important;
                     right: 15mm !important;
                 }
+                
+                /* Page number styling */
+                .page-number {
+                    position: absolute !important;
+                    bottom: 10mm !important;
+                    right: 15mm !important;
+                    font-size: 12px !important;
+                    color: #666 !important;
+                    z-index: 10 !important;
+                }
+                
+                @media print {
+                    .page-number {
+                        position: absolute !important;
+                        bottom: 10mm !important;
+                        right: 15mm !important;
+                        font-size: 12px !important;
+                        color: #666 !important;
+                    }
+                }
 
                 /* Không cắt đôi các phần tử */
                 .prose p, .prose div, .prose h1, .prose h2, .prose h3, .prose h4,
@@ -523,8 +550,8 @@ export function FormTemplate({
                 </h2>
               )}
 
-              <div 
-                style={{ 
+              <div
+                style={{
                   flex: "1",
                   minHeight: 0,
                   maxHeight: index < contentPages.length - 1 ? "147mm" : "none",
@@ -554,7 +581,7 @@ export function FormTemplate({
                     )
                   )}
                 </div>
-                
+
                 {/* Khoảng cách ở cuối mỗi trang (trừ trang cuối) */}
                 {index < contentPages.length - 1 && (
                   <div
@@ -568,6 +595,21 @@ export function FormTemplate({
                   />
                 )}
               </div>
+            </div>
+
+            {/* Page Number - Hiển thị ở góc dưới bên phải mỗi trang */}
+            <div
+              className="page-number"
+              style={{
+                position: "absolute",
+                bottom: "10mm",
+                right: "15mm",
+                fontSize: "12px",
+                color: "#666",
+                zIndex: 10,
+              }}
+            >
+              Trang {index + 1} / {contentPages.length}
             </div>
 
             {/* Signature Section - Chỉ trang cuối */}

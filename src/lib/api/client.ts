@@ -3091,6 +3091,7 @@ class ApiClient {
             resultDescription?: string;
             resultConclude?: string;
             resultNote?: string;
+            resultNotes?: string;
             resultComment?: string;
             resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
             resultName?: string;

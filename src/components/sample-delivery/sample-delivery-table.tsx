@@ -357,6 +357,62 @@ export default function SampleDeliveryTable() {
             selectedFlag: string;
             selectedStainingMethod: string;
         }) => {
+            // Bước 1: Gọi API staining method trước (nếu có) - PHẢI thành công
+            if (params.storedServiceReqId && params.selectedStainingMethod) {
+                const stainingResponse = await apiClient.updateServiceRequestStainingMethod(
+                    params.storedServiceReqId,
+                    params.selectedStainingMethod
+                )
+                if (!stainingResponse.success) {
+                    throw new Error(stainingResponse.message || stainingResponse.error || 'Không thể cập nhật phương pháp nhuộm')
+                }
+            }
+
+            // Bước 2: Gọi API flag (nếu có) - PHẢI thành công
+            if (params.storedServiceReqId && params.selectedFlag) {
+                const flagResponse = await apiClient.updateStoredServiceRequestFlag(
+                    params.storedServiceReqId,
+                    params.selectedFlag
+                )
+                if (!flagResponse.success) {
+                    throw new Error(flagResponse.message || flagResponse.error || 'Không thể cập nhật flag')
+                }
+            }
+
+            // Bước 3: Gọi API cập nhật resultNote cho tất cả services (nếu có handoverNote) - PHẢI thành công
+            if (params.storedServiceReqId && handoverNote) {
+                // Lấy danh sách services từ storedServiceRequestData
+                const services = storedServiceRequestData?.data?.services || []
+                
+                if (services.length > 0) {
+                    // Gọi API cho tất cả services
+                    const resultNotePromises = services.map((service: any) => 
+                        apiClient.saveServiceResult(service.id, {
+                            resultNotes: handoverNote,
+                            resultStatus: 'NORMAL'
+                        })
+                    )
+                    
+                    const resultNoteResults = await Promise.allSettled(resultNotePromises)
+                    
+                    // Kiểm tra tất cả phải thành công
+                    const failedResults = resultNoteResults.filter(r => 
+                        r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+                    )
+                    
+                    if (failedResults.length > 0) {
+                        const errorMessages = failedResults.map(r => {
+                            if (r.status === 'rejected') {
+                                return r.reason?.message || 'Lỗi không xác định'
+                            }
+                            return r.value.message || r.value.error || 'Lỗi không xác định'
+                        }).join(', ')
+                        throw new Error(`Không thể cập nhật ghi chú cho ${failedResults.length}/${services.length} dịch vụ: ${errorMessages}`)
+                    }
+                }
+            }
+
+            // Bước 4: Gọi API transitionWorkflow CUỐI CÙNG sau khi các API khác đã chạy
             const response = await apiClient.transitionWorkflow({
                 storedServiceReqId: params.storedServiceReqId,
                 toStateId: params.toStateId,
@@ -373,54 +429,6 @@ export default function SampleDeliveryTable() {
             return response
         },
         onSuccess: async (_data, variables) => {
-            // Gọi API staining method với storedServiceReqId từ mutation variables
-            if (variables.storedServiceReqId && variables.selectedStainingMethod) {
-                try {
-                    const stainingResponse = await apiClient.updateServiceRequestStainingMethod(
-                        variables.storedServiceReqId,
-                        variables.selectedStainingMethod
-                    )
-                    if (!stainingResponse.success) {
-                        toast({
-                            title: 'Cảnh báo',
-                            description: stainingResponse.message || 'Đã xác nhận bàn giao nhưng không thể cập nhật phương pháp nhuộm',
-                            variant: 'default',
-                        })
-                    }
-                } catch (error: unknown) {
-                    const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
-                    toast({
-                        title: 'Cảnh báo',
-                        description: `Đã xác nhận bàn giao nhưng không thể cập nhật phương pháp nhuộm: ${errorMessage}`,
-                        variant: 'default',
-                    })
-                }
-            }
-
-            // Gọi API flag với storedServiceReqId từ mutation variables
-            if (variables.storedServiceReqId && variables.selectedFlag) {
-                try {
-                    const flagResponse = await apiClient.updateStoredServiceRequestFlag(
-                        variables.storedServiceReqId,
-                        variables.selectedFlag
-                    )
-                    if (!flagResponse.success) {
-                        toast({
-                            title: 'Cảnh báo',
-                            description: flagResponse.message || 'Đã xác nhận bàn giao nhưng không thể cập nhật flag',
-                            variant: 'default',
-                        })
-                    }
-                } catch (error: unknown) {
-                    const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
-                    toast({
-                        title: 'Cảnh báo',
-                        description: `Đã xác nhận bàn giao nhưng không thể cập nhật flag: ${errorMessage}`,
-                        variant: 'default',
-                    })
-                }
-            }
-
             toast({
                 title: 'Thành công',
                 description: 'Đã xác nhận bàn giao mẫu',
@@ -473,6 +481,18 @@ export default function SampleDeliveryTable() {
             })
             return
         }
+        
+        // Kiểm tra nếu mã barcode có tiền tố "S" thì bắt buộc phải chọn cờ
+        if (receptionCodeFromStored && receptionCodeFromStored.trim().toUpperCase().startsWith('S')) {
+            if (!selectedFlag || selectedFlag.trim() === '') {
+                toast({
+                    title: 'Lỗi',
+                    description: 'Mã barcode có tiền tố "S" bắt buộc phải chọn cờ',
+                    variant: 'destructive',
+                })
+                return
+            }
+        }
 
         transitionMutation.mutate({
             storedServiceReqId,
@@ -487,10 +507,21 @@ export default function SampleDeliveryTable() {
 
     // Handle selection from sidebar
     const handleSelectServiceRequest = (code: string, storedId?: string, receptionCode?: string) => {
+        // Reset tất cả các trường trong form "Nhận bệnh phẩm"
         setSelectedServiceReqCode(code)
         setStoredServiceReqId(storedId)
         setReceptionCode(receptionCode || '')
         setReceiveDateTime(getVietnamTime())
+        setHandoverNote('')
+        setSelectedFlag('')
+        setSelectedStainingMethod('')
+        setStainingMethodSearch('')
+        setAppliedStainingMethodSearch('')
+        
+        // Reset trạng thái chuyển tiếp về trạng thái mặc định (SAMPLE_HANDOVER)
+        if (handoverStateId) {
+            setSelectedStateId(handoverStateId)
+        }
         
         // Tự động chọn phòng hiện tại khi chọn service request từ sidebar
         if (currentRoomId && availableRooms.length > 0) {
@@ -541,7 +572,7 @@ export default function SampleDeliveryTable() {
                                     {receptionCodeFromStored && (
                                         <div>
                                             <div className="flex items-center gap-6 mb-2">
-                                                <p className="text-sm text-blue-600 font-medium">Mã bệnh phẩm</p>
+                                                <p className="text-sm text-blue-600 font-medium">Mã Barcode</p>
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
