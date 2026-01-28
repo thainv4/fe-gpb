@@ -144,6 +144,33 @@ export async function POST(request: NextRequest) {
             });
             console.log('Page content set successfully');
 
+            // Count pages by checking .pdf-page elements in the HTML
+            let pageCount = 1;
+            try {
+                const pdfPageElements = await page.$$('.pdf-page');
+                if (pdfPageElements && pdfPageElements.length > 0) {
+                    pageCount = pdfPageElements.length;
+                    console.log('PDF page count (from .pdf-page elements):', pageCount);
+                } else {
+                    // If no .pdf-page elements, check if content might span multiple pages
+                    // by checking the page height
+                    const bodyHeight = await page.evaluate(() => {
+                        return document.body.scrollHeight;
+                    });
+                    const viewportHeight = await page.evaluate(() => {
+                        return window.innerHeight;
+                    });
+                    // A4 height in pixels at 96 DPI ≈ 1123px
+                    const a4HeightPx = 1123;
+                    if (bodyHeight > a4HeightPx) {
+                        pageCount = Math.ceil(bodyHeight / a4HeightPx);
+                        console.log('PDF page count (estimated from content height):', pageCount);
+                    }
+                }
+            } catch (countError: any) {
+                console.warn('Failed to count pages from DOM, will parse PDF buffer:', countError?.message);
+            }
+
             console.log('Generating PDF...');
             // Generate PDF with timeout
             const pdfBuffer = await page.pdf({
@@ -184,8 +211,43 @@ export async function POST(request: NextRequest) {
             console.log('PDF base64 length:', base64.length);
             console.log('PDF base64 preview:', base64.substring(0, 50));
 
-            // Count pages by checking PDF structure
-            const pageCount = Math.max(1, Math.ceil(pdfBuffer.length / 822000));
+            // If pageCount was not determined from DOM, try parsing PDF buffer as fallback
+            if (pageCount === 1) {
+                try {
+                    // Convert buffer to string for parsing
+                    const pdfString = pdfBuffer.toString('latin1'); // Use latin1 to preserve binary data
+                    
+                    // Method 1: Look for /Type /Page or /Type/Page (most reliable)
+                    const pageTypeMatches = pdfString.match(/\/Type[\s\/]*\/Page[^a-zA-Z]/g);
+                    if (pageTypeMatches && pageTypeMatches.length > 0) {
+                        pageCount = pageTypeMatches.length;
+                        console.log('PDF page count (from /Type/Page in buffer):', pageCount);
+                    } else {
+                        // Method 2: Look for /Count in root Pages dictionary
+                        const countMatches = pdfString.match(/\/Count[\s]*(\d+)/g);
+                        if (countMatches && countMatches.length > 0) {
+                            const counts = countMatches.map(m => {
+                                const numMatch = m.match(/(\d+)/);
+                                return numMatch ? parseInt(numMatch[1], 10) : 0;
+                            });
+                            const maxCount = Math.max(...counts);
+                            if (maxCount > 0) {
+                                pageCount = maxCount;
+                                console.log('PDF page count (from /Count in buffer):', pageCount);
+                            }
+                        }
+                    }
+                } catch (parseError: any) {
+                    console.warn('Failed to parse PDF buffer for page count:', parseError?.message);
+                }
+            }
+            
+            // Final validation: ensure pageCount is at least 1
+            if (pageCount < 1) {
+                pageCount = 1;
+            }
+            
+            console.log('Final PDF page count:', pageCount);
 
             return NextResponse.json({
                 success: true,

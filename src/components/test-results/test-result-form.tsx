@@ -488,7 +488,7 @@ export default function TestResultForm() {
                 );
 
                 if (!hisPacsUpdateResponse.success) {
-                    console.error(`❌ Lỗi cập nhật HIS-PACS result cho dịch vụ ${tdlServiceCode}:`, hisPacsUpdateResponse);
+             
                     return {
                         success: false,
                         serviceCode: tdlServiceCode,
@@ -836,7 +836,21 @@ export default function TestResultForm() {
                 'EMR'
             )
 
-            if (response.success && response.data) {
+            // Log response để debug
+            const emrParam = response.data?.Param as any;
+            console.log('API createAndSignHsm response:', {
+                success: response.success,
+                data: response.data,
+                emrSuccess: response.data?.Success,
+                bugCodes: emrParam?.BugCodes,
+                messages: emrParam?.Messages
+            });
+
+            // Kiểm tra Success field trong response.data (EMR API response structure)
+            const emrResponse = response.data as any;
+            const isEmrSuccess = emrResponse?.Success === true;
+
+            if (response.success && response.data && isEmrSuccess) {
                 // Lấy documentId từ response
                 const documentId = response.data?.Data?.DocumentId;
 
@@ -959,10 +973,26 @@ export default function TestResultForm() {
                 })
                 setSignerInfo({ signerId: '', serialNumber: '' })
             } else {
+                // Xử lý lỗi từ EMR API
+                const emrParam = emrResponse?.Param as any;
+                const errorMessage = emrParam?.Messages?.join(', ') || 
+                                   emrParam?.BugCodes?.join(', ') ||
+                                   emrParam?.MessageCodes?.join(', ') ||
+                                   getErrorMessage(response, "Có lỗi xảy ra khi ký số");
+                
+                console.error('❌ API createAndSignHsm failed:', {
+                    success: response.success,
+                    emrSuccess: isEmrSuccess,
+                    bugCodes: emrParam?.BugCodes,
+                    messages: emrParam?.Messages,
+                    messageCodes: emrParam?.MessageCodes,
+                    hasException: emrParam?.HasException
+                });
+
                 toast({
                     variant: "destructive",
-                    title: "Lỗi",
-                    description: getErrorMessage(response, "Có lỗi xảy ra khi ký số")
+                    title: "Lỗi ký số",
+                    description: errorMessage
                 })
             }
         } catch (error: any) {
@@ -1278,16 +1308,12 @@ export default function TestResultForm() {
             if (saveSuccessful > 0 && storedServiceRequest?.id && numOfBlock !== null && numOfBlock !== undefined && numOfBlock.trim() !== '') {
                 try {
                     const numOfBlockValue = numOfBlock.trim()
-                    console.log('📦 Gọi API num-of-block:', {
-                        storedServiceReqId: storedServiceRequest.id,
-                        numOfBlock: numOfBlockValue
-                    })
+                   
                     const numOfBlockResponse = await apiClient.updateStoredServiceRequestNumOfBlock(
                         storedServiceRequest.id,
                         numOfBlockValue
                     )
                     if (!numOfBlockResponse.success) {
-                        console.error('❌ Lỗi cập nhật số lượng block:', numOfBlockResponse)
                         toast({
                             title: 'Cảnh báo',
                             description: numOfBlockResponse.message || 'Đã lưu kết quả nhưng không thể cập nhật số lượng block',
@@ -1297,7 +1323,7 @@ export default function TestResultForm() {
                         console.log('✅ Cập nhật số lượng block thành công')
                     }
                 } catch (error: unknown) {
-                    console.error('❌ Lỗi khi gọi API num-of-block:', error)
+                
                     const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
                     toast({
                         title: 'Cảnh báo',

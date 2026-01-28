@@ -202,7 +202,15 @@ function splitContentIntoPages(htmlContent: string): string[] {
   document.body.appendChild(tempDiv);
 
   const MM_TO_PX = 3.7795275591;
-  const CONTENT_HEIGHT_PER_PAGE = 170 * MM_TO_PX; // ~170mm cho content mỗi trang
+  // Chiều cao tổng của trang: 297mm
+  // Padding top/bottom: 10mm + 10mm = 20mm
+  // Vùng có thể sử dụng: 297mm - 20mm = 277mm
+  // Header chiếm khoảng ~120mm (bao gồm logo, title, patient info)
+  // Vùng content area còn lại: 277mm - 120mm = ~157mm
+  // Trừ đi 30mm cho khoảng cách ở cuối mỗi trang (trừ trang cuối)
+  // Vậy chiều cao tối đa cho nội dung là: 157mm - 30mm = 127mm
+  // Để an toàn, giảm thêm 5mm để đảm bảo có khoảng cách
+  const CONTENT_HEIGHT_PER_PAGE = 122 * MM_TO_PX; // ~122mm cho content mỗi trang (đã trừ 30mm + 5mm buffer)
 
   // Sử dụng chiều cao cố định để tránh khoảng trống dư thừa
   const firstPageHeight = CONTENT_HEIGHT_PER_PAGE;
@@ -221,8 +229,12 @@ function splitContentIntoPages(htmlContent: string): string[] {
 
     const maxHeight = pageIndex === 0 ? firstPageHeight : otherPageHeight;
 
-    // Nếu phần tử quá cao, không được cắt - đưa sang trang mới
-    if (currentPageHeight + childHeight > maxHeight) {
+    // Kiểm tra nếu thêm phần tử này sẽ vượt quá chiều cao cho phép
+    // Trừ đi một buffer nhỏ để đảm bảo có khoảng cách
+    const buffer = 5 * MM_TO_PX; // 5mm buffer
+    const effectiveMaxHeight = maxHeight - buffer;
+
+    if (currentPageHeight + childHeight > effectiveMaxHeight) {
       if (currentPageContent.length > 0) {
         // Lưu trang hiện tại
         const pageDiv = document.createElement("div");
@@ -251,9 +263,18 @@ function splitContentIntoPages(htmlContent: string): string[] {
     pages.push(pageDiv.innerHTML);
   }
 
+  // Thêm khoảng cách 30mm vào cuối mỗi trang (trừ trang cuối)
+  const pagesWithSpacing = pages.map((pageContent, index) => {
+    if (index < pages.length - 1 && pageContent) {
+      // Thêm div spacer vào cuối HTML content
+      return pageContent + '<div style="height: 30mm; min-height: 30mm; width: 100%; display: block;"></div>';
+    }
+    return pageContent;
+  });
+
   tempDiv.remove();
 
-  return pages.length > 0 ? pages : [""];
+  return pagesWithSpacing.length > 0 ? pagesWithSpacing : [""];
 }
 
 export function FormTemplate({
@@ -379,6 +400,27 @@ export function FormTemplate({
                 .page-content-area {
                     flex: 1;
                     overflow: visible;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0;
+                }
+                
+                /* Đảm bảo khoảng cách ở cuối trang */
+                .page-content-area > div:last-child {
+                    flex-shrink: 0;
+                }
+                
+                /* Giới hạn chiều cao nội dung để tạo khoảng cách */
+                .page-content-area > div:first-of-type {
+                    max-height: 107mm !important;
+                    overflow: visible !important;
+                }
+                
+                /* Đảm bảo khoảng cách được áp dụng trong PDF */
+                @media print {
+                    .page-content-area > div:first-of-type {
+                        max-height: 107mm !important;
+                    }
                 }
                 
                 /* Export-specific styles */
@@ -453,6 +495,7 @@ export function FormTemplate({
               padding: "10mm 15mm",
               position: "relative",
               overflow: "hidden",
+              pageBreakAfter: index < contentPages.length - 1 ? "always" : "auto",
             }}
           >
             {/* Header on EVERY page */}
@@ -466,30 +509,65 @@ export function FormTemplate({
               style={{
                 flex: "1",
                 overflow: "visible",
-                paddingBottom: index === contentPages.length - 1 ? "40mm" : "0",
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
               }}
             >
               {index === 0 && (
                 <h2
                   className="text-center font-bold text-lg uppercase py-2 mb-4"
-                  style={{ breakInside: "avoid" }}
+                  style={{ breakInside: "avoid", flexShrink: 0 }}
                 >
                   KẾT QUẢ
                 </h2>
               )}
 
-              {pageContent ? (
+              <div 
+                style={{ 
+                  flex: "1",
+                  minHeight: 0,
+                  maxHeight: index < contentPages.length - 1 ? "147mm" : "none",
+                  overflow: "visible",
+                  position: "relative",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
                 <div
-                  className="prose prose-sm max-w-none leading-relaxed text-[14px]"
-                  dangerouslySetInnerHTML={{ __html: pageContent }}
-                />
-              ) : (
-                index === 0 && (
-                  <div className="p-8 text-gray-400 italic text-center border-2 border-dashed border-gray-300 rounded">
-                    Chưa có kết quả xét nghiệm
-                  </div>
-                )
-              )}
+                  style={{
+                    flex: "1",
+                    maxHeight: index < contentPages.length - 1 ? "107mm" : "none",
+                    overflow: "visible",
+                  }}
+                >
+                  {pageContent ? (
+                    <div
+                      className="prose prose-sm max-w-none leading-relaxed text-[14px]"
+                      dangerouslySetInnerHTML={{ __html: pageContent }}
+                    />
+                  ) : (
+                    index === 0 && (
+                      <div className="p-8 text-gray-400 italic text-center border-2 border-dashed border-gray-300 rounded">
+                        Chưa có kết quả xét nghiệm
+                      </div>
+                    )
+                  )}
+                </div>
+                
+                {/* Khoảng cách ở cuối mỗi trang (trừ trang cuối) */}
+                {index < contentPages.length - 1 && (
+                  <div
+                    style={{
+                      height: "30mm",
+                      minHeight: "30mm",
+                      width: "100%",
+                      display: "block",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+              </div>
             </div>
 
             {/* Signature Section - Chỉ trang cuối */}
