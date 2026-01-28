@@ -169,7 +169,7 @@ function PageHeader({
 
           <div className="flex flex-wrap gap-x-16">
             <div>
-              <span className="text-gray-600">Vị trí:</span>
+              <span className="text-gray-600">Vị trí bệnh phẩm:</span>
               <span className="ml-2">{sampleTypeName || "-"}</span>
             </div>
             <div>

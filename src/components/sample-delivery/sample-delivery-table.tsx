@@ -735,7 +735,7 @@ export default function SampleDeliveryTable() {
                                     <Input type="text" value={currentUserName} disabled className="font-semibold" />
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <Label>Tên mẫu bệnh phẩm</Label>
+                                    <Label>Tên vị trí bệnh phẩm</Label>
                                     <Input 
                                         type="text" 
                                         value={sampleTypeNameFromStored} 

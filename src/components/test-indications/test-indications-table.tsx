@@ -790,7 +790,7 @@ export default function TestIndicationsTable() {
 
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium">Chọn bệnh phẩm</Label>
+                            <Label className="text-sm font-medium">Chọn vị trí bệnh phẩm</Label>
                             <Button
                                 type="button"
                                 variant="ghost"

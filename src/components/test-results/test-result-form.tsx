@@ -58,9 +58,11 @@ export default function TestResultForm() {
 
     // Default templates with HTML format (bold titles and indented content)
     const defaultMacroscopicComment = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
+    const emptyMacroscopicComment = `<p style="padding-left: 20px;"></p>` // Không có tiêu đề, chỉ có nội dung rỗng
     const defaultMicroscopicDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultConclude = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p><p style="padding-left: 20px;"></p>`
+    const defaultResultConcludeCellBiology = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultNote = `<p style="padding-left: 0; margin-left: 0;"><strong>BÀN LUẬN:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>KHUYẾN NGHỊ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>HỘI CHẨN:</strong></p><p style="padding-left: 20px;"></p>`
     
     // Helper function to parse resultDescription into macroscopic and microscopic parts
@@ -231,6 +233,78 @@ export default function TestResultForm() {
     const storedServiceRequest = storedServiceRequestData?.data
     const services = storedServiceRequest?.services || []
 
+    // Kiểm tra tiền tố barcode và cập nhật form
+    useEffect(() => {
+        if (services.length > 0) {
+            const receptionCode = services[0]?.receptionCode || ''
+            const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
+            
+            if (receptionCode) {
+                // Nếu tiền tố là "S"
+                if (barcodePrefix === 'S') {
+                    // Cập nhật Kết luận với tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC"
+                    setResultConclude((prevConclude) => {
+                        // Nếu đã có tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC", không thay đổi
+                        if (prevConclude && prevConclude.includes('CHẨN ĐOÁN MÔ BỆNH HỌC')) {
+                            return prevConclude
+                        }
+                        
+                        // Nếu có tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC", thay thế bằng "CHẨN ĐOÁN MÔ BỆNH HỌC"
+                        const contentMatch = prevConclude.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:<\/strong><\/p>([\s\S]*)$/);
+                        if (contentMatch) {
+                            const content = contentMatch[1].trim();
+                            return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${content}`;
+                        }
+                        
+                        // Nếu chưa có tiêu đề hoặc là default, thay bằng tiêu đề mới
+                        if (!prevConclude || prevConclude.trim() === defaultResultConcludeCellBiology.trim()) {
+                            return defaultResultConclude
+                        }
+                        
+                        // Nếu có nội dung nhưng không có tiêu đề, thêm tiêu đề mới
+                        if (!prevConclude.includes('CHẨN ĐOÁN')) {
+                            return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${prevConclude}`;
+                        }
+                        
+                        return prevConclude
+                    })
+                } 
+                // Nếu tiền tố không phải "S"
+                else {
+                    // Bỏ tiêu đề trong input Nhận xét đại thể (chỉ để trống)
+                    setMacroscopicComment(emptyMacroscopicComment)
+                    
+                    // Cập nhật Kết luận với tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC"
+                    setResultConclude((prevConclude) => {
+                        // Nếu đã có tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC", không thay đổi
+                        if (prevConclude && prevConclude.includes('CHẨN ĐOÁN TẾ BÀO HỌC')) {
+                            return prevConclude
+                        }
+                        
+                        // Nếu có tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC", thay thế bằng "CHẨN ĐOÁN TẾ BÀO HỌC"
+                        const contentMatch = prevConclude.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:<\/strong><\/p>([\s\S]*)$/);
+                        if (contentMatch) {
+                            const content = contentMatch[1].trim();
+                            return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${content}`;
+                        }
+                        
+                        // Nếu chưa có tiêu đề hoặc là default, thay bằng tiêu đề mới
+                        if (!prevConclude || prevConclude.trim() === defaultResultConclude.trim()) {
+                            return defaultResultConcludeCellBiology
+                        }
+                        
+                        // Nếu có nội dung nhưng không có tiêu đề, thêm tiêu đề mới
+                        if (!prevConclude.includes('CHẨN ĐOÁN')) {
+                            return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${prevConclude}`;
+                        }
+                        
+                        return prevConclude
+                    })
+                }
+            }
+        }
+    }, [services, storedServiceReqId])
+
     // Xác định phòng/khoa hiện tại từ tab đang hoạt động
     const currentTab = (tabs as any)?.find?.((t: any) => t?.key === activeKey) ?? (tabs as any)?.[0]
     const currentRoomId = currentTab?.roomId as string | undefined
@@ -251,6 +325,13 @@ export default function TestResultForm() {
         setSelectedServiceReqCode(serviceReqCode)
         if (storedServiceReqId) {
             setStoredServiceReqId(storedServiceReqId)
+            // Reset các field về default để logic kiểm tra tiền tố có thể áp dụng
+            setResultDescription(defaultResultDescription)
+            syncResultDescription(defaultResultDescription)
+            setResultConclude(defaultResultConclude)
+            setResultNote(defaultResultNote)
+            setResultName('')
+            setMacroscopicComment(defaultMacroscopicComment)
         }
     }
 
@@ -534,33 +615,88 @@ export default function TestResultForm() {
                 const desc = data.resultDescription || defaultResultDescription
                 setResultDescription(desc)
                 syncResultDescription(desc)
-                setResultConclude(data.resultConclude || defaultResultConclude)
+                
+                // Kiểm tra tiền tố barcode để quyết định tiêu đề kết luận
+                const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
+                const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
+                
+                let concludeToSet = data.resultConclude || defaultResultConclude
+                let macroscopicToSet = data.resultComment || defaultMacroscopicComment
+                
+                // Nếu có receptionCode, áp dụng logic kiểm tra tiền tố
+                if (receptionCode) {
+                    if (barcodePrefix === 'S') {
+                        // Tiền tố là "S" - đảm bảo tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC"
+                        if (concludeToSet && !concludeToSet.includes('CHẨN ĐOÁN MÔ BỆNH HỌC')) {
+                            const contentMatch = concludeToSet.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:<\/strong><\/p>([\s\S]*)$/);
+                            if (contentMatch) {
+                                const content = contentMatch[1].trim();
+                                concludeToSet = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${content}`;
+                            } else if (!concludeToSet.includes('CHẨN ĐOÁN')) {
+                                concludeToSet = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${concludeToSet}`;
+                            } else {
+                                concludeToSet = defaultResultConclude
+                            }
+                        }
+                    } else {
+                        // Tiền tố không phải "S" - bỏ tiêu đề trong nhận xét đại thể và đảm bảo tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC"
+                        macroscopicToSet = emptyMacroscopicComment
+                        
+                        if (concludeToSet && !concludeToSet.includes('CHẨN ĐOÁN TẾ BÀO HỌC')) {
+                            const contentMatch = concludeToSet.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:<\/strong><\/p>([\s\S]*)$/);
+                            if (contentMatch) {
+                                const content = contentMatch[1].trim();
+                                concludeToSet = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${content}`;
+                            } else if (!concludeToSet.includes('CHẨN ĐOÁN')) {
+                                concludeToSet = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${concludeToSet}`;
+                            } else {
+                                concludeToSet = defaultResultConcludeCellBiology
+                            }
+                        }
+                    }
+                }
+                
+                setResultConclude(concludeToSet)
                 setResultNote(data.resultNote || defaultResultNote)
                 setResultName(data.resultName || '')
-                
-                // Gán resultComment vào input Nhận xét đại thể
-                if (data.resultComment) {
-                    setMacroscopicComment(data.resultComment)
-                } else {
-                    setMacroscopicComment(defaultMacroscopicComment)
-                }
+                setMacroscopicComment(macroscopicToSet)
             } else {
-                // Nếu không có kết quả, reset về default templates
+                // Nếu không có kết quả, reset về default templates và áp dụng logic tiền tố
+                const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
+                const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
+                
                 setResultDescription(defaultResultDescription)
                 syncResultDescription(defaultResultDescription)
-                setResultConclude(defaultResultConclude)
+                
+                if (receptionCode && barcodePrefix !== 'S') {
+                    setResultConclude(defaultResultConcludeCellBiology)
+                    setMacroscopicComment(emptyMacroscopicComment)
+                } else {
+                    setResultConclude(defaultResultConclude)
+                    setMacroscopicComment(defaultMacroscopicComment)
+                }
+                
                 setResultNote(defaultResultNote)
                 setResultName('')
-                setMacroscopicComment(defaultMacroscopicComment)
             }
         } catch (error) {
-            // Nếu có lỗi, reset về default templates
+            // Nếu có lỗi, reset về default templates và áp dụng logic tiền tố
+            const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
+            const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
+            
             setResultDescription(defaultResultDescription)
             syncResultDescription(defaultResultDescription)
-            setResultConclude(defaultResultConclude)
+            
+            if (receptionCode && barcodePrefix !== 'S') {
+                setResultConclude(defaultResultConcludeCellBiology)
+                setMacroscopicComment(emptyMacroscopicComment)
+            } else {
+                setResultConclude(defaultResultConclude)
+                setMacroscopicComment(defaultMacroscopicComment)
+            }
+            
             setResultNote(defaultResultNote)
             setResultName('')
-            setMacroscopicComment(defaultMacroscopicComment)
         }
     }
 
