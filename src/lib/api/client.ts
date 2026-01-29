@@ -951,6 +951,7 @@ export interface StoredServiceRequestResponse {
     updatedAt: string;
     deletedAt?: string | null;
     stainingMethodName?: string | null;
+    flag?: string | null;
 }
 
 export interface ServiceRequestDetail {
@@ -2722,7 +2723,7 @@ class ApiClient {
         const params = new URLSearchParams();
 
         // Set defaults
-        params.append("limit", "100");
+        params.append("limit", "1000");
         params.append("offset", "0");
         params.append("sortBy", "sortOrder");
         params.append("sortOrder", "ASC");

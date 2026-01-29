@@ -622,7 +622,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                             <SelectValue placeholder="Chọn bệnh phẩm..." />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tất cả</SelectItem>
+                            <SelectItem value="all">Tất cả phân loại</SelectItem>
                             <SelectItem value="ST">ST</SelectItem>
                             <SelectItem value="PT">PT</SelectItem>
                             <SelectItem value="HMMD">HMMD</SelectItem>

@@ -820,7 +820,7 @@ export default function SampleDeliveryTable() {
                                     </Select>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    <Label>Chọn cờ để đánh dấu</Label>
+                                    <Label>Phân loại bệnh phẩm</Label>
                                     <Select value={selectedFlag} onValueChange={setSelectedFlag}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Chọn cờ..." />

@@ -177,16 +177,19 @@ export default function TestIndicationsTable() {
                 const response = await apiClient.querySampleTypeByReceptionCode(receptionCode)
 
                 if (response.success && response.data?.sampleTypeId) {
+                    // Xóa search để dropdown hiển thị full list, giúp Select tìm thấy option tương ứng
+                    setSampleTypeSearch('')
+                    setAppliedSearch('')
                     // Set sampleTypeId vào dropdown
                     setSelectedSampleType(response.data.sampleTypeId)
                     toast({
                         title: "Thành công",
-                        description: "Đã tìm thấy bệnh phẩm tương ứng với mã tiếp nhận",
+                        description: "Đã tìm thấy bệnh phẩm tương ứng với Barcode",
                         variant: "default"
                     })
                 } else {
                     // Hiển thị lỗi từ API
-                    const errorMessage = response.error || response.message || "Không tìm thấy bệnh phẩm tương ứng"
+                    const errorMessage = response.error || response.message || "Không tìm thấy bệnh phẩm tương ứng với Barcode"
                     toast({
                         title: "Lỗi",
                         description: errorMessage,
@@ -279,19 +282,26 @@ export default function TestIndicationsTable() {
         createSampleTypeMutation.mutate(data)
     }
 
-    // Nếu có search và có kết quả từ API search, dùng kết quả đó. Nếu không có search, dùng danh sách đầy đủ
+    // Nếu có search và có kết quả từ API search, dùng kết quả đó. Nếu không có search, dùng danh sách đầy đủ.
+    // Luôn đảm bảo item đang chọn (selectedSampleType) có trong list để Select hiển thị đúng sau khi tra barcode.
     const filteredSampleTypeItems = useMemo(() => {
+        let list: SampleType[]
         if (appliedSearch && appliedSearch.trim()) {
-            // Nếu có search term và có kết quả từ API (response.data là mảng)
             if (searchedSampleTypeData?.data && Array.isArray(searchedSampleTypeData.data)) {
-                return searchedSampleTypeData.data
+                list = searchedSampleTypeData.data
+            } else {
+                list = []
             }
-            // Nếu có search term nhưng không có kết quả, trả về mảng rỗng
-            return []
+        } else {
+            list = sampleTypeItems
         }
-        // Nếu không có search term, trả về tất cả
-        return sampleTypeItems
-    }, [appliedSearch, searchedSampleTypeData, sampleTypeItems])
+        // Nếu có selectedSampleType mà không nằm trong list (vd: vừa tra barcode), thêm từ sampleTypeItems để Select hiển thị
+        if (selectedSampleType && !list.some((s) => s.id === selectedSampleType)) {
+            const selected = sampleTypeItems.find((s) => s.id === selectedSampleType)
+            if (selected) list = [selected, ...list]
+        }
+        return list
+    }, [appliedSearch, searchedSampleTypeData, sampleTypeItems, selectedSampleType])
 
 
     const { data: profileData } = useQuery({
@@ -866,7 +876,7 @@ export default function TestIndicationsTable() {
                         {isManualInput ? (
                             <Input
                                 type="text"
-                                placeholder="Nhấn Enter để tìm bệnh phẩm"
+                                placeholder="Nhập Barcode cũ và nhấn Enter để tìm bệnh phẩm"
                                 value={manualBarcode}
                                 onChange={(e) => setManualBarcode(e.target.value)}
                                 onKeyDown={handleManualBarcodeKeyDown}

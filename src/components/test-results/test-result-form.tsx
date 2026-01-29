@@ -1,21 +1,21 @@
 'use client';
 
-import {useEffect, useState, useRef} from "react";
-import {useTabsStore} from "@/lib/stores/tabs";
-import {usePathname} from "next/navigation";
-import {useTabPersistence} from "@/hooks/use-tab-persistence";
-import {ServiceRequestsSidebar} from "@/components/service-requests-sidebar/service-requests-sidebar";
-import {useQuery, useQueryClient} from "@tanstack/react-query";
-import {apiClient} from "@/lib/api/client";
-import {useCurrentRoomStore} from "@/lib/stores/current-room";
-import {Label} from "@/components/ui/label";
-import {Input} from "@/components/ui/input";
-import {Textarea} from "@/components/ui/textarea";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import { useEffect, useState, useRef } from "react";
+import { useTabsStore } from "@/lib/stores/tabs";
+import { usePathname } from "next/navigation";
+import { useTabPersistence } from "@/hooks/use-tab-persistence";
+import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api/client";
+import { useCurrentRoomStore } from "@/lib/stores/current-room";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
-import {useToast} from "@/hooks/use-toast";
-import {CheckCircle2, XCircle, Loader2} from "lucide-react";
-import {LoadingSpinner} from "@/components/ui/loading";
+import { useToast } from "@/hooks/use-toast";
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading";
 import {
     Dialog,
     DialogContent,
@@ -24,17 +24,17 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {FormTemplate} from "@/components/test-results/form-export-pdf/form-template";
-import {Button} from "@/components/ui/button";
-import {useHisStore} from "@/lib/stores/his";
-import {downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer} from '@/lib/utils/pdf-export';
-import {ResultTemplateSelector} from "@/components/result-template/result-template-selector";
+import { FormTemplate } from "@/components/test-results/form-export-pdf/form-template";
+import { Button } from "@/components/ui/button";
+import { useHisStore } from "@/lib/stores/his";
+import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer } from '@/lib/utils/pdf-export';
+import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
 
 export default function TestResultForm() {
     const pathname = usePathname()
-    const {setTabData, getTabData, activeKey, tabs} = useTabsStore()
-    const {toast} = useToast()
-    const {token: hisToken} = useHisStore()
+    const { setTabData, getTabData, activeKey, tabs } = useTabsStore()
+    const { toast } = useToast()
+    const { token: hisToken } = useHisStore()
     const queryClient = useQueryClient()
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
     const [storedServiceReqId, setStoredServiceReqId] = useState<string>('')
@@ -64,7 +64,7 @@ export default function TestResultForm() {
     const defaultResultConclude = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultConcludeCellBiology = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultNote = `<p style="padding-left: 0; margin-left: 0;"><strong>BÀN LUẬN:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>KHUYẾN NGHỊ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>HỘI CHẨN:</strong></p><p style="padding-left: 20px;"></p>`
-    
+
     // Helper function to parse resultDescription into macroscopic and microscopic parts
     const parseResultDescription = (description: string) => {
         // Tìm phần NHẬN XÉT ĐẠI THỂ (bao gồm cả tiêu đề)
@@ -72,10 +72,10 @@ export default function TestResultForm() {
         const macroscopicMatch = description.match(/(<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:<\/strong><\/p>[\s\S]*?)(?=<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>|$)/);
         // Tìm phần MÔ TẢ VI THỂ (bao gồm cả tiêu đề)
         const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>([\s\S]*?)$/);
-        
+
         let macroscopic = defaultMacroscopicComment;
         let microscopic = defaultMicroscopicDescription;
-        
+
         if (macroscopicMatch) {
             macroscopic = macroscopicMatch[1].trim();
             // Đảm bảo có tiêu đề
@@ -83,13 +83,13 @@ export default function TestResultForm() {
                 macroscopic = defaultMacroscopicComment;
             }
         }
-        
+
         if (microscopicMatch) {
             const content = microscopicMatch[1].trim();
             // Thêm lại tiêu đề nếu chưa có
             microscopic = `<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p>${content}`;
         }
-        
+
         return { macroscopic, microscopic };
     };
 
@@ -98,28 +98,28 @@ export default function TestResultForm() {
         // Đảm bảo mỗi phần đã có tiêu đề, nếu chưa thì thêm vào
         let macro = macroscopic;
         let micro = microscopic;
-        
+
         if (!macro.includes('NHẬN XÉT ĐẠI THỂ')) {
             macro = defaultMacroscopicComment;
         }
-        
+
         if (!micro.includes('MÔ TẢ VI THỂ')) {
             micro = defaultMicroscopicDescription;
         }
-        
+
         return `${macro}${micro}`;
     };
-    
+
     const [macroscopicComment, setMacroscopicComment] = useState<string>(defaultMacroscopicComment)
     const [microscopicDescription, setMicroscopicDescription] = useState<string>(defaultMicroscopicDescription)
-    
+
     // Helper function to sync resultDescription with macroscopic and microscopic states
     const syncResultDescription = (description: string) => {
         // Chỉ gán resultDescription vào Mô tả vi thể, không gán vào Nhận xét đại thể
         // Nếu description có chứa "MÔ TẢ VI THỂ", extract phần đó
         // Dùng [\s\S] thay vì . với flag s để tương thích ES5
         const microscopicMatch = description.match(/<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:<\/strong><\/p>([\s\S]*?)$/);
-        
+
         if (microscopicMatch) {
             const content = microscopicMatch[1].trim();
             setMicroscopicDescription(`<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p>${content}`);
@@ -132,20 +132,20 @@ export default function TestResultForm() {
                 setMicroscopicDescription(`<p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p>${description}`);
             }
         }
-        
+
         // Giữ Nhận xét đại thể ở giá trị mặc định (rỗng)
         setMacroscopicComment(defaultMacroscopicComment)
     }
-    
+
     // Helper function to get combined resultDescription
     const getResultDescription = () => {
         return combineResultDescription(macroscopicComment, microscopicDescription)
     }
-    
+
     const [resultDescription, setResultDescription] = useState<string>(defaultResultDescription)
     const [resultConclude, setResultConclude] = useState<string>(defaultResultConclude)
     const [resultNote, setResultNote] = useState<string>(defaultResultNote)
-    
+
     // Sync when macroscopic or microscopic changes
     useEffect(() => {
         const combined = combineResultDescription(macroscopicComment, microscopicDescription)
@@ -190,7 +190,7 @@ export default function TestResultForm() {
     )
 
     // Fetch service request details when selected
-    const {data: serviceRequestData, isLoading, refetch: refetchServiceRequest} = useQuery({
+    const { data: serviceRequestData, isLoading, refetch: refetchServiceRequest } = useQuery({
         queryKey: ['service-request', selectedServiceReqCode, refreshTrigger],
         queryFn: () => apiClient.getServiceRequestByCode(selectedServiceReqCode),
         enabled: !!selectedServiceReqCode,
@@ -198,7 +198,7 @@ export default function TestResultForm() {
     })
 
     // Fetch stored service request with services
-    const {data: storedServiceRequestData, refetch: refetchStoredServiceRequest} = useQuery({
+    const { data: storedServiceRequestData, refetch: refetchStoredServiceRequest } = useQuery({
         queryKey: ['stored-service-request', storedServiceReqId, refreshTrigger],
         queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId),
         enabled: !!storedServiceReqId,
@@ -215,7 +215,7 @@ export default function TestResultForm() {
     }, [refreshTrigger, refetchServiceRequest, refetchStoredServiceRequest])
 
     // Fetch specific service for preview
-    const {data: previewServiceData} = useQuery({
+    const { data: previewServiceData } = useQuery({
         queryKey: ['stored-service-detail', previewServiceId],
         queryFn: () => apiClient.getStoredServiceById(previewServiceId!),
         enabled: !!previewServiceId && previewDialogOpen,
@@ -238,7 +238,7 @@ export default function TestResultForm() {
         if (services.length > 0) {
             const receptionCode = services[0]?.receptionCode || ''
             const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
-            
+
             if (receptionCode) {
                 // Nếu tiền tố là "S"
                 if (barcodePrefix === 'S') {
@@ -248,56 +248,56 @@ export default function TestResultForm() {
                         if (prevConclude && prevConclude.includes('CHẨN ĐOÁN MÔ BỆNH HỌC')) {
                             return prevConclude
                         }
-                        
+
                         // Nếu có tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC", thay thế bằng "CHẨN ĐOÁN MÔ BỆNH HỌC"
                         const contentMatch = prevConclude.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:<\/strong><\/p>([\s\S]*)$/);
                         if (contentMatch) {
                             const content = contentMatch[1].trim();
                             return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${content}`;
                         }
-                        
+
                         // Nếu chưa có tiêu đề hoặc là default, thay bằng tiêu đề mới
                         if (!prevConclude || prevConclude.trim() === defaultResultConcludeCellBiology.trim()) {
                             return defaultResultConclude
                         }
-                        
+
                         // Nếu có nội dung nhưng không có tiêu đề, thêm tiêu đề mới
                         if (!prevConclude.includes('CHẨN ĐOÁN')) {
                             return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${prevConclude}`;
                         }
-                        
+
                         return prevConclude
                     })
-                } 
+                }
                 // Nếu tiền tố không phải "S"
                 else {
                     // Bỏ tiêu đề trong input Nhận xét đại thể (chỉ để trống)
                     setMacroscopicComment(emptyMacroscopicComment)
-                    
+
                     // Cập nhật Kết luận với tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC"
                     setResultConclude((prevConclude) => {
                         // Nếu đã có tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC", không thay đổi
                         if (prevConclude && prevConclude.includes('CHẨN ĐOÁN TẾ BÀO HỌC')) {
                             return prevConclude
                         }
-                        
+
                         // Nếu có tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC", thay thế bằng "CHẨN ĐOÁN TẾ BÀO HỌC"
                         const contentMatch = prevConclude.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:<\/strong><\/p>([\s\S]*)$/);
                         if (contentMatch) {
                             const content = contentMatch[1].trim();
                             return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${content}`;
                         }
-                        
+
                         // Nếu chưa có tiêu đề hoặc là default, thay bằng tiêu đề mới
                         if (!prevConclude || prevConclude.trim() === defaultResultConclude.trim()) {
                             return defaultResultConcludeCellBiology
                         }
-                        
+
                         // Nếu có nội dung nhưng không có tiêu đề, thêm tiêu đề mới
                         if (!prevConclude.includes('CHẨN ĐOÁN')) {
                             return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${prevConclude}`;
                         }
-                        
+
                         return prevConclude
                     })
                 }
@@ -341,19 +341,19 @@ export default function TestResultForm() {
     const handleTemplateSelect = (_templateContent: string, _templateName: string) => {
         // Không sử dụng nữa, dùng handleTemplateSelectFields thay thế
     }
-    
+
     // Handler khi chọn mẫu kết quả với 3 fields riêng biệt
     const handleTemplateSelectFields = (resultDescription: string, resultConclude: string, resultNote: string, templateName: string) => {
         // Lưu giá trị hiện tại của nhận xét đại thể trước khi chọn mẫu để giữ nguyên
         const currentMacroscopicComment = macroscopicComment
-        
+
         const desc = resultDescription || defaultResultDescription
         setResultDescription(desc)
         syncResultDescription(desc)
-        
+
         // Luôn giữ nguyên giá trị nhận xét đại thể sau khi chọn mẫu
         setMacroscopicComment(currentMacroscopicComment)
-        
+
         setResultConclude(resultConclude || defaultResultConclude)
         setResultNote(resultNote || defaultResultNote)
         setResultName(templateName)
@@ -386,30 +386,30 @@ export default function TestResultForm() {
     // Helper function để chuyển HTML thành text có format (giữ xuống dòng)
     const htmlToFormattedText = (html: string): string => {
         if (!html) return '';
-        
+
         if (typeof globalThis.window !== 'undefined') {
             // Tạo một DOM element tạm thời để parse HTML
             const tmp = document.createElement('div');
             tmp.innerHTML = html;
-            
+
             // Thay thế các block elements và <br> bằng ký tự xuống dòng
             const blockElements = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'ul', 'ol', 'tr', 'td', 'th'];
-            
+
             // Clone node tree để tránh modify DOM trực tiếp
             const walker = document.createTreeWalker(
                 tmp,
                 NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
                 null
             );
-            
+
             const nodesToProcess: Array<{ element: Element; insertBr: boolean }> = [];
             let node;
-            
+
             while ((node = walker.nextNode())) {
                 if (node.nodeType === Node.ELEMENT_NODE) {
                     const element = node as Element;
                     const tagName = element.tagName.toLowerCase();
-                    
+
                     if (tagName === 'br') {
                         // Thay thế <br> bằng text node với ký tự xuống dòng
                         nodesToProcess.push({ element, insertBr: true });
@@ -419,7 +419,7 @@ export default function TestResultForm() {
                     }
                 }
             }
-            
+
             // Xử lý ngược lại để tránh ảnh hưởng đến index
             const reversedNodes = [...nodesToProcess].reverse();
             reversedNodes.forEach(({ element, insertBr }) => {
@@ -435,10 +435,10 @@ export default function TestResultForm() {
                     element.appendChild(brAfter);
                 }
             });
-            
+
             // Lấy textContent để lấy text với các ký tự xuống dòng đã được thêm
             let text = tmp.textContent || '';
-            
+
             // Xử lý HTML entities
             text = text
                 .replace(/&nbsp;/g, ' ')
@@ -448,17 +448,17 @@ export default function TestResultForm() {
                 .replace(/&quot;/g, '"')
                 .replace(/&#39;/g, "'")
                 .replace(/&apos;/g, "'");
-            
+
             // Clean up: loại bỏ các xuống dòng và khoảng trắng thừa nhưng giữ format cơ bản
             text = text
                 .replace(/\n{3,}/g, '\n\n')        // Tối đa 2 xuống dòng liên tiếp
                 .replace(/([ \t]){3,}/g, '  ')     // Tối đa 2 khoảng trắng liên tiếp
                 .replace(/^\s+|\s+$/g, '')         // Loại bỏ khoảng trắng đầu cuối
                 .replace(/\n\s+\n/g, '\n\n');      // Loại bỏ khoảng trắng giữa các đoạn
-            
+
             return text;
         }
-        
+
         // Fallback cho server-side: dùng regex
         return html
             .replace(/<p[^>]*>/gi, '\n')
@@ -522,7 +522,7 @@ export default function TestResultForm() {
             // Lấy resultComment và resultDescription, kết hợp lại để tạo Description
             const resultCommentText = stripHtmlForDescription(service?.resultComment || '');
             const resultDescriptionText = stripHtmlForDescription(service?.resultDescription || service?.resultText || '');
-            
+
             // Kết hợp resultComment và resultDescription để tạo Description
             const descriptionParts: string[] = [];
             if (resultCommentText) {
@@ -532,7 +532,7 @@ export default function TestResultForm() {
                 descriptionParts.push(resultDescriptionText);
             }
             const description = descriptionParts.join('\n\n');
-            
+
             const conclude = stripHtml(service?.resultConclude || '');
             const note = stripHtml(service?.resultNote || '');
 
@@ -571,7 +571,7 @@ export default function TestResultForm() {
                 );
 
                 if (!hisPacsUpdateResponse.success) {
-             
+
                     return {
                         success: false,
                         serviceCode: tdlServiceCode,
@@ -617,14 +617,14 @@ export default function TestResultForm() {
                 const desc = data.resultDescription || defaultResultDescription
                 setResultDescription(desc)
                 syncResultDescription(desc)
-                
+
                 // Kiểm tra tiền tố barcode để quyết định tiêu đề kết luận
                 const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
                 const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
-                
+
                 let concludeToSet = data.resultConclude || defaultResultConclude
                 let macroscopicToSet = data.resultComment || defaultMacroscopicComment
-                
+
                 // Nếu có receptionCode, áp dụng logic kiểm tra tiền tố
                 if (receptionCode) {
                     if (barcodePrefix === 'S') {
@@ -643,7 +643,7 @@ export default function TestResultForm() {
                     } else {
                         // Tiền tố không phải "S" - bỏ tiêu đề trong nhận xét đại thể và đảm bảo tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC"
                         macroscopicToSet = emptyMacroscopicComment
-                        
+
                         if (concludeToSet && !concludeToSet.includes('CHẨN ĐOÁN TẾ BÀO HỌC')) {
                             const contentMatch = concludeToSet.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:<\/strong><\/p>([\s\S]*)$/);
                             if (contentMatch) {
@@ -657,7 +657,7 @@ export default function TestResultForm() {
                         }
                     }
                 }
-                
+
                 setResultConclude(concludeToSet)
                 setResultNote(data.resultNote || defaultResultNote)
                 setResultName(data.resultName || '')
@@ -666,10 +666,10 @@ export default function TestResultForm() {
                 // Nếu không có kết quả, reset về default templates và áp dụng logic tiền tố
                 const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
                 const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
-                
+
                 setResultDescription(defaultResultDescription)
                 syncResultDescription(defaultResultDescription)
-                
+
                 if (receptionCode && barcodePrefix !== 'S') {
                     setResultConclude(defaultResultConcludeCellBiology)
                     setMacroscopicComment(emptyMacroscopicComment)
@@ -677,7 +677,7 @@ export default function TestResultForm() {
                     setResultConclude(defaultResultConclude)
                     setMacroscopicComment(defaultMacroscopicComment)
                 }
-                
+
                 setResultNote(defaultResultNote)
                 setResultName('')
             }
@@ -685,10 +685,10 @@ export default function TestResultForm() {
             // Nếu có lỗi, reset về default templates và áp dụng logic tiền tố
             const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
             const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
-            
+
             setResultDescription(defaultResultDescription)
             syncResultDescription(defaultResultDescription)
-            
+
             if (receptionCode && barcodePrefix !== 'S') {
                 setResultConclude(defaultResultConcludeCellBiology)
                 setMacroscopicComment(emptyMacroscopicComment)
@@ -696,7 +696,7 @@ export default function TestResultForm() {
                 setResultConclude(defaultResultConclude)
                 setMacroscopicComment(defaultMacroscopicComment)
             }
-            
+
             setResultNote(defaultResultNote)
             setResultName('')
         }
@@ -708,10 +708,10 @@ export default function TestResultForm() {
         try {
             const fileName = `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`;
             await downloadPdfFromContainerWithPuppeteer(previewRef.current, fileName);
-            
+
         } catch (error: any) {
             console.error('Error downloading PDF:', error);
-            
+
             // Extract error message
             let errorMessage = "Có lỗi xảy ra khi tải PDF";
             if (error?.message) {
@@ -719,7 +719,7 @@ export default function TestResultForm() {
             } else if (typeof error === 'string') {
                 errorMessage = error;
             }
-            
+
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -738,7 +738,7 @@ export default function TestResultForm() {
 
         } catch (error: any) {
             console.error('Error printing PDF:', error);
-            
+
             // Extract error message
             let errorMessage = "Có lỗi xảy ra khi in PDF";
             if (error?.message) {
@@ -746,7 +746,7 @@ export default function TestResultForm() {
             } else if (typeof error === 'string') {
                 errorMessage = error;
             }
-            
+
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -760,7 +760,7 @@ export default function TestResultForm() {
         if (!previewRef.current || !storedServiceRequestData?.data || !previewServiceData?.data) return null;
 
         try {
-            const {base64, pageCount} = await pdfBase64FromContainerWithPuppeteer(previewRef.current);
+            const { base64, pageCount } = await pdfBase64FromContainerWithPuppeteer(previewRef.current);
             setSignaturePageTotal(pageCount);
             return base64;
         } catch (error) {
@@ -807,13 +807,13 @@ export default function TestResultForm() {
             if (response.success && response.data?.Data && response.data.Data.length > 0) {
                 const signerData = response.data.Data[0]
                 const signerId = signerData.ID.toString()
-                
+
                 // Set state để hiển thị (nếu cần)
                 setSignerInfo({
                     signerId: signerId,
                     serialNumber: ''
                 })
-                
+
                 // Truyền signerId trực tiếp vào hàm ký số
                 await handleDigitalSign(signerId)
             } else {
@@ -837,7 +837,7 @@ export default function TestResultForm() {
     const handleDigitalSign = async (signerIdParam?: string) => {
         // Sử dụng parameter nếu có, nếu không thì dùng state
         const signerIdToUse = signerIdParam || signerInfo.signerId
-        
+
         if (!signerIdToUse) {
             toast({
                 variant: "destructive",
@@ -857,9 +857,9 @@ export default function TestResultForm() {
         }
 
         // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả
-        const hasResult = previewServiceData?.data?.resultText || 
-                         previewServiceData?.data?.resultDescription || 
-                         resultDescription.trim()
+        const hasResult = previewServiceData?.data?.resultText ||
+            previewServiceData?.data?.resultDescription ||
+            resultDescription.trim()
         if (!hasResult) {
             toast({
                 variant: "destructive",
@@ -1005,7 +1005,7 @@ export default function TestResultForm() {
                         });
 
                         const updateResults = await Promise.allSettled(updatePromises);
-                        
+
                         // Kiểm tra kết quả cập nhật
                         const updateSuccessful = updateResults.filter(r => r.status === 'fulfilled').length;
                         const updateFailed = updateResults.filter(r => r.status === 'rejected').length;
@@ -1015,7 +1015,7 @@ export default function TestResultForm() {
                                 .filter(r => r.status === 'rejected')
                                 .map(r => r.status === 'rejected' ? r.reason?.message || 'Lỗi không xác định' : '')
                                 .filter(Boolean);
-                            
+
                             toast({
                                 variant: "destructive",
                                 title: "Cảnh báo",
@@ -1033,13 +1033,13 @@ export default function TestResultForm() {
                             const refreshedServices = refreshedData.data?.data?.services || services;
 
                             // Gọi API updateHisPacsResult cho tất cả dịch vụ
-                            const hisPacsPromises = refreshedServices.map((service: any) => 
+                            const hisPacsPromises = refreshedServices.map((service: any) =>
                                 updateHisPacsResultForService(service, tokenCode!)
                             );
 
                             const hisPacsResults = await Promise.allSettled(hisPacsPromises);
-                            
-                            const hisPacsSuccessful = hisPacsResults.filter(r => 
+
+                            const hisPacsSuccessful = hisPacsResults.filter(r =>
                                 r.status === 'fulfilled' && r.value.success
                             ).length;
                             const hisPacsFailed = hisPacsResults.length - hisPacsSuccessful;
@@ -1081,7 +1081,7 @@ export default function TestResultForm() {
                             currentDepartmentId: currentDepartmentId,
                             currentRoomId: currentRoomId,
                         })
-                        
+
                         if (workflowResponse.success) {
                             // Refresh sidebar sau khi transition thành công
                             setRefreshTrigger(prev => prev + 1)
@@ -1113,11 +1113,11 @@ export default function TestResultForm() {
             } else {
                 // Xử lý lỗi từ EMR API
                 const emrParam = emrResponse?.Param as any;
-                const errorMessage = emrParam?.Messages?.join(', ') || 
-                                   emrParam?.BugCodes?.join(', ') ||
-                                   emrParam?.MessageCodes?.join(', ') ||
-                                   getErrorMessage(response, "Có lỗi xảy ra khi ký số");
-                
+                const errorMessage = emrParam?.Messages?.join(', ') ||
+                    emrParam?.BugCodes?.join(', ') ||
+                    emrParam?.MessageCodes?.join(', ') ||
+                    getErrorMessage(response, "Có lỗi xảy ra khi ký số");
+
                 console.error('❌ API createAndSignHsm failed:', {
                     success: response.success,
                     emrSuccess: isEmrSuccess,
@@ -1191,14 +1191,14 @@ export default function TestResultForm() {
         try {
             // Gom nhóm các service theo documentId để tránh gọi API nhiều lần cho cùng documentId
             const documentIdMap = new Map<number, string[]>()
-            
+
             servicesWithDocumentId.forEach((service: any) => {
                 if (service.documentId) {
                     // Convert documentId sang number
-                    const docId = typeof service.documentId === 'string' 
-                        ? Number.parseInt(service.documentId, 10) 
+                    const docId = typeof service.documentId === 'string'
+                        ? Number.parseInt(service.documentId, 10)
                         : Number(service.documentId)
-                    
+
                     if (!Number.isNaN(docId)) {
                         if (!documentIdMap.has(docId)) {
                             documentIdMap.set(docId, [])
@@ -1213,21 +1213,21 @@ export default function TestResultForm() {
                 Array.from(documentIdMap.entries()).map(async ([documentId, serviceIds]) => {
                     // Gọi API hủy chữ ký số (chỉ một lần cho mỗi documentId) - documentId đã là number
                     const deleteResponse = await apiClient.deleteEmrDocument(documentId, tokenCode!, 'EMR')
-                    
+
                     // Kiểm tra response.success (wrapper) và response.data?.Success (EMR API response)
                     if (!deleteResponse.success) {
                         throw new Error(getErrorMessage(deleteResponse, `Không thể hủy chữ ký số cho document ${documentId}`))
                     }
-                    
+
                     // Kiểm tra Success field trong response.data (EMR API response structure)
                     const emrResponse = deleteResponse.data as any
                     if (!emrResponse?.Success) {
-                        const errorMessage = emrResponse?.Param?.Messages?.join(', ') || 
-                                           emrResponse?.Param?.MessageCodes?.join(', ') ||
-                                           `Không thể hủy chữ ký số cho document ${documentId}`
+                        const errorMessage = emrResponse?.Param?.Messages?.join(', ') ||
+                            emrResponse?.Param?.MessageCodes?.join(', ') ||
+                            `Không thể hủy chữ ký số cho document ${documentId}`
                         throw new Error(errorMessage)
                     }
-                    
+
                     // Chỉ chạy các API tiếp theo nếu Success = true
                     // Cập nhật documentId = null cho tất cả các service có documentId này
                     const updateResults = await Promise.allSettled(
@@ -1239,14 +1239,14 @@ export default function TestResultForm() {
                             return { success: true, serviceId }
                         })
                     )
-                    
+
                     // Kiểm tra nếu có lỗi trong việc cập nhật
                     const updateErrors = updateResults.filter(r => r.status === 'rejected')
                     if (updateErrors.length > 0) {
                         const errorMessages = updateErrors.map(r => r.status === 'rejected' ? r.reason?.message || 'Lỗi không xác định' : '').filter(Boolean)
                         throw new Error(`Lỗi cập nhật: ${errorMessages.join(', ')}`)
                     }
-                    
+
                     return { success: true, documentId, serviceIds }
                 })
             )
@@ -1267,7 +1267,7 @@ export default function TestResultForm() {
                             stateId,
                             storedServiceRequest.id
                         );
-                        
+
                         if (!deleteWorkflowHistoryResponse.success) {
                             console.error('❌ Lỗi xóa workflow history:', deleteWorkflowHistoryResponse);
                             // Không hiển thị toast vì đây không phải lỗi nghiêm trọng
@@ -1277,10 +1277,10 @@ export default function TestResultForm() {
                         // Không hiển thị toast vì đây không phải lỗi nghiêm trọng
                     }
                 }
-                
+
                 // Refresh sidebar để cập nhật trạng thái dịch vụ
                 setRefreshTrigger(prev => prev + 1)
-                
+
                 toast({
                     title: "Thành công",
                     description: `Đã hủy chữ ký số cho ${servicesWithDocumentId.length} dịch vụ`,
@@ -1291,10 +1291,10 @@ export default function TestResultForm() {
                     .filter(r => r.status === 'rejected')
                     .map(r => r.status === 'rejected' ? r.reason?.message || 'Lỗi không xác định' : '')
                     .filter(Boolean)
-                
+
                 toast({
                     title: failed === results.length ? "Lỗi" : "Hoàn thành",
-                    description: failed === results.length 
+                    description: failed === results.length
                         ? `Không thể hủy chữ ký số: ${errorMessages[0] || 'Lỗi không xác định'}`
                         : `Đã hủy chữ ký số cho ${successful}/${documentIdMap.size} document. ${failed} document gặp lỗi.`,
                     variant: failed === results.length ? "destructive" : "default"
@@ -1332,7 +1332,7 @@ export default function TestResultForm() {
             })
             return
         }
-        
+
         if (!resultConclude.trim()) {
             toast({
                 variant: "destructive",
@@ -1359,7 +1359,7 @@ export default function TestResultForm() {
             if (!templateResultDescription.includes('MÔ TẢ VI THỂ')) {
                 templateResultDescription = defaultMicroscopicDescription
             }
-            
+
             // Lưu kết quả cho tất cả dịch vụ
             const savePromises = services.map(async (service) => {
                 const serviceId = service.id
@@ -1373,20 +1373,20 @@ export default function TestResultForm() {
                     resultStatus: 'NORMAL',
                     resultName: resultName
                 })
-                
+
                 if (!response.success) {
                     throw new Error(getErrorMessage(response, `Không thể lưu kết quả cho dịch vụ ${serviceId}`))
                 }
-                
+
                 return response
             })
 
             const saveResults = await Promise.allSettled(savePromises)
-            
+
             // Kiểm tra kết quả lưu
             const saveSuccessful = saveResults.filter(r => r.status === 'fulfilled').length
             const saveFailed = saveResults.filter(r => r.status === 'rejected').length
-            
+
             if (saveFailed > 0) {
                 const errorMessages = saveResults
                     .filter(r => r.status === 'rejected')
@@ -1397,13 +1397,13 @@ export default function TestResultForm() {
                         return ''
                     })
                     .filter(Boolean)
-                
+
                 toast({
                     variant: "destructive",
                     title: "Lỗi",
                     description: `Không thể lưu kết quả cho ${saveFailed}/${services.length} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
                 })
-                
+
                 // Nếu tất cả đều lỗi, dừng lại
                 if (saveFailed === services.length) {
                     return
@@ -1421,7 +1421,7 @@ export default function TestResultForm() {
                         currentDepartmentId: currentDepartmentId,
                         currentRoomId: currentRoomId,
                     })
-                    
+
                     if (workflowResponse.success) {
                         // Refresh sidebar sau khi transition thành công
                         setRefreshTrigger(prev => prev + 1)
@@ -1446,7 +1446,7 @@ export default function TestResultForm() {
             if (saveSuccessful > 0 && storedServiceRequest?.id && numOfBlock !== null && numOfBlock !== undefined && numOfBlock.trim() !== '') {
                 try {
                     const numOfBlockValue = numOfBlock.trim()
-                   
+
                     const numOfBlockResponse = await apiClient.updateStoredServiceRequestNumOfBlock(
                         storedServiceRequest.id,
                         numOfBlockValue
@@ -1461,7 +1461,7 @@ export default function TestResultForm() {
                         console.log('✅ Cập nhật số lượng block thành công')
                     }
                 } catch (error: unknown) {
-                
+
                     const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
                     toast({
                         title: 'Cảnh báo',
@@ -1470,35 +1470,35 @@ export default function TestResultForm() {
                     })
                 }
             }
-            
+
             // Hiển thị thông báo thành công
             if (saveSuccessful > 0) {
                 toast({
                     title: "Thành công",
-                    description: saveFailed > 0 
+                    description: saveFailed > 0
                         ? `Đã lưu kết quả cho ${saveSuccessful}/${services.length} dịch vụ`
                         : `Đã lưu kết quả cho ${services.length} dịch vụ`,
                     variant: "default"
                 })
-                
+
                 // Invalidate và refetch để cập nhật danh sách dịch vụ
-                await queryClient.invalidateQueries({ 
-                    queryKey: ['stored-service-request', storedServiceRequest.id] 
+                await queryClient.invalidateQueries({
+                    queryKey: ['stored-service-request', storedServiceRequest.id]
                 })
-                await queryClient.invalidateQueries({ 
-                    queryKey: ['stored-service-detail'] 
+                await queryClient.invalidateQueries({
+                    queryKey: ['stored-service-detail']
                 })
-                
+
                 // Refresh ngay lập tức để cập nhật bảng dịch vụ
                 await refetchStoredServiceRequest()
 
                 // Không gọi API updateHisPacsResult ở đây nữa
                 // API updateHisPacsResult chỉ được gọi sau khi ký số thành công (trong handleDigitalSign)
             }
-            
+
             // Trigger refresh để cập nhật trạng thái dịch vụ (cho sidebar và các components khác)
             setRefreshTrigger(prev => prev + 1)
-            
+
             setResultDescription(defaultResultDescription)
             syncResultDescription(defaultResultDescription)
             setResultConclude(defaultResultConclude)
@@ -1559,38 +1559,94 @@ export default function TestResultForm() {
                                             <div>
                                                 <Label className="text-sm text-gray-600">Mã Y lệnh</Label>
                                                 <Input value={serviceRequest.serviceReqCode || ''} disabled
-                                                       className="mt-1 font-semibold"/>
+                                                    className="mt-1 font-semibold" />
                                             </div>
                                             <div>
                                                 <Label className="text-sm text-gray-600">Mã bệnh nhân</Label>
                                                 <Input value={patient?.code || ''} disabled
-                                                       className="mt-1 font-semibold"/>
+                                                    className="mt-1 font-semibold" />
                                             </div>
                                             <div>
                                                 <Label className="text-sm text-gray-600">Họ và tên bệnh nhân</Label>
                                                 <Input value={patient?.name || ''} disabled
-                                                       className="mt-1 font-semibold"/>
+                                                    className="mt-1 font-semibold" />
                                             </div>
                                             <div>
                                                 <Label className="text-sm text-gray-600">Ngày sinh</Label>
                                                 <Input
                                                     value={patient?.dob ? `${String(patient.dob).substring(6, 8)}/${String(patient.dob).substring(4, 6)}/${String(patient.dob).substring(0, 4)}` : ''}
-                                                    disabled className="mt-1 font-semibold"/>
+                                                    disabled className="mt-1 font-semibold" />
                                             </div>
                                             <div>
                                                 <Label className="text-sm text-gray-600">Giới tính</Label>
                                                 <Input value={patient?.genderName || ''} disabled
-                                                       className="mt-1 font-semibold"/>
+                                                    className="mt-1 font-semibold" />
                                             </div>
                                             <div>
                                                 <Label className="text-sm text-gray-600">Địa chỉ</Label>
                                                 <Input value={patient?.address || ''} disabled
-                                                       className="mt-1 font-semibold"/>
+                                                    className="mt-1 font-semibold" />
                                             </div>
                                             <div className="col-span-3">
                                                 <Label className="text-sm text-gray-600">Chẩn đoán</Label>
                                                 <Input value={serviceRequest.icdName || ''} disabled
-                                                       className="mt-1 font-semibold"/>
+                                                    className="mt-1 font-semibold" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Số block, Phương pháp nhuộm và Vị trí bệnh phẩm */}
+                                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                                        <div className="flex justify-between mb-4 pb-3 border-b border-gray-200">
+                                            <h3 className="text-lg font-semibold">Thông tin bệnh phẩm</h3>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">Số block</Label>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Nhập số block..."
+                                                    value={numOfBlock}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        // Chỉ cho phép số
+                                                        if (value === '' || /^\d+$/.test(value)) {
+                                                            setNumOfBlock(value);
+                                                        }
+                                                    }}
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
+
+                                            <div className="mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">Vị trí bệnh phẩm</Label>
+                                                <Input
+                                                    type="text"
+                                                    value={services.length > 0 ? (services[0]?.sampleTypeName || '') : ''}
+                                                    disabled
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
+
+                                            <div className="mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">Phương pháp nhuộm</Label>
+                                                <Input
+                                                    type="text"
+                                                    value={storedServiceRequest?.stainingMethodName || ''}
+                                                    disabled
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
+
+                                            <div className="mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">Phân loại bệnh phẩm</Label>
+                                                <Input
+                                                    type="text"
+                                                    value={storedServiceRequest?.flag ?? ''}
+                                                    disabled
+                                                    placeholder="—"
+                                                    className="max-w-xs"
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -1603,7 +1659,7 @@ export default function TestResultForm() {
                                                     Chọn danh sách dịch vụ để trả kết quả
                                                 </h3>
                                                 <div className="flex gap-2">
-                                                    <Button 
+                                                    <Button
                                                         onClick={() => {
                                                             // Mở preview với dịch vụ đầu tiên có kết quả, hoặc dịch vụ đầu tiên
                                                             const firstServiceWithResult = services.find(s => s.resultConclude) || services[0]
@@ -1617,7 +1673,7 @@ export default function TestResultForm() {
                                                     >
                                                         Xem kết quả
                                                     </Button>
-                                                    <Button 
+                                                    <Button
                                                         onClick={() => setConfirmCancelSignDialogOpen(true)}
                                                         disabled={isSigning || services.length === 0}
                                                         variant="destructive"
@@ -1636,134 +1692,96 @@ export default function TestResultForm() {
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-gray-200">
                                                     <thead className="bg-gray-50">
-                                                    <tr>
-                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            STT
-                                                        </th>
-                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Mã dịch vụ
-                                                        </th>
-                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Tên dịch vụ
-                                                        </th>
-                                                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Đơn giá
-                                                        </th>
-                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Mã tiếp nhận
-                                                        </th>
-                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Trạng thái
-                                                        </th>
-                                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Trạng thái ký
-                                                        </th>
-                                                    </tr>
+                                                        <tr>
+                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                STT
+                                                            </th>
+                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Mã dịch vụ
+                                                            </th>
+                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Tên dịch vụ
+                                                            </th>
+                                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Đơn giá
+                                                            </th>
+                                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Mã tiếp nhận
+                                                            </th>
+                                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Trạng thái
+                                                            </th>
+                                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                Trạng thái ký
+                                                            </th>
+                                                        </tr>
                                                     </thead>
                                                     <tbody className="bg-white divide-y divide-gray-200">
-                                                    {services.map((service, index) => {
-                                                        // Tính trạng thái dựa trên tất cả dịch vụ - lấy từ dịch vụ đầu tiên làm chuẩn
-                                                        const firstService = services[0]
-                                                        const hasResult = firstService?.resultConclude ? true : false
-                                                        const hasSignature = firstService?.documentId ? true : false
-                                                        
-                                                        return (
-                                                            <tr 
-                                                                key={service.id} 
-                                                                className="hover:bg-gray-50 cursor-pointer"
-                                                                onClick={() => handleServiceClick(service.id)}
-                                                            >
-                                                                <td className="px-4 py-3 text-sm text-gray-900">
-                                                                    {index + 1}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                                    {service.serviceCode}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm text-gray-900">
-                                                                    {service.serviceName}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                                                                    {service.price.toLocaleString('vi-VN')} đ
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                                                                    {service.receptionCode || '-'}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm text-center">
-                                                                    {hasResult ? (
-                                                                        <span
-                                                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                                            <CheckCircle2 className="w-3.5 h-3.5"/>
-                                                                            Đã có kết quả
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span
-                                                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                                                            <XCircle className="w-3.5 h-3.5"/>
-                                                                            Chưa có kết quả
-                                                                        </span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="px-4 py-3 text-sm text-center">
-                                                                    {hasSignature ? (
-                                                                        <span
-                                                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                                            <CheckCircle2 className="w-3.5 h-3.5"/>
-                                                                            Đã ký
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="text-xs text-gray-400">
-                                                                            Chưa ký
-                                                                        </span>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        )
-                                                    })}
+                                                        {services.map((service, index) => {
+                                                            // Tính trạng thái dựa trên tất cả dịch vụ - lấy từ dịch vụ đầu tiên làm chuẩn
+                                                            const firstService = services[0]
+                                                            const hasResult = firstService?.resultConclude ? true : false
+                                                            const hasSignature = firstService?.documentId ? true : false
+
+                                                            return (
+                                                                <tr
+                                                                    key={service.id}
+                                                                    className="hover:bg-gray-50 cursor-pointer"
+                                                                    onClick={() => handleServiceClick(service.id)}
+                                                                >
+                                                                    <td className="px-4 py-3 text-sm text-gray-900">
+                                                                        {index + 1}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                                        {service.serviceCode}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-sm text-gray-900">
+                                                                        {service.serviceName}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                                        {service.price.toLocaleString('vi-VN')} đ
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-sm text-gray-900 text-center">
+                                                                        {service.receptionCode || '-'}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-sm text-center">
+                                                                        {hasResult ? (
+                                                                            <span
+                                                                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                                Đã có kết quả
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span
+                                                                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                                                <XCircle className="w-3.5 h-3.5" />
+                                                                                Chưa có kết quả
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-sm text-center">
+                                                                        {hasSignature ? (
+                                                                            <span
+                                                                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                                Đã ký
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-xs text-gray-400">
+                                                                                Chưa ký
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            )
+                                                        })}
                                                     </tbody>
                                                 </table>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Số block, Phương pháp nhuộm và Vị trí bệnh phẩm */}
-                                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="mb-4">
-                                                <Label className="text-sm font-medium mb-2 block">Số block</Label>
-                                                <Input 
-                                                    type="number" 
-                                                    placeholder="Nhập số block..." 
-                                                    value={numOfBlock}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value;
-                                                        // Chỉ cho phép số
-                                                        if (value === '' || /^\d+$/.test(value)) {
-                                                            setNumOfBlock(value);
-                                                        }
-                                                    }}
-                                                    className="max-w-xs"
-                                                />
-                                            </div>
-                                            <div className="mb-4">
-                                                <Label className="text-sm font-medium mb-2 block">Phương pháp nhuộm</Label>
-                                                <Input 
-                                                    type="text" 
-                                                    value={storedServiceRequest?.stainingMethodName || ''}
-                                                    disabled
-                                                    className="max-w-xs"
-                                                />
-                                            </div>
-                                            <div className="mb-4">
-                                                <Label className="text-sm font-medium mb-2 block">Vị trí bệnh phẩm</Label>
-                                                <Input 
-                                                    type="text" 
-                                                    value={services.length > 0 ? (services[0]?.sampleTypeName || '') : ''}
-                                                    disabled
-                                                    className="max-w-xs"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
+
 
                                     {/* Test Results */}
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
@@ -1776,10 +1794,10 @@ export default function TestResultForm() {
 
                                         <div className="mb-4">
                                             <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
-                                            <Textarea 
+                                            <Textarea
                                                 value={resultName}
                                                 onChange={(e) => setResultName(e.target.value)}
-                                                placeholder="Nhập tên phiếu kết quả..." 
+                                                placeholder="Nhập tên phiếu kết quả..."
                                                 rows={3}
                                                 className="resize-none"
                                             />
@@ -1882,7 +1900,7 @@ export default function TestResultForm() {
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                     Tải PDF
                                 </Button>
@@ -1895,7 +1913,7 @@ export default function TestResultForm() {
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                     </svg>
                                     In PDF
                                 </Button>
@@ -1915,7 +1933,7 @@ export default function TestResultForm() {
                                         <>
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                             </svg>
                                             Ký số
                                         </>
@@ -1925,7 +1943,7 @@ export default function TestResultForm() {
                         </div>
                     </DialogHeader>
 
-                    <div className="overflow-y-auto p-6 bg-gray-100" style={{maxHeight: 'calc(95vh - 80px)'}}>
+                    <div className="overflow-y-auto p-6 bg-gray-100" style={{ maxHeight: 'calc(95vh - 80px)' }}>
                         {storedServiceRequestData?.data && previewServiceData?.data && (
                             <div ref={previewRef} className="mx-auto">
                                 <FormTemplate
