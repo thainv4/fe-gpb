@@ -1725,9 +1725,9 @@ export default function TestResultForm() {
                                         </div>
                                     )}
 
-                                    {/* Số block và Phương pháp nhuộm */}
+                                    {/* Số block, Phương pháp nhuộm và Vị trí bệnh phẩm */}
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-3 gap-4">
                                             <div className="mb-4">
                                                 <Label className="text-sm font-medium mb-2 block">Số block</Label>
                                                 <Input 
@@ -1749,6 +1749,15 @@ export default function TestResultForm() {
                                                 <Input 
                                                     type="text" 
                                                     value={storedServiceRequest?.stainingMethodName || ''}
+                                                    disabled
+                                                    className="max-w-xs"
+                                                />
+                                            </div>
+                                            <div className="mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">Vị trí bệnh phẩm</Label>
+                                                <Input 
+                                                    type="text" 
+                                                    value={services.length > 0 ? (services[0]?.sampleTypeName || '') : ''}
                                                     disabled
                                                     className="max-w-xs"
                                                 />
