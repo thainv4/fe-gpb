@@ -92,6 +92,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     // State để quản lý filter flag
     const [selectedFlag, setSelectedFlag] = useState<string>('all')
+    // State để quản lý trạng thái xuất Excel
+    const [isExportingExcel, setIsExportingExcel] = useState(false)
     
     // Helper function để format ISO string sang YYYY-MM-DD cho input type="date"
     const formatDateForInput = (isoString: string) => {
@@ -397,25 +399,81 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         }
     }
 
-    // Xử lý xuất Excel
-    const handleExportExcel = () => {
-        if (serviceRequests.length === 0) {
+    // Xử lý xuất Excel - lấy tối đa 9999 bản ghi từ API
+    const handleExportExcel = async () => {
+        if (!selectedRoomId || !selectedStateId) {
             toast({
                 title: 'Thông báo',
-                description: 'Không có dữ liệu để xuất',
+                description: 'Vui lòng chọn phòng và trạng thái',
                 variant: 'default',
             })
             return
         }
 
+        setIsExportingExcel(true)
         try {
+            // Xây dựng params giống như query hiện tại nhưng với limit=9999 và offset=0
+            const { hisServiceReqCode, receptionCode, ...filtersWithoutDeprecated } = filters
+            const params: any = {
+                roomId: selectedRoomId === 'all' ? '' : selectedRoomId,
+                limit: 9999, // Tối đa 9999 bản ghi
+                offset: 0, // Bắt đầu từ đầu
+                order: filters.order || 'DESC',
+                orderBy: filters.orderBy || 'actionTimestamp',
+                roomType: filters.roomType || 'currentRoomId',
+                stateType: filters.stateType || '',
+                timeType: filters.timeType || 'actionTimestamp',
+            }
+
+            if (selectedStateId && selectedStateId !== 'all') {
+                params.stateId = selectedStateId
+            }
+            if (selectedFlag && selectedFlag !== 'all') {
+                params.flag = selectedFlag
+            }
+            if (filters.patientName) {
+                params.patientName = filters.patientName
+            }
+            if (filters.code) {
+                params.code = filters.code
+            } else {
+                const code = [hisServiceReqCode, receptionCode].filter(Boolean).join(',') || undefined
+                if (code) {
+                    params.code = code
+                }
+            }
+            if (filters.fromDate) {
+                params.fromDate = filters.fromDate
+            }
+            if (filters.toDate) {
+                params.toDate = filters.toDate
+            }
+
+            // Gọi API để lấy dữ liệu cho Excel
+            const response = await apiClient.getWorkflowHistory(params)
+            
+            if (!response.success || !response.data?.items) {
+                throw new Error('Không thể lấy dữ liệu từ API')
+            }
+
+            const exportItems = response.data.items
+
+            if (exportItems.length === 0) {
+                toast({
+                    title: 'Thông báo',
+                    description: 'Không có dữ liệu để xuất',
+                    variant: 'default',
+                })
+                return
+            }
+
             // Lấy tên trạng thái hiện tại
             const currentStateName = selectedStateId === 'all' 
                 ? 'Tất cả' 
                 : workflowStates.find(s => s.id === selectedStateId)?.stateName || 'Chưa xác định'
 
             // Chuẩn bị dữ liệu cho Excel
-            const excelData: ExportExcelItem[] = serviceRequests.map((item: any) => {
+            const excelData: ExportExcelItem[] = exportItems.map((item: any) => {
                 const serviceReq = item.serviceRequest
                 const serviceReqCode = serviceReq?.hisServiceReqCode || serviceReq?.serviceReqCode || ''
                 const patientName = serviceReq?.patientName || ''
@@ -431,16 +489,6 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                     numOfBlock = String(item.storedServiceRequest.numOfBlock)
                 } else if (serviceReq?.numOfBlock !== undefined && serviceReq?.numOfBlock !== null && serviceReq?.numOfBlock !== '') {
                     numOfBlock = String(serviceReq.numOfBlock)
-                }
-
-                // Debug log để kiểm tra cấu trúc dữ liệu
-                if (serviceRequests.length > 0 && serviceRequests.indexOf(item) === 0) {
-                    console.log('📦 Debug Excel export - First item structure:', {
-                        item,
-                        itemNumOfBlock: item.numOfBlock,
-                        storedServiceRequest: item.storedServiceRequest,
-                        serviceReq,
-                    })
                 }
 
                 return {
@@ -459,6 +507,12 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                 stateName: currentStateName,
                 sheetName: 'Dòng thời gian',
             })
+
+            toast({
+                title: 'Thành công',
+                description: `Đã xuất ${excelData.length} bản ghi ra file Excel`,
+                variant: 'default',
+            })
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi xuất Excel'
             toast({
@@ -466,6 +520,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                 description: errorMessage,
                 variant: 'destructive',
             })
+        } finally {
+            setIsExportingExcel(false)
         }
     }
 
@@ -482,10 +538,18 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleExportExcel}
-                                className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                title="Xuất Excel"
+                                disabled={isExportingExcel}
+                                className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 disabled:opacity-50"
+                                title="Xuất Excel (tối đa 9999 bản ghi)"
                             >
-                                Xuất Excel
+                                {isExportingExcel ? (
+                                    <>
+                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                        Đang xuất...
+                                    </>
+                                ) : (
+                                    'Xuất Excel'
+                                )}
                             </Button>
                         )}
                         {selectedId && (
