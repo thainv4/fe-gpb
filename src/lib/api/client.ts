@@ -998,6 +998,10 @@ export interface UserRoom {
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
+    /** Tiền tố sinh barcode mặc định của phòng (ví dụ: T, C, F, S) */
+    selectPrefix?: string;
+    /** Loại form kết quả mặc định của phòng */
+    resultFormType?: string;
 }
 
 export interface AssignRoomsRequest {

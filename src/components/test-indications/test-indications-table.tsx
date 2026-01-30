@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest } from "@/lib/api/client";
+import { apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest, type UserRoom } from "@/lib/api/client";
 import { formatDobFromHis } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Printer, Plus } from "lucide-react";
 import { useTabsStore } from "@/lib/stores/tabs";
+import { useCurrentRoomStore } from "@/lib/stores/current-room";
 import { usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
@@ -26,6 +27,9 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useHisStore } from "@/lib/stores/his";
 import { SampleTypeForm } from "@/components/sample-type-management/sample-type-form";
 import { SampleTypeRequest } from "@/lib/api/client";
+
+/** Các giá trị tiền tố có trong dropdown chọn tiền tố */
+const PREFIX_OPTIONS = ['T', 'C', 'F', 'S'];
 
 export default function TestIndicationsTable() {
 
@@ -36,6 +40,7 @@ export default function TestIndicationsTable() {
     const tabKey = activeKey ?? pathname ?? 'default' // Use pathname as fallback
     const { setTabData, getTabData } = useTabsStore()
     const { token: hisToken } = useHisStore()
+    const { currentRoomId } = useCurrentRoomStore()
 
     // Get current tab's room info
     const currentTab = tabs.find(t => t.key === tabKey)
@@ -108,6 +113,27 @@ export default function TestIndicationsTable() {
         staleTime: 5 * 60 * 1000,
     })
 
+    // Danh sách phòng của user (my-rooms) để lấy select_prefix của phòng đang chọn
+    const { data: myRoomsData } = useQuery({
+        queryKey: ['my-rooms'],
+        queryFn: () => apiClient.getMyUserRooms(),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const myRooms = useMemo((): UserRoom[] => {
+        const raw = (myRoomsData?.data as unknown) ?? []
+        return Array.isArray(raw) ? (raw as UserRoom[]) : []
+    }, [myRoomsData])
+
+    // Tiền tố bị khóa theo phòng: nếu phòng có selectPrefix trùng dropdown thì chỉ được chọn giá trị đó
+    const lockedRoomPrefix = useMemo(() => {
+        const roomId = currentRoomId ?? tabRoomId
+        if (!roomId || !myRooms.length) return undefined
+        const room = myRooms.find((r) => r.roomId === roomId)
+        const prefix = (room?.selectPrefix ?? (room as { select_prefix?: string })?.select_prefix)?.trim?.()
+        return prefix && PREFIX_OPTIONS.includes(prefix) ? prefix : undefined
+    }, [currentRoomId, tabRoomId, myRooms])
+
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient
 
@@ -130,6 +156,18 @@ export default function TestIndicationsTable() {
             if (selectedSampleType) localStorage.setItem('lastSampleTypeId', selectedSampleType)
         } catch { }
     }, [selectedSampleType])
+
+    // Tự động chọn tiền tố theo select_prefix của phòng làm việc (nếu trùng với dropdown).
+    // Dùng currentRoomId (cập nhật ngay khi đổi phòng) để dropdown đổi theo không cần reload.
+    useEffect(() => {
+        const roomId = currentRoomId ?? tabRoomId
+        if (!roomId || !myRooms.length || isManualInput) return
+        const room = myRooms.find((r) => r.roomId === roomId)
+        const prefix = (room?.selectPrefix ?? (room as { select_prefix?: string })?.select_prefix)?.trim?.()
+        if (prefix && PREFIX_OPTIONS.includes(prefix)) {
+            setSelectedPrefix(prefix)
+        }
+    }, [currentRoomId, tabRoomId, myRooms, isManualInput])
 
     const triggerSearch = () => {
         if (!serviceReqCode?.trim()) return
@@ -891,10 +929,16 @@ export default function TestIndicationsTable() {
                                     <SelectValue placeholder="Chọn tiền tố" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="T">T</SelectItem>
-                                    <SelectItem value="C">C</SelectItem>
-                                    <SelectItem value="F">F</SelectItem>
-                                    <SelectItem value="S">S</SelectItem>
+                                    {lockedRoomPrefix ? (
+                                        <SelectItem value={lockedRoomPrefix}>{lockedRoomPrefix}</SelectItem>
+                                    ) : (
+                                        <>
+                                            <SelectItem value="T">T</SelectItem>
+                                            <SelectItem value="C">C</SelectItem>
+                                            <SelectItem value="F">F</SelectItem>
+                                            <SelectItem value="S">S</SelectItem>
+                                        </>
+                                    )}
                                 </SelectContent>
                             </Select>
                         )}
