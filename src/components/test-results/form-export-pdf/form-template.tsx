@@ -449,7 +449,7 @@ export function FormTemplate({
                 .pdf-exporting .signature-section {
                     position: absolute !important;
                     bottom: 20mm !important;
-                    right: 15mm !important;
+                    right: 25mm !important;
                 }
                 
                 /* Page number styling */
@@ -616,7 +616,7 @@ export function FormTemplate({
             {index === contentPages.length - 1 && (
               <div
                 className="signature-section mt-auto pb-8 flex justify-end"
-                style={{ position: "absolute", bottom: "20mm", right: "15mm" }}
+                style={{ position: "absolute", bottom: "20mm", right: "25mm" }}
               >
                 <div className="text-center">
                   <div className="text-sm text-gray-600 mb-1 border-t border-gray-400 px-10">

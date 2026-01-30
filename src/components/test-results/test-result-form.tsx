@@ -938,8 +938,8 @@ export default function TestResultForm() {
 
             const signRequest = {
                 PointSign: {
-                    CoorXRectangle: 460,
-                    CoorYRectangle: 45,
+                    CoorXRectangle: 430,
+                    CoorYRectangle: 50,
                     PageNumber: pageCount,
                     MaxPageNumber: pageCount,
                     WidthRectangle: 150,
@@ -1600,7 +1600,7 @@ export default function TestResultForm() {
                                         <div className="flex justify-between mb-4 pb-3 border-b border-gray-200">
                                             <h3 className="text-lg font-semibold">Thông tin bệnh phẩm</h3>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-4 gap-4">
                                             <div className="mb-4">
                                                 <Label className="text-sm font-medium mb-2 block">Số block</Label>
                                                 <Input
