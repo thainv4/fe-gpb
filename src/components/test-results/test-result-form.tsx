@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useTabsStore } from "@/lib/stores/tabs";
 import { usePathname } from "next/navigation";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
@@ -24,7 +24,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { FormTemplate } from "@/components/test-results/form-export-pdf/form-template";
+import { ResultForm, RESULT_FORM_TYPE_GPB } from "@/components/test-results/form-export-pdf";
 import { Button } from "@/components/ui/button";
 import { useHisStore } from "@/lib/stores/his";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer } from '@/lib/utils/pdf-export';
@@ -228,6 +228,13 @@ export default function TestResultForm() {
         staleTime: 5 * 60 * 1000,
     })
 
+    // Danh sách phòng của user để lấy resultFormType
+    const { data: myRoomsData } = useQuery({
+        queryKey: ['my-rooms'],
+        queryFn: () => apiClient.getMyUserRooms(),
+        staleTime: 5 * 60 * 1000,
+    })
+
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient
     const storedServiceRequest = storedServiceRequestData?.data
@@ -310,6 +317,21 @@ export default function TestResultForm() {
     const currentRoomId = currentTab?.roomId as string | undefined
     const currentDepartmentId = currentTab?.departmentId as string | undefined
     const currentUserId = profileData?.data?.id as string | undefined
+
+    const myRooms = useMemo(() => {
+        const raw = (myRoomsData?.data as unknown) ?? []
+        return Array.isArray(raw) ? raw : []
+    }, [myRoomsData])
+
+    // resultFormType của phòng: 1 = form-gpb, 2 = form-gen-1.
+    // Ưu tiên storeCurrentRoomId (cập nhật ngay khi đổi phòng) để form đổi theo không cần reload.
+    const resultFormType = useMemo(() => {
+        const roomId = storeCurrentRoomId ?? currentRoomId
+        if (!roomId || !myRooms.length) return RESULT_FORM_TYPE_GPB
+        const room = myRooms.find((r: { roomId?: string }) => r.roomId === roomId)
+        const raw = room?.resultFormType ?? (room as { result_form_type?: number })?.result_form_type ?? RESULT_FORM_TYPE_GPB
+        return Number(raw) === 2 ? 2 : RESULT_FORM_TYPE_GPB
+    }, [storeCurrentRoomId, currentRoomId, myRooms])
 
     // Reset state khi đổi phòng (detect qua storeCurrentRoomId) để làm mới trang
     useEffect(() => {
@@ -938,8 +960,8 @@ export default function TestResultForm() {
 
             const signRequest = {
                 PointSign: {
-                    CoorXRectangle: 430,
-                    CoorYRectangle: 50,
+                    CoorXRectangle: 440,
+                    CoorYRectangle: 60,
                     PageNumber: pageCount,
                     MaxPageNumber: pageCount,
                     WidthRectangle: 150,
@@ -1946,7 +1968,8 @@ export default function TestResultForm() {
                     <div className="overflow-y-auto p-6 bg-gray-100" style={{ maxHeight: 'calc(95vh - 80px)' }}>
                         {storedServiceRequestData?.data && previewServiceData?.data && (
                             <div ref={previewRef} className="mx-auto">
-                                <FormTemplate
+                                <ResultForm
+                                    formType={resultFormType}
                                     data={storedServiceRequestData.data}
                                     specificService={previewServiceData.data}
                                 />

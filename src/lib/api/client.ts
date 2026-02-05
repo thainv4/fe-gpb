@@ -1021,6 +1021,14 @@ export interface GetUserRoomsFilters {
     sortOrder?: 'ASC' | 'DESC';
 }
 
+export interface WorkflowActionInfo {
+    actionUsername: string;
+    actionUserFullName: string;
+    stateName: string;
+    stateOrder: number;
+    createdAt: string;
+}
+
 // API trả về data trực tiếp, không có wrapper serviceRequest
 export type ServiceRequestResponse = ServiceRequestDetail;
 
@@ -3446,6 +3454,16 @@ class ApiClient {
             hasAccess: boolean;
             message: string;
         }>(`/user-rooms/check/${userId}/${roomId}`);
+    }
+
+    /**
+     * Lấy danh sách action từ workflow history theo storedServiceReqId
+     * GET /workflow-history/action-info/:storedServiceReqId
+     */
+    async getWorkflowActionInfo(
+        storedServiceReqId: string
+    ): Promise<ApiResponse<WorkflowActionInfo[]>> {
+        return this.request<WorkflowActionInfo[]>(`/workflow-history/action-info/${storedServiceReqId}`);
     }
 
 }

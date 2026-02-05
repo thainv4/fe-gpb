@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
-import { FormTemplate } from '@/components/test-results/form-export-pdf/form-template';
+import { ResultForm, RESULT_FORM_TYPE_GPB } from '@/components/test-results/form-export-pdf';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 
@@ -12,6 +12,8 @@ export default function PreviewPage() {
     const searchParams = useSearchParams();
     const storedServiceReqId = params.serviceReqCode as string;
     const serviceId = searchParams.get('serviceId');
+    const formTypeParam = searchParams.get('formType');
+    const formType = formTypeParam ? Number(formTypeParam) : RESULT_FORM_TYPE_GPB;
     const componentRef = useRef<HTMLDivElement>(null);
 
     // Fetch stored service request
@@ -153,7 +155,8 @@ export default function PreviewPage() {
 
                 {/* Preview Content */}
                 <div ref={componentRef}>
-                    <FormTemplate
+                    <ResultForm
+                        formType={formType}
                         data={storedServiceRequestData.data}
                         specificService={serviceData?.data}
                     />
