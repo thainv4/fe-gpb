@@ -25,7 +25,7 @@ const PRINT_CONFIG = {
   PADDING_TOP_MM: 10,
   PADDING_BOTTOM_MM: 10,
   /** Khoảng trống giữa phần nội dung và khối "Bác sĩ đọc kết quả" trên trang cuối */
-  SIGNATURE_PAGE_EXTRA_SPACE_MM: 0,
+  SIGNATURE_PAGE_EXTRA_SPACE_MM: 8,
   PADDING_LEFT_MM: 15,
   PADDING_RIGHT_MM: 15,
   HEADER_HEIGHT_MM: 120,
@@ -249,14 +249,14 @@ const PageHeader = React.memo(({
           {/* Sample collection and approval info */}
           <div className="mt-2 grid grid-cols-2 gap-x-8 gap-y-2">
             {/* Hàng 1 */}
-            <div className="flex gap-2">
+            {/* <div className="flex gap-2">
               <span className="text-gray-600">Người lấy mẫu:</span>
               <span>{sampleCollectorInfo?.actionUserFullName ?? "-"}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-gray-600">Thời gian lấy mẫu:</span>
               <span>{formatDateTime(sampleCollectorInfo?.createdAt)}</span>
-            </div>
+            </div> */}
 
             {/* Hàng 2 */}
             <div className="flex gap-2">
@@ -601,7 +601,7 @@ export function FormTemplate({
             .signature-section {
               position: absolute !important;
               bottom: ${PRINT_CONFIG.SIGNATURE_BLOCK_BOTTOM_MM}mm !important;
-              right: ${PRINT_CONFIG.PADDING_RIGHT_MM + 10}mm !important;
+              right: 35mm !important;
             }
 
             @media print {
@@ -614,7 +614,7 @@ export function FormTemplate({
               .signature-section {
                 position: absolute !important;
                 bottom: ${PRINT_CONFIG.SIGNATURE_BLOCK_BOTTOM_MM}mm !important;
-                right: ${PRINT_CONFIG.PADDING_RIGHT_MM + 10}mm !important;
+                right: 35mm !important;
               }
 
             }

@@ -960,8 +960,8 @@ export default function TestResultForm() {
 
             const signRequest = {
                 PointSign: {
-                    CoorXRectangle: 440,
-                    CoorYRectangle: 60,
+                    CoorXRectangle: 405,
+                    CoorYRectangle: 65,
                     PageNumber: pageCount,
                     MaxPageNumber: pageCount,
                     WidthRectangle: 150,
