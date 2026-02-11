@@ -357,29 +357,30 @@ export default function SampleDeliveryTable() {
             selectedFlag: string;
             selectedStainingMethod: string;
         }) => {
-            // Bước 1: Gọi API staining method trước (nếu có) - PHẢI thành công
-            if (params.storedServiceReqId && params.selectedStainingMethod) {
-                const stainingResponse = await apiClient.updateServiceRequestStainingMethod(
+            // Bước 1: Gọi API tổng hợp để cập nhật flag và staining method cùng lúc (nếu có) - PHẢI thành công
+            if (params.storedServiceReqId && (params.selectedStainingMethod || params.selectedFlag)) {
+                const updateData: {
+                    stainingMethodId?: string;
+                    flag?: string;
+                } = {};
+                
+                if (params.selectedStainingMethod) {
+                    updateData.stainingMethodId = params.selectedStainingMethod;
+                }
+                if (params.selectedFlag) {
+                    updateData.flag = params.selectedFlag;
+                }
+                
+                const response = await apiClient.updateStoredServiceRequest(
                     params.storedServiceReqId,
-                    params.selectedStainingMethod
+                    updateData
                 )
-                if (!stainingResponse.success) {
-                    throw new Error(stainingResponse.message || stainingResponse.error || 'Không thể cập nhật phương pháp nhuộm')
+                if (!response.success) {
+                    throw new Error(response.message || response.error || 'Không thể cập nhật thông tin bàn giao mẫu')
                 }
             }
 
-            // Bước 2: Gọi API flag (nếu có) - PHẢI thành công
-            if (params.storedServiceReqId && params.selectedFlag) {
-                const flagResponse = await apiClient.updateStoredServiceRequestFlag(
-                    params.storedServiceReqId,
-                    params.selectedFlag
-                )
-                if (!flagResponse.success) {
-                    throw new Error(flagResponse.message || flagResponse.error || 'Không thể cập nhật flag')
-                }
-            }
-
-            // Bước 3: Gọi API cập nhật resultNote cho tất cả services (nếu có handoverNote) - PHẢI thành công
+            // Bước 2: Gọi API cập nhật resultNote cho tất cả services (nếu có handoverNote) - PHẢI thành công
             if (params.storedServiceReqId && handoverNote) {
                 // Lấy danh sách services từ storedServiceRequestData
                 const services = storedServiceRequestData?.data?.services || []

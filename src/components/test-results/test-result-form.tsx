@@ -27,7 +27,7 @@ import {
 import { ResultForm, RESULT_FORM_TYPE_GPB } from "@/components/test-results/form-export-pdf";
 import { Button } from "@/components/ui/button";
 import { useHisStore } from "@/lib/stores/his";
-import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer } from '@/lib/utils/pdf-export';
+import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
 
 export default function TestResultForm() {
@@ -56,6 +56,10 @@ export default function TestResultForm() {
     const [confirmSignDialogOpen, setConfirmSignDialogOpen] = useState(false)
     const [confirmCancelSignDialogOpen, setConfirmCancelSignDialogOpen] = useState(false)
 
+    // PDF attachment states (for resultFormType = 2)
+    const [attachedPdfFile, setAttachedPdfFile] = useState<File | null>(null)
+    const [attachedPdfBase64, setAttachedPdfBase64] = useState<string>('')
+
     // Default templates with HTML format (bold titles and indented content)
     const defaultMacroscopicComment = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
     const emptyMacroscopicComment = `<p style="padding-left: 20px;"></p>` // Không có tiêu đề, chỉ có nội dung rỗng
@@ -63,6 +67,7 @@ export default function TestResultForm() {
     const defaultResultDescription = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>MÔ TẢ VI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultConclude = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultConcludeCellBiology = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p><p style="padding-left: 20px;"></p>`
+    const defaultResultConcludeGen1 = "" // Trống hoàn toàn cho resultFormType = 2
     const defaultResultNote = `<p style="padding-left: 0; margin-left: 0;"><strong>BÀN LUẬN:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>KHUYẾN NGHỊ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>HỘI CHẨN:</strong></p><p style="padding-left: 20px;"></p>`
 
     // Helper function to parse resultDescription into macroscopic and microscopic parts
@@ -240,78 +245,6 @@ export default function TestResultForm() {
     const storedServiceRequest = storedServiceRequestData?.data
     const services = storedServiceRequest?.services || []
 
-    // Kiểm tra tiền tố barcode và cập nhật form
-    useEffect(() => {
-        if (services.length > 0) {
-            const receptionCode = services[0]?.receptionCode || ''
-            const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
-
-            if (receptionCode) {
-                // Nếu tiền tố là "S"
-                if (barcodePrefix === 'S') {
-                    // Cập nhật Kết luận với tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC"
-                    setResultConclude((prevConclude) => {
-                        // Nếu đã có tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC", không thay đổi
-                        if (prevConclude && prevConclude.includes('CHẨN ĐOÁN MÔ BỆNH HỌC')) {
-                            return prevConclude
-                        }
-
-                        // Nếu có tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC", thay thế bằng "CHẨN ĐOÁN MÔ BỆNH HỌC"
-                        const contentMatch = prevConclude.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:<\/strong><\/p>([\s\S]*)$/);
-                        if (contentMatch) {
-                            const content = contentMatch[1].trim();
-                            return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${content}`;
-                        }
-
-                        // Nếu chưa có tiêu đề hoặc là default, thay bằng tiêu đề mới
-                        if (!prevConclude || prevConclude.trim() === defaultResultConcludeCellBiology.trim()) {
-                            return defaultResultConclude
-                        }
-
-                        // Nếu có nội dung nhưng không có tiêu đề, thêm tiêu đề mới
-                        if (!prevConclude.includes('CHẨN ĐOÁN')) {
-                            return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${prevConclude}`;
-                        }
-
-                        return prevConclude
-                    })
-                }
-                // Nếu tiền tố không phải "S"
-                else {
-                    // Bỏ tiêu đề trong input Nhận xét đại thể (chỉ để trống)
-                    setMacroscopicComment(emptyMacroscopicComment)
-
-                    // Cập nhật Kết luận với tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC"
-                    setResultConclude((prevConclude) => {
-                        // Nếu đã có tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC", không thay đổi
-                        if (prevConclude && prevConclude.includes('CHẨN ĐOÁN TẾ BÀO HỌC')) {
-                            return prevConclude
-                        }
-
-                        // Nếu có tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC", thay thế bằng "CHẨN ĐOÁN TẾ BÀO HỌC"
-                        const contentMatch = prevConclude.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:<\/strong><\/p>([\s\S]*)$/);
-                        if (contentMatch) {
-                            const content = contentMatch[1].trim();
-                            return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${content}`;
-                        }
-
-                        // Nếu chưa có tiêu đề hoặc là default, thay bằng tiêu đề mới
-                        if (!prevConclude || prevConclude.trim() === defaultResultConclude.trim()) {
-                            return defaultResultConcludeCellBiology
-                        }
-
-                        // Nếu có nội dung nhưng không có tiêu đề, thêm tiêu đề mới
-                        if (!prevConclude.includes('CHẨN ĐOÁN')) {
-                            return `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${prevConclude}`;
-                        }
-
-                        return prevConclude
-                    })
-                }
-            }
-        }
-    }, [services, storedServiceReqId])
-
     // Xác định phòng/khoa hiện tại từ tab đang hoạt động
     const currentTab = (tabs as any)?.find?.((t: any) => t?.key === activeKey) ?? (tabs as any)?.[0]
     const currentRoomId = currentTab?.roomId as string | undefined
@@ -333,6 +266,34 @@ export default function TestResultForm() {
         return Number(raw) === 2 ? 2 : RESULT_FORM_TYPE_GPB
     }, [storeCurrentRoomId, currentRoomId, myRooms])
 
+    // Tự động thêm tiêu đề dựa trên barcode prefix
+    // CHỈ khi chưa click vào dịch vụ (resultConclude đang ở giá trị mặc định)
+    useEffect(() => {
+        if (resultFormType !== 2 && services.length > 0) {
+            const receptionCode = services[0]?.receptionCode || ''
+            const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
+
+            // Kiểm tra xem resultConclude có phải là giá trị mặc định không
+            const isDefaultValue = 
+                !resultConclude || 
+                resultConclude === defaultResultConclude || 
+                resultConclude === defaultResultConcludeCellBiology ||
+                resultConclude === defaultResultConcludeGen1
+
+            if (receptionCode && isDefaultValue) {
+                if (barcodePrefix === 'S') {
+                    // Barcode bắt đầu bằng "S" → "CHẨN ĐOÁN MÔ BỆNH HỌC"
+                    setResultConclude(defaultResultConclude)
+                    setMacroscopicComment(defaultMacroscopicComment)
+                } else {
+                    // Barcode không phải "S" → "CHẨN ĐOÁN TẾ BÀO HỌC"
+                    setResultConclude(defaultResultConcludeCellBiology)
+                    setMacroscopicComment(emptyMacroscopicComment)
+                }
+            }
+        }
+    }, [services, storedServiceReqId, resultFormType])
+
     // Reset state khi đổi phòng (detect qua storeCurrentRoomId) để làm mới trang
     useEffect(() => {
         if (storeCurrentRoomId && storeCurrentRoomId !== currentRoomId) {
@@ -350,7 +311,8 @@ export default function TestResultForm() {
             // Reset các field về default để logic kiểm tra tiền tố có thể áp dụng
             setResultDescription(defaultResultDescription)
             syncResultDescription(defaultResultDescription)
-            setResultConclude(defaultResultConclude)
+            // Sử dụng default khác nhau dựa trên resultFormType
+            setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(defaultResultNote)
             setResultName('')
             setMacroscopicComment(defaultMacroscopicComment)
@@ -376,7 +338,8 @@ export default function TestResultForm() {
         // Luôn giữ nguyên giá trị nhận xét đại thể sau khi chọn mẫu
         setMacroscopicComment(currentMacroscopicComment)
 
-        setResultConclude(resultConclude || defaultResultConclude)
+        // Sử dụng default đúng dựa trên resultFormType
+        setResultConclude(resultConclude || (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude))
         setResultNote(resultNote || defaultResultNote)
         setResultName(templateName)
     }
@@ -640,87 +603,86 @@ export default function TestResultForm() {
                 setResultDescription(desc)
                 syncResultDescription(desc)
 
-                // Kiểm tra tiền tố barcode để quyết định tiêu đề kết luận
-                const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
-                const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
-
-                let concludeToSet = data.resultConclude || defaultResultConclude
-                let macroscopicToSet = data.resultComment || defaultMacroscopicComment
-
-                // Nếu có receptionCode, áp dụng logic kiểm tra tiền tố
-                if (receptionCode) {
-                    if (barcodePrefix === 'S') {
-                        // Tiền tố là "S" - đảm bảo tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC"
-                        if (concludeToSet && !concludeToSet.includes('CHẨN ĐOÁN MÔ BỆNH HỌC')) {
-                            const contentMatch = concludeToSet.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:<\/strong><\/p>([\s\S]*)$/);
-                            if (contentMatch) {
-                                const content = contentMatch[1].trim();
-                                concludeToSet = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${content}`;
-                            } else if (!concludeToSet.includes('CHẨN ĐOÁN')) {
-                                concludeToSet = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:</strong></p>${concludeToSet}`;
-                            } else {
-                                concludeToSet = defaultResultConclude
-                            }
-                        }
-                    } else {
-                        // Tiền tố không phải "S" - bỏ tiêu đề trong nhận xét đại thể và đảm bảo tiêu đề "CHẨN ĐOÁN TẾ BÀO HỌC"
-                        macroscopicToSet = emptyMacroscopicComment
-
-                        if (concludeToSet && !concludeToSet.includes('CHẨN ĐOÁN TẾ BÀO HỌC')) {
-                            const contentMatch = concludeToSet.match(/<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN MÔ BỆNH HỌC:<\/strong><\/p>([\s\S]*)$/);
-                            if (contentMatch) {
-                                const content = contentMatch[1].trim();
-                                concludeToSet = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${content}`;
-                            } else if (!concludeToSet.includes('CHẨN ĐOÁN')) {
-                                concludeToSet = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p>${concludeToSet}`;
-                            } else {
-                                concludeToSet = defaultResultConcludeCellBiology
-                            }
-                        }
-                    }
-                }
+                // Load nguyên văn data từ database, không thêm tiêu đề
+                const concludeToSet = data.resultConclude || (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
+                const macroscopicToSet = data.resultComment || defaultMacroscopicComment
 
                 setResultConclude(concludeToSet)
                 setResultNote(data.resultNote || defaultResultNote)
                 setResultName(data.resultName || '')
                 setMacroscopicComment(macroscopicToSet)
             } else {
-                // Nếu không có kết quả, reset về default templates và áp dụng logic tiền tố
-                const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
-                const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
-
+                // Nếu không có kết quả, reset về default templates
                 setResultDescription(defaultResultDescription)
                 syncResultDescription(defaultResultDescription)
-
-                if (receptionCode && barcodePrefix !== 'S') {
-                    setResultConclude(defaultResultConcludeCellBiology)
-                    setMacroscopicComment(emptyMacroscopicComment)
-                } else {
-                    setResultConclude(defaultResultConclude)
-                    setMacroscopicComment(defaultMacroscopicComment)
-                }
-
+                setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
                 setResultNote(defaultResultNote)
                 setResultName('')
-            }
-        } catch (error) {
-            // Nếu có lỗi, reset về default templates và áp dụng logic tiền tố
-            const receptionCode = services.find((s: any) => s.id === serviceId)?.receptionCode || services[0]?.receptionCode || ''
-            const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
-
-            setResultDescription(defaultResultDescription)
-            syncResultDescription(defaultResultDescription)
-
-            if (receptionCode && barcodePrefix !== 'S') {
-                setResultConclude(defaultResultConcludeCellBiology)
-                setMacroscopicComment(emptyMacroscopicComment)
-            } else {
-                setResultConclude(defaultResultConclude)
                 setMacroscopicComment(defaultMacroscopicComment)
             }
-
+        } catch (error) {
+            // Nếu có lỗi, reset về default templates
+            setResultDescription(defaultResultDescription)
+            syncResultDescription(defaultResultDescription)
+            setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(defaultResultNote)
             setResultName('')
+            setMacroscopicComment(defaultMacroscopicComment)
+        }
+    }
+
+    // Handler để xử lý file PDF upload
+    const handlePdfFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng chỉ chọn file PDF"
+            })
+            return
+        }
+        
+        // Validate file size (giới hạn 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "File PDF không được vượt quá 10MB"
+            })
+            return
+        }
+        
+        setAttachedPdfFile(file)
+        
+        // Convert to base64 for merging later
+        const reader = new FileReader()
+        reader.onload = () => {
+            const base64 = reader.result as string
+            // Remove data:application/pdf;base64, prefix
+            setAttachedPdfBase64(base64.split(',')[1])
+        }
+        reader.onerror = () => {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Không thể đọc file PDF"
+            })
+        }
+        reader.readAsDataURL(file)
+    }
+
+    // Handler để xóa file đính kèm
+    const handleRemoveAttachedPdf = () => {
+        setAttachedPdfFile(null)
+        setAttachedPdfBase64('')
+        // Reset file input
+        const fileInput = document.getElementById('pdf-attachment') as HTMLInputElement
+        if (fileInput) {
+            fileInput.value = ''
         }
     }
 
@@ -729,7 +691,41 @@ export default function TestResultForm() {
 
         try {
             const fileName = `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`;
-            await downloadPdfFromContainerWithPuppeteer(previewRef.current, fileName);
+            
+            // Nếu resultFormType = 2 và có file đính kèm, merge PDFs
+            if (resultFormType === 2 && attachedPdfBase64) {
+                // Generate PDF from form
+                const {base64: formPdfBase64} = await pdfBase64FromContainerWithPuppeteer(previewRef.current);
+                
+                // Merge với file đính kèm
+                const { base64: mergedBase64 } = await mergePdfsBase64(formPdfBase64, attachedPdfBase64);
+                
+                // Download merged PDF
+                const byteCharacters = atob(mergedBase64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: 'application/pdf' });
+                
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                toast({
+                    title: "Thành công",
+                    description: "Đã tải PDF kèm file đính kèm"
+                });
+            } else {
+                // Download bình thường (không merge)
+                await downloadPdfFromContainerWithPuppeteer(previewRef.current, fileName);
+            }
 
         } catch (error: any) {
             console.error('Error downloading PDF:', error);
@@ -879,9 +875,12 @@ export default function TestResultForm() {
         }
 
         // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả
-        const hasResult = previewServiceData?.data?.resultText ||
-            previewServiceData?.data?.resultDescription ||
-            resultDescription.trim()
+        // Nếu resultFormType = 2, chỉ check resultConclude
+        const hasResult = resultFormType === 2 
+            ? resultConclude.trim()
+            : (previewServiceData?.data?.resultText ||
+               previewServiceData?.data?.resultDescription ||
+               resultDescription.trim())
         if (!hasResult) {
             toast({
                 variant: "destructive",
@@ -944,7 +943,25 @@ export default function TestResultForm() {
                 return
             }
 
-            const { base64: pdfBase64, pageCount } = pdfResult;
+            let pdfBase64 = pdfResult.base64;
+            let pageCount = pdfResult.pageCount;
+
+            // Khi resultFormType = 2, merge với file PDF đính kèm (nếu có) - giống logic tải PDF
+            if (resultFormType === 2 && attachedPdfBase64) {
+                try {
+                    const mergedResult = await mergePdfsBase64(pdfBase64, attachedPdfBase64);
+                    pdfBase64 = mergedResult.base64;
+                    pageCount = mergedResult.pageCount; // Số trang sau khi merge - ký vào trang cuối
+                } catch (mergeError) {
+                    console.error('Error merging PDF for signature:', mergeError);
+                    toast({
+                        variant: "destructive",
+                        title: "Lỗi",
+                        description: "Không thể gộp file PDF đính kèm. Vui lòng thử ký lại không có file đính kèm."
+                    });
+                    return;
+                }
+            }
 
             // Cập nhật state để hiển thị
             setSignaturePageTotal(pageCount);
@@ -1345,16 +1362,20 @@ export default function TestResultForm() {
             return
         }
 
-        const combinedDescription = combineResultDescription(macroscopicComment, microscopicDescription)
-        if (!combinedDescription.trim() || (!macroscopicComment.trim() && !microscopicDescription.trim())) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Vui lòng nhập nhận xét đại thể hoặc mô tả vi thể"
-            })
-            return
+        // Chỉ validate macroscopicComment và microscopicDescription khi resultFormType !== 2
+        if (resultFormType !== 2) {
+            const combinedDescription = combineResultDescription(macroscopicComment, microscopicDescription)
+            if (!combinedDescription.trim() || (!macroscopicComment.trim() && !microscopicDescription.trim())) {
+                toast({
+                    variant: "destructive",
+                    title: "Lỗi",
+                    description: "Vui lòng nhập nhận xét đại thể hoặc mô tả vi thể"
+                })
+                return
+            }
         }
 
+        // Luôn validate resultConclude
         if (!resultConclude.trim()) {
             toast({
                 variant: "destructive",
@@ -1385,16 +1406,24 @@ export default function TestResultForm() {
             // Lưu kết quả cho tất cả dịch vụ
             const savePromises = services.map(async (service) => {
                 const serviceId = service.id
-                const response = await apiClient.saveServiceResult(serviceId, {
+                
+                // Chuẩn bị payload dựa trên resultFormType
+                const payload: any = {
                     resultValue: 12.5,
                     resultValueText: "12.5",
-                    resultDescription: templateResultDescription,
                     resultConclude: resultConclude,
-                    resultNote: resultNote,
-                    resultComment: macroscopicComment || '',
                     resultStatus: 'NORMAL',
-                    resultName: resultName
-                })
+                }
+
+                // Chỉ gửi các field này khi resultFormType !== 2
+                if (resultFormType !== 2) {
+                    payload.resultDescription = templateResultDescription
+                    payload.resultComment = macroscopicComment || ''
+                    payload.resultNote = resultNote
+                    payload.resultName = resultName
+                }
+
+                const response = await apiClient.saveServiceResult(serviceId, payload)
 
                 if (!response.success) {
                     throw new Error(getErrorMessage(response, `Không thể lưu kết quả cho dịch vụ ${serviceId}`))
@@ -1464,14 +1493,14 @@ export default function TestResultForm() {
                 }
             }
 
-            // Gọi API num-of-block nếu có giá trị (khác null hoặc rỗng)
+            // Gọi API cập nhật num-of-block nếu có giá trị (khác null hoặc rỗng)
             if (saveSuccessful > 0 && storedServiceRequest?.id && numOfBlock !== null && numOfBlock !== undefined && numOfBlock.trim() !== '') {
                 try {
                     const numOfBlockValue = numOfBlock.trim()
 
-                    const numOfBlockResponse = await apiClient.updateStoredServiceRequestNumOfBlock(
+                    const numOfBlockResponse = await apiClient.updateStoredServiceRequest(
                         storedServiceRequest.id,
-                        numOfBlockValue
+                        { numOfBlock: numOfBlockValue }
                     )
                     if (!numOfBlockResponse.success) {
                         toast({
@@ -1523,7 +1552,8 @@ export default function TestResultForm() {
 
             setResultDescription(defaultResultDescription)
             syncResultDescription(defaultResultDescription)
-            setResultConclude(defaultResultConclude)
+            // Sử dụng default khác nhau dựa trên resultFormType
+            setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(defaultResultNote)
             setResultName('')
         } catch (error: any) {
@@ -1809,64 +1839,127 @@ export default function TestResultForm() {
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                                         <div className="flex justify-between mb-4 pb-3 border-b border-gray-200">
                                             <h3 className="text-lg font-semibold">Kết quả xét nghiệm</h3>
-                                            <Button onClick={() => setTemplateSelectorOpen(true)}>
-                                                Chọn mẫu kết quả có sẵn
-                                            </Button>
+                                            {/* Chỉ hiện nút chọn mẫu khi resultFormType !== 2 */}
+                                            {resultFormType !== 2 && (
+                                                <Button onClick={() => setTemplateSelectorOpen(true)}>
+                                                    Chọn mẫu kết quả có sẵn
+                                                </Button>
+                                            )}
                                         </div>
 
-                                        <div className="mb-4">
-                                            <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
-                                            <Textarea
-                                                value={resultName}
-                                                onChange={(e) => setResultName(e.target.value)}
-                                                placeholder="Nhập tên phiếu kết quả..."
-                                                rows={3}
-                                                className="resize-none"
-                                            />
+                                        {/* Chỉ hiện các input này khi resultFormType !== 2 */}
+                                        {resultFormType !== 2 && (
+                                            <>
+                                                <div className="mb-4">
+                                                    <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
+                                                    <Textarea
+                                                        value={resultName}
+                                                        onChange={(e) => setResultName(e.target.value)}
+                                                        placeholder="Nhập tên phiếu kết quả..."
+                                                        rows={3}
+                                                        className="resize-none"
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                    {/* Nhận xét đại thể */}
+                                                    <div>
+                                                        <Label className="text-sm font-medium mb-2 block">Nhận xét đại thể *</Label>
+                                                        <div className="border rounded-md">
+                                                            <RichTextEditor
+                                                                value={macroscopicComment}
+                                                                onChange={setMacroscopicComment}
+                                                                placeholder="Nhập nhận xét đại thể..."
+                                                                minHeight="120px"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Mô tả vi thể */}
+                                                    <div>
+                                                        <Label className="text-sm font-medium mb-2 block">Mô tả vi thể *</Label>
+                                                        <div className="border rounded-md">
+                                                            <RichTextEditor
+                                                                value={microscopicDescription}
+                                                                onChange={setMicroscopicDescription}
+                                                                placeholder="Nhập mô tả vi thể..."
+                                                                minHeight="120px"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Kết luận - LUÔN hiển thị */}
+                                        <div className={resultFormType !== 2 ? "mt-4" : ""}>
+                                            <Label className="text-sm font-medium mb-2 block">Kết luận *</Label>
+                                            <div className="border rounded-md">
+                                                <RichTextEditor
+                                                    value={resultConclude}
+                                                    onChange={setResultConclude}
+                                                    placeholder="Nhập kết luận về kết quả xét nghiệm..."
+                                                    minHeight="120px"
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div className="space-y-4">
-                                            {/* Nhận xét đại thể */}
-                                            <div>
-                                                <Label className="text-sm font-medium mb-2 block">Nhận xét đại thể *</Label>
-                                                <div className="border rounded-md">
-                                                    <RichTextEditor
-                                                        value={macroscopicComment}
-                                                        onChange={setMacroscopicComment}
-                                                        placeholder="Nhập nhận xét đại thể..."
-                                                        minHeight="120px"
-                                                    />
+                                        {/* File đính kèm PDF - Chỉ hiện khi resultFormType = 2 */}
+                                        {resultFormType === 2 && (
+                                            <div className="mt-4">
+                                                <Label className="text-sm font-medium mb-2 block">File đính kèm (PDF)</Label>
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex-1">
+                                                        <input
+                                                            type="file"
+                                                            accept="application/pdf"
+                                                            onChange={handlePdfFileChange}
+                                                            className="hidden"
+                                                            id="pdf-attachment"
+                                                        />
+                                                        <label
+                                                            htmlFor="pdf-attachment"
+                                                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                            </svg>
+                                                            Chọn file PDF
+                                                        </label>
+                                                        
+                                                        {attachedPdfFile && (
+                                                            <div className="mt-2 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                                                <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                </svg>
+                                                                <span className="flex-1 text-sm text-gray-700 truncate">{attachedPdfFile.name}</span>
+                                                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                                                    ({(attachedPdfFile.size / 1024).toFixed(2)} KB)
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleRemoveAttachedPdf}
+                                                                    className="text-red-600 hover:text-red-800 flex-shrink-0 transition-colors"
+                                                                    title="Xóa file"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <p className="mt-1 text-xs text-gray-500">
+                                                            File PDF sẽ được nối vào sau kết quả xét nghiệm (Tối đa 10MB)
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                        )}
 
-                                            {/* Mô tả vi thể */}
-                                            <div>
-                                                <Label className="text-sm font-medium mb-2 block">Mô tả vi thể *</Label>
-                                                <div className="border rounded-md">
-                                                    <RichTextEditor
-                                                        value={microscopicDescription}
-                                                        onChange={setMicroscopicDescription}
-                                                        placeholder="Nhập mô tả vi thể..."
-                                                        minHeight="120px"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Kết luận */}
-                                            <div>
-                                                <Label className="text-sm font-medium mb-2 block">Kết luận *</Label>
-                                                <div className="border rounded-md">
-                                                    <RichTextEditor
-                                                        value={resultConclude}
-                                                        onChange={setResultConclude}
-                                                        placeholder="Nhập kết luận về kết quả xét nghiệm..."
-                                                        minHeight="120px"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Ghi chú */}
-                                            <div>
+                                        {/* Ghi chú - Chỉ hiện khi resultFormType !== 2 */}
+                                        {resultFormType !== 2 && (
+                                            <div className="mt-4">
                                                 <Label className="text-sm font-medium mb-2 block">Ghi chú</Label>
                                                 <div className="border rounded-md">
                                                     <RichTextEditor
@@ -1877,7 +1970,7 @@ export default function TestResultForm() {
                                                     />
                                                 </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
 
                                     {/* Action Buttons */}

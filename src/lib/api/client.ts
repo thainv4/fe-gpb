@@ -3052,6 +3052,7 @@ class ApiClient {
 
     /**
      * Update flag for a stored service request
+     * @deprecated Sử dụng updateStoredServiceRequest() thay thế để cập nhật nhiều field cùng lúc
      */
     async updateStoredServiceRequestFlag(
         storedServiceReqId: string,
@@ -3068,6 +3069,7 @@ class ApiClient {
 
     /**
      * Update staining method for a stored service request
+     * @deprecated Sử dụng updateStoredServiceRequest() thay thế để cập nhật nhiều field cùng lúc
      */
     async updateServiceRequestStainingMethod(
         storedServiceReqId: string,
@@ -3082,6 +3084,10 @@ class ApiClient {
         );
     }
 
+    /**
+     * Update num of block for a stored service request
+     * @deprecated Sử dụng updateStoredServiceRequest() thay thế để cập nhật nhiều field cùng lúc
+     */
     async updateStoredServiceRequestNumOfBlock(
         storedServiceReqId: string,
         numOfBlock: string | number
@@ -3091,6 +3097,28 @@ class ApiClient {
             {
                 method: 'PATCH',
                 body: JSON.stringify({ numOfBlock }),
+            }
+        );
+    }
+
+    /**
+     * Update stored service request với nhiều fields cùng lúc (PATCH endpoint tổng hợp)
+     * @param storedServiceReqId ID của stored service request
+     * @param data Object chứa các field cần update (partial update)
+     */
+    async updateStoredServiceRequest(
+        storedServiceReqId: string,
+        data: {
+            flag?: string;
+            stainingMethodId?: string;
+            numOfBlock?: string | number;
+        }
+    ): Promise<ApiResponse<unknown>> {
+        return this.request<unknown>(
+            `/service-requests/stored/${storedServiceReqId}`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify(data),
             }
         );
     }

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 interface PdfGenerationResult {
     pdf: any; // jsPDF instance, typed as any to avoid direct dependency
@@ -360,5 +360,42 @@ export async function downloadPdfFromContainerWithPuppeteer(container: HTMLEleme
     } catch (error) {
         console.error('Error downloading PDF with Puppeteer:', error);
         throw error;
+    }
+}
+
+// Merge multiple PDFs using the API endpoint
+export async function mergePdfsBase64(
+    formPdfBase64: string, 
+    attachedPdfBase64: string
+): Promise<{ base64: string; pageCount: number }> {
+    try {
+        const response = await fetch('/api/pdf/merge', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                pdfs: [formPdfBase64, attachedPdfBase64]
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.details || error.error || 'Failed to merge PDFs');
+        }
+        
+        const result = await response.json();
+        
+        if (!result.mergedBase64) {
+            throw new Error('Invalid response from merge API');
+        }
+        
+        return {
+            base64: result.mergedBase64,
+            pageCount: result.pageCount ?? 1
+        };
+    } catch (error) {
+        console.error('Error merging PDFs:', error);
+        throw error instanceof Error ? error : new Error('Failed to merge PDFs');
     }
 }
