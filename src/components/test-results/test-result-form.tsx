@@ -984,7 +984,7 @@ export default function TestResultForm() {
                 TreatmentCode: storedServiceRequestData.data.treatmentCode,
                 DocumentTypeId: 22,
                 DocumentGroupId: 101,
-                HisCode: `SERVICE_REQ_CODE:${storedServiceRequestData.data.serviceReqCode}`,
+                HisCode: storedServiceRequestData.data.serviceReqCode,
                 FileType: 0,
                 OriginalVersion: {
                     Base64Data: pdfBase64

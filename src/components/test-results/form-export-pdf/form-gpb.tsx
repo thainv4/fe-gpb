@@ -25,7 +25,7 @@ const PRINT_CONFIG = {
   PADDING_TOP_MM: 10,
   PADDING_BOTTOM_MM: 10,
   /** Khoảng trống giữa phần nội dung và khối "Bác sĩ đọc kết quả" trên trang cuối */
-  SIGNATURE_PAGE_EXTRA_SPACE_MM: 8,
+  SIGNATURE_PAGE_EXTRA_SPACE_MM: 0,
   PADDING_LEFT_MM: 15,
   PADDING_RIGHT_MM: 15,
   HEADER_HEIGHT_MM: 120,
@@ -33,7 +33,7 @@ const PRINT_CONFIG = {
   /** Khoảng cách từ mép dưới trang đến đáy khối "Bác sĩ đọc kết quả" — tăng để chừa không gian cho chữ ký số bên dưới */
   SIGNATURE_BLOCK_BOTTOM_MM: 35,
   /** Chiều cao tối đa vùng nội dung trang cuối (= 297 - padding - header - SIGNATURE_BLOCK_BOTTOM - SIGNATURE_HEIGHT) */
-  CONTENT_MAX_HEIGHT_LAST_PAGE_MM: 89,
+  CONTENT_MAX_HEIGHT_LAST_PAGE_MM: 120,
   PAGE_SPACING_MM: 30,
   CONTENT_BUFFER_MM: 5,
   MM_TO_PX: 3.7795275591,
@@ -259,14 +259,14 @@ const PageHeader = React.memo(({
             </div> */}
 
             {/* Hàng 2 */}
-            <div className="flex gap-2">
+            {/* <div className="flex gap-2">
               <span className="text-gray-600">Người nhận mẫu:</span>
               <span>{sampleReceiverInfo?.actionUserFullName ?? "-"}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-gray-600">Thời gian nhận mẫu:</span>
               <span>{formatDateTime(sampleReceiverInfo?.createdAt)}</span>
-            </div>
+            </div> */}
           </div>
 
 
@@ -680,7 +680,7 @@ export function FormTemplate({
             <div className="page-content-area">
               {index === 0 && (
                 <h2
-                  className="text-center font-bold text-lg uppercase py-2 mb-4"
+                  className="text-center font-bold text-lg uppercase mb-4"
                   style={{ breakInside: "avoid", flexShrink: 0 }}
                 >
                   KẾT QUẢ
@@ -693,7 +693,7 @@ export function FormTemplate({
                   minHeight: 0,
                   maxHeight:
                     index < contentPages.length - 1
-                      ? "147mm"
+                      ? "47mm"
                       : `${PRINT_CONFIG.CONTENT_MAX_HEIGHT_LAST_PAGE_MM}mm`,
                   overflow:
                     index === contentPages.length - 1 ? "hidden" : "visible",
