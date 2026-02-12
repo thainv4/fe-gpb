@@ -598,36 +598,28 @@ export default function TestResultForm() {
             const resultResponse = await apiClient.getServiceResult(serviceId)
             if (resultResponse.success && resultResponse.data) {
                 const data = resultResponse.data
-                // Set các field từ response, nếu null/empty thì dùng default
-                const desc = data.resultDescription || defaultResultDescription
-                setResultDescription(desc)
-                syncResultDescription(desc)
+                // Gán trực tiếp từ API response - resultDescription vào Mô tả vi thể, resultComment vào Nhận xét đại thể
+                setMicroscopicDescription(data.resultDescription ?? defaultMicroscopicDescription)
+                setMacroscopicComment(data.resultComment ?? defaultMacroscopicComment)
 
-                // Load nguyên văn data từ database, không thêm tiêu đề
-                const concludeToSet = data.resultConclude || (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
-                const macroscopicToSet = data.resultComment || defaultMacroscopicComment
-
-                setResultConclude(concludeToSet)
-                setResultNote(data.resultNote || defaultResultNote)
-                setResultName(data.resultName || '')
-                setMacroscopicComment(macroscopicToSet)
+                setResultConclude(data.resultConclude ?? (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude))
+                setResultNote(data.resultNote ?? defaultResultNote)
+                setResultName(data.resultName ?? '')
             } else {
                 // Nếu không có kết quả, reset về default templates
-                setResultDescription(defaultResultDescription)
-                syncResultDescription(defaultResultDescription)
+                setMicroscopicDescription(defaultMicroscopicDescription)
+                setMacroscopicComment(defaultMacroscopicComment)
                 setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
                 setResultNote(defaultResultNote)
                 setResultName('')
-                setMacroscopicComment(defaultMacroscopicComment)
             }
         } catch (error) {
             // Nếu có lỗi, reset về default templates
-            setResultDescription(defaultResultDescription)
-            syncResultDescription(defaultResultDescription)
+            setMicroscopicDescription(defaultMicroscopicDescription)
+            setMacroscopicComment(defaultMacroscopicComment)
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(defaultResultNote)
             setResultName('')
-            setMacroscopicComment(defaultMacroscopicComment)
         }
     }
 
@@ -1396,18 +1388,10 @@ export default function TestResultForm() {
 
         setIsSaving(true)
         try {
-            // resultDescription chỉ lấy từ microscopicDescription (Mô tả vi thể), không bao gồm macroscopicComment (Nhận xét đại thể)
-            // Đảm bảo có tiêu đề "MÔ TẢ VI THỂ"
-            let templateResultDescription = microscopicDescription || defaultMicroscopicDescription
-            if (!templateResultDescription.includes('MÔ TẢ VI THỂ')) {
-                templateResultDescription = defaultMicroscopicDescription
-            }
-
-            // Lưu kết quả cho tất cả dịch vụ
+            // form-gpb: gửi đúng giá trị input, không tự chèn thêm (ví dụ: không thêm default cho mô tả vi thể)
             const savePromises = services.map(async (service) => {
                 const serviceId = service.id
                 
-                // Chuẩn bị payload dựa trên resultFormType
                 const payload: any = {
                     resultValue: 12.5,
                     resultValueText: "12.5",
@@ -1415,10 +1399,9 @@ export default function TestResultForm() {
                     resultStatus: 'NORMAL',
                 }
 
-                // Chỉ gửi các field này khi resultFormType !== 2
                 if (resultFormType !== 2) {
-                    payload.resultDescription = templateResultDescription
-                    payload.resultComment = macroscopicComment || ''
+                    payload.resultDescription = microscopicDescription
+                    payload.resultComment = macroscopicComment
                     payload.resultNote = resultNote
                     payload.resultName = resultName
                 }
