@@ -30,6 +30,20 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR'): void {
                     padding: 0;
                     box-sizing: border-box;
                 }
+                .page-two-qr {
+                    display: flex;
+                    align-items: stretch;
+                    width: 100%;
+                    min-height: 100%;
+                }
+                .qr-half {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 0;
+                }
                 @media print {
                     html, body {
                         width: 100%;
@@ -38,22 +52,6 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR'): void {
                         padding: 0;
                         overflow: hidden;
                     }
-                    .print-container {
-                        page-break-after: avoid;
-                        page-break-inside: avoid;
-                    }
-                    .qr-code {
-                        width: 50px !important;
-                        height: 50px !important;
-                        margin-bottom: 8px !important;
-                    }
-                    .qr-code svg {
-                        width: 50px !important;
-                        height: 50px !important;
-                    }
-                    .print-container > div:last-child {
-                        margin-top: 8px !important;
-                    }
                     .print-text-xs {
                         font-size: 0.75rem !important;
                         line-height: 1rem !important;
@@ -61,9 +59,14 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR'): void {
                 }
             </style>
         </head>
-        <body class="min-h-screen flex items-center justify-center bg-white p-2">
-            <div class="print-container text-center">
-                <div class="qr-code">${qrCodeHtml}</div>
+        <body class="min-h-screen bg-white p-2">
+            <div class="page-two-qr print-container">
+                <div class="qr-half text-center">
+                    <div class="qr-code">${qrCodeHtml}</div>
+                </div>
+                <div class="qr-half text-center">
+                    <div class="qr-code">${qrCodeHtml}</div>
+                </div>
             </div>
             <script>
                 window.onload = function() {
