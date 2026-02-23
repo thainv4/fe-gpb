@@ -25,6 +25,7 @@ import { useTabPersistence } from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { QRCodeSVG } from 'qrcode.react';
 import { useHisStore } from "@/lib/stores/his";
+import { printQrCode } from '@/lib/utils/print-qr-code';
 import { SampleTypeForm } from "@/components/sample-type-management/sample-type-form";
 import { SampleTypeRequest } from "@/lib/api/client";
 
@@ -376,87 +377,9 @@ export default function TestIndicationsTable() {
         }
     }, [storedServiceRequestData])
 
-    // Function để in QR code - chỉ in QR code
     const handlePrintBarcode = () => {
         if (!barcodeRef.current || !currentReceptionCode) return
-
-        const printWindow = window.open('', '_blank')
-        if (!printWindow) return
-
-        const qrCodeHtml = barcodeRef.current.innerHTML
-
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html lang="vi">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>In mã QR - ${currentReceptionCode}</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                                <style>
-                    @page {
-                        size: 50mm 30mm;
-                        margin: 0;
-                        padding: 0;
-                    }
-                    * {
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
-                    }
-                    @media print {
-                        html, body {
-                            width: 100%;
-                            height: 100%;
-                            margin: 0;
-                            padding: 0;
-                            overflow: hidden;
-                        }
-                        .print-container {
-                            page-break-after: avoid;
-                            page-break-inside: avoid;
-                        }
-                        .qr-code {
-                            width: 50px !important;
-                            height: 50px !important;
-                        }
-                        .qr-code svg {
-                            width: 50px !important;
-                            height: 50px !important;
-                        }
-                        .qr-code {
-                            margin-bottom: 8px !important;
-                        }
-                        .print-container > div:last-child {
-                            margin-top: 8px !important;
-                        }
-                        .print-text-xs {
-                            font-size: 0.75rem !important;
-                            line-height: 1rem !important;
-                        }
-                    }
-                </style>
-            </head>
-            <body class="min-h-screen flex items-center justify-center bg-white p-2">
-                <div class="print-container text-center">
-                    <div class="qr-code">
-                        ${qrCodeHtml}
-                    </div>
-                </div>
-                <script>
-                    window.onload = function() {
-                        setTimeout(function() {
-                            window.print();
-                        }, 500);
-                        window.onafterprint = function() {
-                            window.close();
-                        }
-                    }
-                </script>
-            </body>
-            </html>
-        `)
-        printWindow.document.close()
+        printQrCode(barcodeRef.current.innerHTML, currentReceptionCode)
     }
 
     // Mutation để tạo mã tiếp nhận
