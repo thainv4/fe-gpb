@@ -1090,6 +1090,10 @@ export interface EmrSignResponse {
             NumOrder: number;
             IsSigned: boolean;
             SignTime?: string;
+            Version?: {
+                DocumentCode?: string;
+                Base64Data?: string;
+            };
         }>;
     };
     Success: boolean;
@@ -3178,6 +3182,40 @@ class ApiClient {
                 body: JSON.stringify({ documentId }),
             }
         );
+    }
+
+    /**
+     * Lưu document đã ký số vào storage
+     * POST /api/v1/store-signed-documents
+     */
+    async storeSignedDocuments(data: {
+        storedServiceReqId: string;
+        hisServiceReqCode: string;
+        documentId: number;
+        signedDocumentBase64: string;
+    }): Promise<ApiResponse> {
+        return this.request('/store-signed-documents', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    /**
+     * Stream PDF văn bản đã ký theo hisServiceReqCode
+     * GET /api/v1/store-signed-documents/by-his-code/:hisServiceReqCode/document
+     */
+    async getSignedDocumentByHisCode(hisServiceReqCode: string): Promise<Blob> {
+        this.refreshTokenFromStorage();
+        const url = `${this.baseURL}/store-signed-documents/by-his-code/${encodeURIComponent(hisServiceReqCode)}/document`;
+        const headers: Record<string, string> = {};
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+        const response = await fetch(url, { method: 'GET', headers });
+        if (!response.ok) {
+            throw new Error(response.status === 404 ? 'Không tìm thấy văn bản đã ký' : `Lỗi tải văn bản: ${response.status}`);
+        }
+        return response.blob();
     }
 
     async getWorkflowStates(params?: {

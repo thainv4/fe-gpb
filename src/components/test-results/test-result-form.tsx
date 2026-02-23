@@ -623,6 +623,31 @@ export default function TestResultForm() {
         }
     }
 
+    // Handler xem văn bản đã ký (stream PDF theo hisServiceReqCode)
+    const handleViewSignedDocument = async () => {
+        const hisCode = storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode
+        if (!hisCode) {
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi',
+                description: 'Không có mã yêu cầu dịch vụ HIS'
+            })
+            return
+        }
+        try {
+            const blob = await apiClient.getSignedDocumentByHisCode(hisCode)
+            const url = URL.createObjectURL(blob)
+            window.open(url, '_blank')
+            setTimeout(() => URL.revokeObjectURL(url), 60000)
+        } catch (e: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi',
+                description: e?.message || 'Không tải được văn bản đã ký'
+            })
+        }
+    }
+
     // Handler để xử lý file PDF upload
     const handlePdfFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -1020,8 +1045,36 @@ export default function TestResultForm() {
             const isEmrSuccess = emrResponse?.Success === true;
 
             if (response.success && response.data && isEmrSuccess) {
-                // Lấy documentId từ response
+                // Lấy documentId và signedDocumentBase64 từ response
                 const documentId = response.data?.Data?.DocumentId;
+                const signedDocumentBase64 = response.data?.Data?.Signs[0]?.Version?.Base64Data
+
+                // Gọi API store-signed-documents để lưu document đã ký
+                if (storedServiceRequest?.id && signedDocumentBase64) {
+                    try {
+                        const storeSignedResponse = await apiClient.storeSignedDocuments({
+                            storedServiceReqId: storedServiceRequest.id,
+                            hisServiceReqCode: storedServiceRequest.hisServiceReqCode || storedServiceRequest.serviceReqCode || '',
+                            documentId: Number(documentId) || 0,
+                            signedDocumentBase64,
+                        })
+                        if (!storeSignedResponse.success) {
+                            console.warn('⚠️ Không thể lưu document đã ký:', storeSignedResponse.message || storeSignedResponse.error)
+                            toast({
+                                variant: 'default',
+                                title: 'Cảnh báo',
+                                description: storeSignedResponse.message || 'Đã ký số nhưng không thể lưu document.'
+                            })
+                        }
+                    } catch (storeError: any) {
+                        console.error('❌ Lỗi lưu document đã ký:', storeError)
+                        toast({
+                            variant: 'default',
+                            title: 'Cảnh báo',
+                            description: storeError?.message || 'Đã ký số nhưng không thể lưu document.'
+                        })
+                    }
+                }
 
                 // Nếu có documentId, cập nhật cho tất cả dịch vụ
                 if (documentId && services.length > 0) {
@@ -1694,6 +1747,13 @@ export default function TestResultForm() {
                                                     Chọn danh sách dịch vụ để trả kết quả
                                                 </h3>
                                                 <div className="flex gap-2">
+                                                    <Button
+                                                        onClick={handleViewSignedDocument}
+                                                        disabled={!storedServiceReqId || !(storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode)}
+                                                        variant="outline"
+                                                    >
+                                                        Xem văn bản đã ký
+                                                    </Button>
                                                     <Button
                                                         onClick={() => {
                                                             // Mở preview với dịch vụ đầu tiên có kết quả, hoặc dịch vụ đầu tiên
