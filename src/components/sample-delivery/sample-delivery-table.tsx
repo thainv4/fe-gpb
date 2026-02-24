@@ -605,6 +605,14 @@ export default function SampleDeliveryTable() {
                                             className="mt-1 font-semibold"
                                         />
                                     </div>
+                                    <div className="col-span-3">
+                                        <Label className="text-sm text-gray-600">Bác sĩ chỉ định</Label>
+                                        <Input 
+                                            value={`${storedServiceRequestData.data.requestUsername} (${storedServiceRequestData.data.requestLoginname})` || ''} 
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         )}

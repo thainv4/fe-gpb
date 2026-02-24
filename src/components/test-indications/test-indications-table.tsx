@@ -915,6 +915,19 @@ export default function TestIndicationsTable() {
                             <Label>CMND/CCCD</Label>
                             <Input type='text' value={patient?.cmndNumber ?? ''} disabled />
                         </div>
+
+                        <div className="flex flex-col gap-2">
+                            <Label>Bác sĩ chỉ định</Label>
+                            <Input
+                                type="text"
+                                value={
+                                    serviceRequest?.requestUsername && serviceRequest?.requestLoginname
+                                        ? `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`
+                                        : (serviceRequest?.requestUsername ?? serviceRequest?.requestLoginname ?? '')
+                                }
+                                disabled
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-6">
@@ -943,6 +956,8 @@ export default function TestIndicationsTable() {
                                 disabled
                             />
                         </div>
+
+                        
                     </div>
 
                     <div className="space-y-6">

@@ -95,6 +95,8 @@ const PageHeader = React.memo(({
     treatmentCode,
     requestDepartmentName,
     requestRoomName,
+    requestUsername,
+    requestLoginname,
     icdCode,
     icdName,
     serviceReqCode,
@@ -217,6 +219,17 @@ const PageHeader = React.memo(({
               <span className="font-semibold ml-2">{requestRoomName}</span>
             </span>
           </div>
+
+          {(requestUsername || requestLoginname) && (
+            <div>
+              <span className="text-gray-600">Bác sĩ chỉ định:</span>
+              <span className="font-semibold ml-2">
+                {requestUsername && requestLoginname
+                  ? `${requestUsername} (${requestLoginname})`
+                  : (requestUsername ?? requestLoginname ?? "")}
+              </span>
+            </div>
+          )}
 
           <div>
             <span className="text-gray-600">Chẩn đoán lâm sàng:</span>

@@ -1675,10 +1675,23 @@ export default function TestResultForm() {
                                                 <Input value={patient?.address || ''} disabled
                                                     className="mt-1 font-semibold" />
                                             </div>
+                                            
                                             <div className="col-span-3">
                                                 <Label className="text-sm text-gray-600">Chẩn đoán</Label>
                                                 <Input value={serviceRequest.icdName || ''} disabled
                                                     className="mt-1 font-semibold" />
+                                            </div>
+                                            <div>
+                                                <Label className="text-sm text-gray-600">Bác sĩ chỉ định</Label>
+                                                <Input
+                                                    value={
+                                                        serviceRequest?.requestUsername && serviceRequest?.requestLoginname
+                                                            ? `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`
+                                                            : (serviceRequest?.requestUsername ?? serviceRequest?.requestLoginname ?? '')
+                                                    }
+                                                    disabled
+                                                    className="mt-1 font-semibold"
+                                                />
                                             </div>
                                         </div>
                                     </div>

@@ -892,7 +892,6 @@ export interface StoredServiceRequestResponse {
     icdText?: string | null;
     treatmentId: number;
     treatmentCode: string;
-    note?: string | null;
     requestRoomId: string;
     requestRoomCode: string;
     requestRoomName: string;
@@ -901,6 +900,8 @@ export interface StoredServiceRequestResponse {
     requestDepartmentCode: string;
     requestDepartmentName: string;
     requestDepartmentLisId?: string | null;
+    requestUsername?: string | null;
+    requestLoginname?: string | null;
     executeRoomId: string;
     executeRoomCode: string;
     executeRoomName: string;
@@ -972,6 +973,10 @@ export interface ServiceRequestDetail {
     note?: string | null;
     requestRoom?: RoomInfo;
     requestDepartment?: DepartmentInfo;
+    /** Tên bác sĩ chỉ định */
+    requestUsername?: string | null;
+    /** Login name bác sĩ chỉ định */
+    requestLoginname?: string | null;
     executeRoom?: RoomInfo;
     executeDepartment?: DepartmentInfo;
     patient: PatientInfo;
