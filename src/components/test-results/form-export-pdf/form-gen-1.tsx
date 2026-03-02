@@ -4,7 +4,9 @@ import React, { useMemo } from "react";
 import {
   StoredServiceRequestResponse,
   StoredService,
+  apiClient,
 } from "@/lib/api/client";
+import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 
 export interface FormGen1Props {
@@ -18,6 +20,21 @@ function calculateAge(dob: number): number {
   const year = Number.parseInt(dobStr.substring(0, 4), 10);
   const currentYear = new Date().getFullYear();
   return currentYear - year;
+}
+
+/** Lấy phần text chữ thường từ resultConclude HTML (bỏ thẻ, bỏ tiêu đề CHẨN ĐOÁN MÔ BỆNH HỌC). */
+function getResultConcludePlainText(html: string): string {
+  if (!html?.trim()) return "";
+  const div = typeof document !== "undefined" ? document.createElement("div") : null;
+  if (div) {
+    div.innerHTML = html;
+    let text = (div.textContent ?? div.innerText ?? "").replace(/\s+/g, " ").trim();
+    const header = /chẩn\s*đoán\s*mô\s*bệnh\s*học\s*:?\s*/i;
+    text = text.replace(header, "").trim();
+    return text;
+  }
+  const stripped = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return stripped.replace(/chẩn\s*đoán\s*mô\s*bệnh\s*học\s*:?\s*/i, "").trim();
 }
 
 /** Chỉ re-render khi `html` thay đổi (so sánh reference), tránh set lại innerHTML mỗi lần parent re-render → giữ được bôi đen. */
@@ -43,12 +60,27 @@ export function FormGen1({
     icdCode,
     icdName,
     serviceReqCode,
+    requestUsername,
+    requestLoginname,
   } = data;
 
   const age = calculateAge(patientDob);
   const sampleTypeName = specificService?.sampleTypeName ?? "";
   const receptionCode = specificService?.receptionCode ?? "";
   const resultName = specificService?.resultName ?? "Phiếu kết quả xét nghiệm";
+  const barcodeMapGenGpb = specificService?.barcodeMapGenGpb ?? data?.services?.[0]?.barcodeMapGenGpb ?? "";
+
+  const { data: resultConcludeData } = useQuery({
+    queryKey: ["stored-services-result-conclude", barcodeMapGenGpb],
+    queryFn: () => apiClient.getStoredServicesResultConclude(barcodeMapGenGpb),
+    enabled: !!barcodeMapGenGpb?.trim(),
+    staleTime: 2 * 60 * 1000,
+  });
+  const resultConcludePlainText = useMemo(() => {
+    const raw = resultConcludeData?.data?.resultConclude;
+    return raw ? getResultConcludePlainText(raw) : "";
+  }, [resultConcludeData?.data?.resultConclude]);
+  const diagnosisDisplay = resultConcludePlainText || `${icdCode} - ${icdName}`;
 
   const resultText = useMemo(() => {
     if (!specificService) return "";
@@ -84,9 +116,11 @@ export function FormGen1({
         margin: 20mm 15mm 20mm 15mm;
       }
 
-      /* Font chữ Times New Roman cho toàn bộ form */
+      /* Font chữ Cambria cho toàn bộ form */
       .a4-page {
-        font-family: 'Times New Roman', Times, serif;
+        font-family: Cambria, 'Hoefler Text', serif;
+        line-height: 1.2;
+        font-size: 16px;
       }
 
       @media print {
@@ -96,14 +130,31 @@ export function FormGen1({
         }
 
         .a4-page {
+        line-height: 1.2;
           width: 210mm;
           min-height: 297mm;
           box-shadow: none;
           margin: 0;
           padding: 0;
           page-break-after: always;
-          font-family: 'Times New Roman', Times, serif;
+          font-family: Cambria, 'Hoefler Text', serif;
         }
+
+      .a4-page h1 {
+        font-size: 16px !important;   /* thay vì text-xl ~20px */
+        line-height: 1.2;
+      }
+
+  /* Tất cả chữ text-sm */
+  .a4-page .text-sm {
+    font-size: 16px !important;   /* hoặc 12px */
+  }
+
+  /* Phần kết quả (prose) */
+  .a4-page .prose,
+  .a4-page .prose p {
+    font-size: 16px !important;   /* hoặc 12px */
+  }
 
         .a4-page:last-child {
           page-break-after: auto;
@@ -169,7 +220,7 @@ export function FormGen1({
 
             {/* QR + mã */}
             <div className="text-center pl-2">
-              {serviceReqCode && (
+              {/* {serviceReqCode && (
                 <div className="flex flex-col items-center mb-2">
                   <QRCodeSVG
                     value={serviceReqCode}
@@ -178,8 +229,9 @@ export function FormGen1({
                     includeMargin={false}
                   />
                 </div>
-              )}
-              <div className="text-xs text-left inline-block">
+              )} */}
+              <div className="text-sm text-left inline-block">
+                <div>Barcode: {receptionCode}</div>
                 <div>PID: {patientCode}</div>
                 <div>SID: {serviceReqCode}</div>
               </div>
@@ -195,7 +247,7 @@ export function FormGen1({
           </div>
 
           {/* 1. Patient Information */}
-          <div className="mb-4 avoid-break">
+          <div className="mb-2 avoid-break">
             <h2 className="font-bold mb-2">1. THÔNG TIN NGƯỜI BỆNH:</h2>
             <div className="ml-4 space-y-2 text-sm">
               <div className="flex flex-wrap gap-x-4 gap-y-1 items-baseline">
@@ -228,9 +280,17 @@ export function FormGen1({
           </div>
 
           {/* 2. Doctor / Request info */}
-          <div className="mb-4 avoid-break">
+          <div className="mb-2 avoid-break">
             <h2 className="font-bold mb-2">2. THÔNG TIN BÁC SỸ CHỈ ĐỊNH:</h2>
             <div className="ml-4 space-y-2 text-sm">
+              <div className="flex flex-wrap gap-x-4 items-baseline">
+                <span className="shrink-0">Bác sĩ chỉ định:</span>
+                <span className="flex-1 min-w-0">
+                  {requestUsername && requestLoginname
+                    ? `${requestUsername} (${requestLoginname})`
+                    : (requestUsername ?? requestLoginname ?? "")}
+                </span>
+              </div>
               <div className="flex flex-wrap gap-x-4 items-baseline">
                 <span className="shrink-0">Đơn vị:</span>
                 <span className="flex-1 min-w-0">
@@ -241,7 +301,7 @@ export function FormGen1({
           </div>
 
           {/* 3. Sample Information */}
-          <div className="mb-4 avoid-break">
+          <div className="mb-2 avoid-break">
             <h2 className="font-bold mb-2">3. THÔNG TIN MẪU BỆNH PHẨM:</h2>
             <div className="ml-4 w-full text-sm">
               <div className="grid grid-cols-2 gap-y-2">
@@ -265,33 +325,46 @@ export function FormGen1({
                   <span className="ml-2"></span>
                 </div>
 
-                {/* Hàng 3 */}
                 <div className="flex">
-                  <span className="font-semibold">Mã bệnh phẩm:</span>
-                  <span className="ml-2">{receptionCode || "—"}</span>
+                  <span className="font-semibold">Loại mẫu:</span>
+                  <span className="ml-2"></span>
                 </div>
                 <div className="flex">
+                  <span className="font-semibold">Tình trạng mẫu:</span>
+                  <span className="ml-2">Đạt</span>
+                </div>
+
+                {/* Hàng 3 */}
+                {/* <div className="flex col-span-2">
+                  <span className="font-semibold">Mã bệnh phẩm:</span>
+                  <span className="ml-2">{receptionCode}</span>
+                </div> */}
+
+                <div className="flex">
                   <span className="font-semibold">Vị trí lấy mẫu:</span>
-                  <span className="ml-2">{sampleTypeName || "—"}</span>
+                  <span className="ml-2">{sampleTypeName}</span>
                 </div>
 
                 {/* Hàng 4 */}
                 <div className="flex">
-                  <span className="font-semibold">Phương pháp nhuộm:</span>
-                  <span className="ml-2">
-                    {specificService?.stainingMethodName ?? "—"}
-                  </span>
+                  <span className="font-semibold">Phương pháp lấy mẫu:</span>
+                  <span className="ml-2"></span>
                 </div>
+
                 <div className="flex">
-                  <span className="font-semibold">Mã Y lệnh:</span>
-                  <span className="ml-2">{serviceReqCode}</span>
+                  <span className="font-semibold">Mã bệnh phẩm GPB:</span>
+                  <span className="ml-2">{barcodeMapGenGpb}</span>
                 </div>
+              </div>
+              <div className="mt-2">
+                <span className="font-semibold">Chẩn đoán mô bệnh học:</span>
+                <span className="ml-2">{diagnosisDisplay}</span>
               </div>
             </div>
           </div>
 
           {/* 4. Technique */}
-          <div className="mb-4 avoid-break">
+          <div className="mb-2 avoid-break">
             <h2 className="font-bold mb-2">4. KỸ THUẬT THỰC HIỆN:</h2>
             <div className="ml-4 text-sm">
               {specificService?.stainingMethodName
@@ -317,13 +390,13 @@ export function FormGen1({
         </div>
 
         {/* Signature - cố định ở cuối trang */}
-        <div className="avoid-break flex flex-col items-center mb-20 ml-80">
+        <div className="avoid-break flex flex-col items-center mb-16 ml-80">
           <div className="text-center align-top">
             Ngày {new Date().getDate()} tháng{" "}
             {new Date().getMonth() + 1} năm {new Date().getFullYear()}
           </div>
           <div className="font-bold">
-            Bác sỹ đọc kết quả / Người thực hiện
+            Người phê duyệt kết quả
           </div>
           {signatureImageBase64 && (
             <div className="flex justify-center my-2">

@@ -862,6 +862,7 @@ export interface StoredService {
     documentId?: string | number | null;
     sampleTypeName?: string | null;
     stainingMethodName?: string | null;
+    barcodeMapGenGpb?: string | null;
 }
 
 export interface StoreServiceRequestBody {
@@ -3132,6 +3133,25 @@ class ApiClient {
         );
     }
 
+    /**
+     * Cập nhật Mã bệnh phẩm GPB (barcode_map_gen_gpb) cho stored service request.
+     * Backend cập nhật trường barcode_map_gen_gpb ở bảng bml_stored_sr_services thuộc request này.
+     * @param storedServiceReqId ID của bảng bml_stored_service_requests
+     * @param barcodeMapGenGpb Giá trị Mã bệnh phẩm GPB
+     */
+    async updateStoredServiceRequestBarcodeMapGenGpb(
+        storedServiceReqId: string,
+        barcodeMapGenGpb: string
+    ): Promise<ApiResponse<unknown>> {
+        return this.request<unknown>(
+            `/service-requests/stored/${storedServiceReqId}/barcode-map-gen-gpb`,
+            {
+                method: 'PATCH',
+                body: JSON.stringify({ barcodeMapGenGpb }),
+            }
+        );
+    }
+
     async saveServiceResult(
         serviceId: string,
         data: {
@@ -3153,6 +3173,20 @@ class ApiClient {
                 method: 'PATCH',
                 body: JSON.stringify(data),
             }
+        );
+    }
+
+    /**
+     * GET result-conclude cho stored services (Chẩn đoán mô bệnh học).
+     * Parameter: receptionCode (Mã bệnh phẩm GPB, ví dụ S2601.0942).
+     * GET /api/v1/service-requests/stored/services/result-conclude?receptionCode=...
+     */
+    async getStoredServicesResultConclude(
+        receptionCode: string
+    ): Promise<ApiResponse<{ resultConclude?: string }>> {
+        const params = new URLSearchParams({ receptionCode });
+        return this.request<{ resultConclude?: string }>(
+            `/service-requests/stored/services/result-conclude?${params.toString()}`
         );
     }
 

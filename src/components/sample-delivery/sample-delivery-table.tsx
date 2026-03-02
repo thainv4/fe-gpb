@@ -52,6 +52,13 @@ export default function SampleDeliveryTable() {
         enabled: !!currentUserId,
     })
 
+    // Danh sách phòng my-rooms để lấy resultFormType (giống trang test-result)
+    const { data: myRoomsData } = useQuery({
+        queryKey: ['my-rooms'],
+        queryFn: () => apiClient.getMyUserRooms(),
+        staleTime: 5 * 60 * 1000,
+    })
+
     // State để control việc mở Select "Đơn vị thực hiện"
     const [executeRoomSelectOpen, setExecuteRoomSelectOpen] = useState(false)
 
@@ -69,7 +76,7 @@ export default function SampleDeliveryTable() {
     // Map rooms từ API response thành format availableRooms
     const availableRoomsFromAPI = useMemo(() => {
         if (!roomsData?.data?.rooms) return []
-        
+
         return roomsData.data.rooms.map((room: any) => ({
             key: room.id,
             roomId: room.id,
@@ -101,6 +108,19 @@ export default function SampleDeliveryTable() {
                 departmentCode: ur.departmentCode,
             }))
     }, [availableRoomsFromAPI, userRoomsData])
+
+    const myRooms = useMemo(() => {
+        const raw = (myRoomsData?.data as unknown) ?? []
+        return Array.isArray(raw) ? raw : []
+    }, [myRoomsData])
+
+    // resultFormType của phòng hiện tại: 1 = form-gpb, 2 = form-gen-1 (giống test-result-form)
+    const resultFormType = useMemo(() => {
+        if (!currentRoomId || !myRooms.length) return 1
+        const room = myRooms.find((r: { roomId?: string }) => r.roomId === currentRoomId)
+        const raw = room?.resultFormType ?? (room as { result_form_type?: number })?.result_form_type ?? 1
+        return Number(raw) === 2 ? 2 : 1
+    }, [currentRoomId, myRooms])
 
     // Query workflow states to get "Bàn giao mẫu" state ID
     const { data: statesData } = useQuery({
@@ -135,6 +155,7 @@ export default function SampleDeliveryTable() {
     const [selectedFlag, setSelectedFlag] = useState<string>('')
     // State cho phương pháp nhuộm
     const [selectedStainingMethod, setSelectedStainingMethod] = useState<string>('')
+    const [barcodeMapGenGpb, setBarcodeMapGenGpb] = useState<string>('')
     const [stainingMethodSearch, setStainingMethodSearch] = useState<string>('') // Từ khóa đang gõ
     const [appliedStainingMethodSearch, setAppliedStainingMethodSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
     const [stainingMethodSelectOpen, setStainingMethodSelectOpen] = useState(false)
@@ -153,6 +174,7 @@ export default function SampleDeliveryTable() {
             receptionCode,
             selectedFlag,
             selectedStainingMethod,
+            barcodeMapGenGpb,
         },
         {
             saveScroll: true,
@@ -166,6 +188,7 @@ export default function SampleDeliveryTable() {
                 if (data.receptionCode) setReceptionCode(data.receptionCode)
                 if (data.selectedFlag) setSelectedFlag(data.selectedFlag)
                 if (data.selectedStainingMethod) setSelectedStainingMethod(data.selectedStainingMethod)
+                if (data.barcodeMapGenGpb !== undefined) setBarcodeMapGenGpb(data.barcodeMapGenGpb)
             },
         }
     )
@@ -188,8 +211,8 @@ export default function SampleDeliveryTable() {
     // Query staining methods với search
     const { data: searchedStainingMethodsData } = useQuery({
         queryKey: ['staining-methods-search', appliedStainingMethodSearch],
-        queryFn: () => apiClient.getStainingMethods({ 
-            limit: 10, 
+        queryFn: () => apiClient.getStainingMethods({
+            limit: 10,
             offset: 0,
             search: appliedStainingMethodSearch
         }),
@@ -279,6 +302,7 @@ export default function SampleDeliveryTable() {
             currentRoomId: string;
             selectedFlag: string;
             selectedStainingMethod: string;
+            barcodeMapGenGpb: string;
         }) => {
             // Bước 1: Gọi API tổng hợp để cập nhật flag và staining method cùng lúc (nếu có) - PHẢI thành công
             if (params.storedServiceReqId && (params.selectedStainingMethod || params.selectedFlag)) {
@@ -286,14 +310,14 @@ export default function SampleDeliveryTable() {
                     stainingMethodId?: string;
                     flag?: string;
                 } = {};
-                
+
                 if (params.selectedStainingMethod) {
                     updateData.stainingMethodId = params.selectedStainingMethod;
                 }
                 if (params.selectedFlag) {
                     updateData.flag = params.selectedFlag;
                 }
-                
+
                 const response = await apiClient.updateStoredServiceRequest(
                     params.storedServiceReqId,
                     updateData
@@ -307,23 +331,23 @@ export default function SampleDeliveryTable() {
             if (params.storedServiceReqId && handoverNote) {
                 // Lấy danh sách services từ storedServiceRequestData
                 const services = storedServiceRequestData?.data?.services || []
-                
+
                 if (services.length > 0) {
                     // Gọi API cho tất cả services
-                    const resultNotePromises = services.map((service: any) => 
+                    const resultNotePromises = services.map((service: any) =>
                         apiClient.saveServiceResult(service.id, {
                             resultNotes: handoverNote,
                             resultStatus: 'NORMAL'
                         })
                     )
-                    
+
                     const resultNoteResults = await Promise.allSettled(resultNotePromises)
-                    
+
                     // Kiểm tra tất cả phải thành công
-                    const failedResults = resultNoteResults.filter(r => 
+                    const failedResults = resultNoteResults.filter(r =>
                         r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
                     )
-                    
+
                     if (failedResults.length > 0) {
                         const errorMessages = failedResults.map(r => {
                             if (r.status === 'rejected') {
@@ -350,6 +374,16 @@ export default function SampleDeliveryTable() {
             if (!response.success) {
                 throw new Error(response.error || response.message || 'Không thể xác nhận bàn giao mẫu')
             }
+
+            // Bước 5: Cập nhật Mã bệnh phẩm GPB (barcode_map_gen_gpb)
+            const barcodeResponse = await apiClient.updateStoredServiceRequestBarcodeMapGenGpb(
+                params.storedServiceReqId,
+                params.barcodeMapGenGpb
+            )
+            if (!barcodeResponse.success) {
+                throw new Error(barcodeResponse.message || barcodeResponse.error || 'Không thể cập nhật Mã bệnh phẩm GPB')
+            }
+
             return response
         },
         onSuccess: async (_data, variables) => {
@@ -405,7 +439,7 @@ export default function SampleDeliveryTable() {
             })
             return
         }
-        
+
         // Kiểm tra nếu mã barcode có tiền tố "S" thì bắt buộc phải chọn cờ
         if (receptionCodeFromStored && receptionCodeFromStored.trim().toUpperCase().startsWith('S')) {
             if (!selectedFlag || selectedFlag.trim() === '') {
@@ -426,6 +460,7 @@ export default function SampleDeliveryTable() {
             currentRoomId: receiverRoomId,
             selectedFlag,
             selectedStainingMethod,
+            barcodeMapGenGpb: barcodeMapGenGpb ?? '',
         })
     }
 
@@ -441,12 +476,12 @@ export default function SampleDeliveryTable() {
         setSelectedStainingMethod('')
         setStainingMethodSearch('')
         setAppliedStainingMethodSearch('')
-        
+
         // Reset trạng thái chuyển tiếp về trạng thái mặc định (SAMPLE_HANDOVER)
         if (handoverStateId) {
             setSelectedStateId(handoverStateId)
         }
-        
+
         // Tự động chọn phòng hiện tại khi chọn service request từ sidebar
         if (currentRoomId && availableRooms.length > 0) {
             const matchingRoom = availableRooms.find(r => r.roomId === currentRoomId)
@@ -541,16 +576,16 @@ export default function SampleDeliveryTable() {
                                 <div className="grid grid-cols-3 gap-4">
                                     <div>
                                         <Label className="text-sm text-gray-600">Mã bệnh nhân</Label>
-                                        <Input 
-                                            value={storedServiceRequestData.data.patientCode || ''} 
+                                        <Input
+                                            value={storedServiceRequestData.data.patientCode || ''}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
                                     </div>
                                     <div>
                                         <Label className="text-sm text-gray-600">Họ và tên bệnh nhân</Label>
-                                        <Input 
-                                            value={storedServiceRequestData.data.patientName || ''} 
+                                        <Input
+                                            value={storedServiceRequestData.data.patientName || ''}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
@@ -558,57 +593,57 @@ export default function SampleDeliveryTable() {
                                     <div>
                                         <Label className="text-sm text-gray-600">Ngày sinh</Label>
                                         <Input
-                                            value={storedServiceRequestData.data.patientDob 
-                                                ? `${String(storedServiceRequestData.data.patientDob).substring(6, 8)}/${String(storedServiceRequestData.data.patientDob).substring(4, 6)}/${String(storedServiceRequestData.data.patientDob).substring(0, 4)}` 
+                                            value={storedServiceRequestData.data.patientDob
+                                                ? `${String(storedServiceRequestData.data.patientDob).substring(6, 8)}/${String(storedServiceRequestData.data.patientDob).substring(4, 6)}/${String(storedServiceRequestData.data.patientDob).substring(0, 4)}`
                                                 : ''}
-                                            disabled 
+                                            disabled
                                             className="mt-1 font-semibold"
                                         />
                                     </div>
                                     <div>
                                         <Label className="text-sm text-gray-600">Giới tính</Label>
-                                        <Input 
-                                            value={storedServiceRequestData.data.patientGenderName || ''} 
+                                        <Input
+                                            value={storedServiceRequestData.data.patientGenderName || ''}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
                                     </div>
                                     <div>
                                         <Label className="text-sm text-gray-600">Số điện thoại</Label>
-                                        <Input 
-                                            value={storedServiceRequestData.data.patientMobile || storedServiceRequestData.data.patientPhone || ''} 
+                                        <Input
+                                            value={storedServiceRequestData.data.patientMobile || storedServiceRequestData.data.patientPhone || ''}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
                                     </div>
                                     <div>
                                         <Label className="text-sm text-gray-600">CMND/CCCD</Label>
-                                        <Input 
-                                            value={storedServiceRequestData.data.patientCmndNumber || ''} 
+                                        <Input
+                                            value={storedServiceRequestData.data.patientCmndNumber || ''}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
                                     </div>
                                     <div className="col-span-3">
                                         <Label className="text-sm text-gray-600">Địa chỉ</Label>
-                                        <Input 
-                                            value={storedServiceRequestData.data.patientAddress || ''} 
+                                        <Input
+                                            value={storedServiceRequestData.data.patientAddress || ''}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
                                     </div>
                                     <div className="col-span-3">
                                         <Label className="text-sm text-gray-600">Chẩn đoán</Label>
-                                        <Input 
-                                            value={storedServiceRequestData.data.icdName || ''} 
+                                        <Input
+                                            value={storedServiceRequestData.data.icdName || ''}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
                                     </div>
                                     <div className="col-span-3">
                                         <Label className="text-sm text-gray-600">Bác sĩ chỉ định</Label>
-                                        <Input 
-                                            value={`${storedServiceRequestData.data.requestUsername} (${storedServiceRequestData.data.requestLoginname})` || ''} 
+                                        <Input
+                                            value={`${storedServiceRequestData.data.requestUsername} (${storedServiceRequestData.data.requestLoginname})` || ''}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
@@ -644,7 +679,7 @@ export default function SampleDeliveryTable() {
                                                         </SelectItem>
                                                     )
                                                 }
-                                                
+
                                                 if (availableRooms.length === 0) {
                                                     return (
                                                         <SelectItem value="_empty" disabled>
@@ -652,7 +687,7 @@ export default function SampleDeliveryTable() {
                                                         </SelectItem>
                                                     )
                                                 }
-                                                
+
                                                 return availableRooms.map(room => (
                                                     <SelectItem key={room.key} value={room.key}>
                                                         {(room.roomName || 'Phòng') + ' - ' + (room.departmentName || 'Khoa')}
@@ -668,11 +703,11 @@ export default function SampleDeliveryTable() {
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <Label>Vị trí bệnh phẩm</Label>
-                                    <Input 
-                                        type="text" 
-                                        value={sampleTypeNameFromStored} 
-                                        disabled 
-                                        className="font-semibold" 
+                                    <Input
+                                        type="text"
+                                        value={sampleTypeNameFromStored}
+                                        disabled
+                                        className="font-semibold"
                                         placeholder="Chưa có thông tin loại mẫu"
                                     />
                                 </div>
@@ -695,8 +730,8 @@ export default function SampleDeliveryTable() {
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <Label>Phương pháp nhuộm</Label>
-                                    <Select 
-                                        value={selectedStainingMethod} 
+                                    <Select
+                                        value={selectedStainingMethod}
                                         onValueChange={setSelectedStainingMethod}
                                         open={stainingMethodSelectOpen}
                                         onOpenChange={setStainingMethodSelectOpen}
@@ -706,7 +741,7 @@ export default function SampleDeliveryTable() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             {/* Ô tìm kiếm phương pháp nhuộm - sticky at top */}
-                                            <div 
+                                            <div
                                                 className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
                                                 role="none"
                                                 onKeyDown={(e) => {
@@ -727,12 +762,12 @@ export default function SampleDeliveryTable() {
                                                             setAppliedStainingMethodSearch(stainingMethodSearch)
                                                             return
                                                         }
-                                                        
+
                                                         // Cho phép Escape để đóng dropdown
                                                         if (e.key === 'Escape') {
                                                             return
                                                         }
-                                                        
+
                                                         // Ngăn tất cả các phím khác lan truyền để tránh Select tự động filter/chọn
                                                         e.stopPropagation()
                                                     }}
@@ -768,7 +803,19 @@ export default function SampleDeliveryTable() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                
+
+                                {resultFormType === 2 && (
+                                    <div className="flex flex-col gap-2 md:col-span-2">
+                                        <Label>Mã bệnh phẩm GPB</Label>
+                                        <Input
+                                            type="text"
+                                            className="font-semibold"
+                                            value={barcodeMapGenGpb}
+                                            onChange={(e) => setBarcodeMapGenGpb(e.target.value)}
+                                        />
+                                    </div>
+                                )}
+
                                 <div className="flex flex-col gap-2 md:col-span-2">
                                     <Label>Ghi chú</Label>
                                     <Textarea
