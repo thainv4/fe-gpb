@@ -27,6 +27,14 @@ const getVietnamTime = () => {
     return dayjs().tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DDTHH:mm')
 }
 
+// Giá trị dropdown "PHƯƠNG PHÁP LẤY MẪU" khi resultFormType === 2
+const SAMPLING_METHOD_TYPE_OPTIONS = [
+    { value: 'SINH THIẾT', label: 'SINH THIẾT' },
+    { value: 'PHẪU THUẬT', label: 'PHẪU THUẬT' },
+    { value: 'CHỌC DÒ DỊCH', label: 'CHỌC DÒ DỊCH' },
+    { value: 'CHƯA RÕ THÔNG TIN', label: 'CHƯA RÕ THÔNG TIN' },
+] as const
+
 export default function SampleDeliveryTable() {
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
     const queryClient = useQueryClient()
@@ -156,9 +164,12 @@ export default function SampleDeliveryTable() {
     // State cho phương pháp nhuộm
     const [selectedStainingMethod, setSelectedStainingMethod] = useState<string>('')
     const [barcodeMapGenGpb, setBarcodeMapGenGpb] = useState<string>('')
+    const [gpbResultConclude, setGpbResultConclude] = useState<string>('') // Kết quả từ API result-conclude (khi nhấn Enter ở Mã bệnh phẩm GPB)
     const [stainingMethodSearch, setStainingMethodSearch] = useState<string>('') // Từ khóa đang gõ
     const [appliedStainingMethodSearch, setAppliedStainingMethodSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
     const [stainingMethodSelectOpen, setStainingMethodSelectOpen] = useState(false)
+    // State cho "PHƯƠNG PHÁP LẤY MẪU" khi resultFormType === 2 (SINH THIẾT, PHẪU THUẬT, ...)
+    const [samplingMethodType, setSamplingMethodType] = useState<string>('')
 
     // Tab persistence
     const pathname = usePathname()
@@ -173,6 +184,7 @@ export default function SampleDeliveryTable() {
             handoverNote,
             receptionCode,
             selectedFlag,
+            samplingMethodType,
             selectedStainingMethod,
             barcodeMapGenGpb,
         },
@@ -187,6 +199,7 @@ export default function SampleDeliveryTable() {
                 if (data.handoverNote !== undefined) setHandoverNote(data.handoverNote)
                 if (data.receptionCode) setReceptionCode(data.receptionCode)
                 if (data.selectedFlag) setSelectedFlag(data.selectedFlag)
+                if (data.samplingMethodType) setSamplingMethodType(data.samplingMethodType)
                 if (data.selectedStainingMethod) setSelectedStainingMethod(data.selectedStainingMethod)
                 if (data.barcodeMapGenGpb !== undefined) setBarcodeMapGenGpb(data.barcodeMapGenGpb)
             },
@@ -303,6 +316,7 @@ export default function SampleDeliveryTable() {
             selectedFlag: string;
             selectedStainingMethod: string;
             barcodeMapGenGpb: string;
+            resultConcludeMapGenGpb: string;
         }) => {
             // Bước 1: Gọi API tổng hợp để cập nhật flag và staining method cùng lúc (nếu có) - PHẢI thành công
             if (params.storedServiceReqId && (params.selectedStainingMethod || params.selectedFlag)) {
@@ -372,16 +386,19 @@ export default function SampleDeliveryTable() {
             })
             // Nếu API trả về success: false, throw error để trigger onError
             if (!response.success) {
-                throw new Error(response.error || response.message || 'Không thể xác nhận bàn giao mẫu')
+                throw new Error(response.error || response.message || 'Không thể bàn giao mẫu')
             }
 
-            // Bước 5: Cập nhật Mã bệnh phẩm GPB (barcode_map_gen_gpb)
-            const barcodeResponse = await apiClient.updateStoredServiceRequestBarcodeMapGenGpb(
+            // Bước 5: PATCH gpb-fields (barcodeMapGenGpb, resultConcludeMapGenGpb)
+            const gpbResponse = await apiClient.updateStoredServiceRequestGpbFields(
                 params.storedServiceReqId,
-                params.barcodeMapGenGpb
+                {
+                    barcodeMapGenGpb: params.barcodeMapGenGpb,
+                    resultConcludeMapGenGpb: params.resultConcludeMapGenGpb,
+                }
             )
-            if (!barcodeResponse.success) {
-                throw new Error(barcodeResponse.message || barcodeResponse.error || 'Không thể cập nhật Mã bệnh phẩm GPB')
+            if (!gpbResponse.success) {
+                throw new Error(gpbResponse.message || gpbResponse.error || 'Không thể cập nhật gpb-fields')
             }
 
             return response
@@ -400,11 +417,56 @@ export default function SampleDeliveryTable() {
             const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
             toast({
                 title: 'Lỗi',
-                description: `Không thể xác nhận bàn giao: ${errorMessage}`,
+                description: `Không thể bàn giao mẫu: ${errorMessage}`,
                 variant: 'destructive',
             })
         },
     })
+
+    // Gọi API result-conclude cho Mã bệnh phẩm GPB (khi resultFormType === 2)
+    const resultConcludeMutation = useMutation({
+        mutationFn: async (receptionCode: string) => {
+            const res = await apiClient.getStoredServicesResultConclude(receptionCode.trim())
+            if (!res.success) {
+                throw new Error(res.message || res.error || 'Không lấy được kết quả resultConclude')
+            }
+            const html = res.data?.resultConclude || ''
+            let text: string
+            if (typeof document !== 'undefined') {
+                const div = document.createElement('div')
+                div.innerHTML = html
+                text = (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim()
+            } else {
+                text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+            }
+            // Chỉ lấy phần chữ thường: bỏ tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC:"
+            const header = /chẩn\s*đoán\s*mô\s*bệnh\s*học\s*:?\s*/i
+            return text.replace(header, '').trim()
+        },
+        onSuccess: (plainText) => {
+            setGpbResultConclude(plainText)
+        },
+        onError: (error: unknown) => {
+            const msg = error instanceof Error ? error.message : 'Lỗi không xác định'
+            setGpbResultConclude('')
+            toast({
+                title: 'Lỗi',
+                description: `Không lấy được kết quả resultConclude: ${msg}`,
+                variant: 'destructive',
+            })
+        },
+    })
+
+    // Tự động gọi API result-conclude khi barcodeMapGenGpb thay đổi (không cần Enter)
+    useEffect(() => {
+        if (resultFormType !== 2) return
+        const code = barcodeMapGenGpb.trim()
+        if (!code) {
+            setGpbResultConclude('')
+            return
+        }
+        resultConcludeMutation.mutate(code)
+    }, [barcodeMapGenGpb, resultFormType])
 
     const handleConfirmHandover = () => {
         if (!storedServiceReqId) {
@@ -423,10 +485,18 @@ export default function SampleDeliveryTable() {
             })
             return
         }
-        if (!selectedStainingMethod) {
+        if (resultFormType !== 2 && !selectedStainingMethod) {
             toast({
                 title: 'Lỗi',
                 description: 'Vui lòng chọn phương pháp nhuộm',
+                variant: 'destructive',
+            })
+            return
+        }
+        if (resultFormType === 2 && !samplingMethodType) {
+            toast({
+                title: 'Lỗi',
+                description: 'Vui lòng chọn phương pháp lấy mẫu',
                 variant: 'destructive',
             })
             return
@@ -440,8 +510,8 @@ export default function SampleDeliveryTable() {
             return
         }
 
-        // Kiểm tra nếu mã barcode có tiền tố "S" thì bắt buộc phải chọn cờ
-        if (receptionCodeFromStored && receptionCodeFromStored.trim().toUpperCase().startsWith('S')) {
+        // Kiểm tra nếu mã barcode có tiền tố "S" thì bắt buộc phải chọn cờ (chỉ khi resultFormType !== 2)
+        if (resultFormType !== 2 && receptionCodeFromStored && receptionCodeFromStored.trim().toUpperCase().startsWith('S')) {
             if (!selectedFlag || selectedFlag.trim() === '') {
                 toast({
                     title: 'Lỗi',
@@ -458,9 +528,10 @@ export default function SampleDeliveryTable() {
             currentUserId,
             currentDepartmentId: receiverDepartmentId,
             currentRoomId: receiverRoomId,
-            selectedFlag,
-            selectedStainingMethod,
+            selectedFlag: resultFormType === 2 ? samplingMethodType : selectedFlag,
+            selectedStainingMethod: resultFormType === 2 ? '' : selectedStainingMethod,
             barcodeMapGenGpb: barcodeMapGenGpb ?? '',
+            resultConcludeMapGenGpb: gpbResultConclude ?? '',
         })
     }
 
@@ -473,9 +544,11 @@ export default function SampleDeliveryTable() {
         setReceiveDateTime(getVietnamTime())
         setHandoverNote('')
         setSelectedFlag('')
+        setSamplingMethodType('')
         setSelectedStainingMethod('')
         setStainingMethodSearch('')
         setAppliedStainingMethodSearch('')
+        setGpbResultConclude('')
 
         // Reset trạng thái chuyển tiếp về trạng thái mặc định (SAMPLE_HANDOVER)
         if (handoverStateId) {
@@ -728,92 +801,118 @@ export default function SampleDeliveryTable() {
                                     <Label>Thời gian nhận mẫu</Label>
                                     <Input type="datetime-local" value={receiveDateTime} onChange={(e) => setReceiveDateTime(e.target.value)} />
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <Label>Phương pháp nhuộm</Label>
-                                    <Select
-                                        value={selectedStainingMethod}
-                                        onValueChange={setSelectedStainingMethod}
-                                        open={stainingMethodSelectOpen}
-                                        onOpenChange={setStainingMethodSelectOpen}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn phương pháp nhuộm..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {/* Ô tìm kiếm phương pháp nhuộm - sticky at top */}
-                                            <div
-                                                className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
-                                                role="none"
-                                                onKeyDown={(e) => {
-                                                    // Ngăn tất cả keyboard events lan truyền ra ngoài container
-                                                    e.stopPropagation()
-                                                }}
-                                            >
-                                                <Input
-                                                    placeholder="Tìm kiếm phương pháp nhuộm..."
-                                                    value={stainingMethodSearch}
-                                                    onChange={(e) => setStainingMethodSearch(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        // Ngăn chặn tất cả keyboard events lan truyền đến Select component
-                                                        // để tránh tự động highlight/chọn items khi đang gõ
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault()
+                                {resultFormType !== 2 && (
+                                    <div className="flex flex-col gap-2">
+                                        <Label>Phương pháp nhuộm</Label>
+                                        <Select
+                                            value={selectedStainingMethod}
+                                            onValueChange={setSelectedStainingMethod}
+                                            open={stainingMethodSelectOpen}
+                                            onOpenChange={setStainingMethodSelectOpen}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Chọn phương pháp nhuộm..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <div
+                                                    className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
+                                                    role="none"
+                                                    onKeyDown={(e) => e.stopPropagation()}
+                                                >
+                                                    <Input
+                                                        placeholder="Tìm kiếm phương pháp nhuộm..."
+                                                        value={stainingMethodSearch}
+                                                        onChange={(e) => setStainingMethodSearch(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault()
+                                                                e.stopPropagation()
+                                                                setAppliedStainingMethodSearch(stainingMethodSearch)
+                                                                return
+                                                            }
+                                                            if (e.key === 'Escape') return
                                                             e.stopPropagation()
-                                                            setAppliedStainingMethodSearch(stainingMethodSearch)
-                                                            return
-                                                        }
-
-                                                        // Cho phép Escape để đóng dropdown
-                                                        if (e.key === 'Escape') {
-                                                            return
-                                                        }
-
-                                                        // Ngăn tất cả các phím khác lan truyền để tránh Select tự động filter/chọn
-                                                        e.stopPropagation()
-                                                    }}
-                                                    className="text-sm"
-                                                    autoComplete="off"
-                                                />
-                                            </div>
-                                            {filteredStainingMethods.length
-                                                ? filteredStainingMethods.map((method: { id: string; methodName: string }) => (
-                                                    <SelectItem key={method.id} value={method.id}>
-                                                        {method.methodName}
-                                                    </SelectItem>
-                                                ))
-                                                : <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>
-                                            }
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <Label>Phân loại bệnh phẩm</Label>
-                                    <Select value={selectedFlag} onValueChange={setSelectedFlag}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Chọn cờ..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="ST">ST</SelectItem>
-                                            <SelectItem value="PT">PT</SelectItem>
-                                            <SelectItem value="HMMD">HMMD</SelectItem>
-                                            <SelectItem value="CL">CL</SelectItem>
-                                            <SelectItem value="HC">HC</SelectItem>
-                                            <SelectItem value="DB">DB</SelectItem>
-                                            <SelectItem value="HQMD">HQMD</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                                        }}
+                                                        className="text-sm"
+                                                        autoComplete="off"
+                                                    />
+                                                </div>
+                                                {filteredStainingMethods.length
+                                                    ? filteredStainingMethods.map((method: { id: string; methodName: string }) => (
+                                                        <SelectItem key={method.id} value={method.id}>
+                                                            {method.methodName}
+                                                        </SelectItem>
+                                                    ))
+                                                    : <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>
+                                                }
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                                {resultFormType !== 2 && (
+                                    <div className="flex flex-col gap-2">
+                                        <Label>Phân loại bệnh phẩm</Label>
+                                        <Select value={selectedFlag} onValueChange={setSelectedFlag}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Chọn cờ..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="ST">ST</SelectItem>
+                                                <SelectItem value="PT">PT</SelectItem>
+                                                <SelectItem value="HMMD">HMMD</SelectItem>
+                                                <SelectItem value="CL">CL</SelectItem>
+                                                <SelectItem value="HC">HC</SelectItem>
+                                                <SelectItem value="DB">DB</SelectItem>
+                                                <SelectItem value="HQMD">HQMD</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
 
                                 {resultFormType === 2 && (
-                                    <div className="flex flex-col gap-2 md:col-span-2">
-                                        <Label>Mã bệnh phẩm GPB</Label>
-                                        <Input
-                                            type="text"
-                                            className="font-semibold"
-                                            value={barcodeMapGenGpb}
-                                            onChange={(e) => setBarcodeMapGenGpb(e.target.value)}
-                                        />
+                                    <div className="flex flex-col gap-2">
+                                        <Label>PHƯƠNG PHÁP LẤY MẪU</Label>
+                                        <Select value={samplingMethodType} onValueChange={setSamplingMethodType}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Chọn phương pháp lấy mẫu..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {SAMPLING_METHOD_TYPE_OPTIONS.map((opt) => (
+                                                    <SelectItem key={opt.value} value={opt.value}>
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
+                                )}
+
+                                {resultFormType === 2 && (
+                                    <>
+                                        <div className="flex flex-col gap-2 md:col-span-2">
+                                            <Label>Mã bệnh phẩm GPB</Label>
+                                            <Input
+                                                type="text"
+                                                className="font-semibold"
+                                                value={barcodeMapGenGpb}
+                                                onChange={(e) => setBarcodeMapGenGpb(e.target.value)}
+                                                placeholder="Nhập mã bệnh phẩm GPB"
+                                            />
+                                            {resultConcludeMutation.isPending && (
+                                                <span className="text-xs text-muted-foreground">Đang tải kết luận mô bệnh học...</span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-col gap-1 md:col-span-2">
+                                            <Label className="text-sm font-medium">Chẩn đoán mô bệnh học</Label>
+                                            <Textarea
+                                                value={gpbResultConclude}
+                                                onChange={(e) => setGpbResultConclude(e.target.value)}
+                                                className="resize-y min-h-[40px] text-sm bg-muted/30"
+                                                placeholder="Kết luận mô bệnh học sẽ được lấy tự động từ hệ thống, bạn có thể nhập thủ công tại đây..."
+                                            />
+                                        </div>
+                                    </>
                                 )}
 
                                 <div className="flex flex-col gap-2 md:col-span-2">
@@ -830,7 +929,7 @@ export default function SampleDeliveryTable() {
 
                         {/* Action buttons */}
                         <div className="flex justify-center gap-3 mt-6">
-                            <Button onClick={handleConfirmHandover} disabled={transitionMutation.isPending || !storedServiceReqId || !selectedStateId || !receiverRoomId || !receiverDepartmentId || !selectedStainingMethod}>
+                            <Button onClick={handleConfirmHandover} disabled={transitionMutation.isPending || !storedServiceReqId || !selectedStateId || !receiverRoomId || !receiverDepartmentId || (resultFormType !== 2 && !selectedStainingMethod) || (resultFormType === 2 && !samplingMethodType)}>
                                 {transitionMutation.isPending ? 'Đang xử lý...' : 'Xác nhận bàn giao'}
                             </Button>
                             <Button variant="secondary" onClick={() => setReceiveDateTime(getVietnamTime())} disabled={transitionMutation.isPending}>

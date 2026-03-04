@@ -614,6 +614,23 @@ export interface StainingMethodFilters {
     search?: string;
 }
 
+/** Phương pháp thực hiện xét nghiệm (testing-methods-gen module) */
+export interface TestingMethodGen {
+    id: string;
+    methodName: string;
+    createdAt: string;
+    updatedAt: string;
+    createdBy?: string | null;
+    updatedBy?: string | null;
+    version: number;
+}
+
+export interface TestingMethodGenFilters {
+    limit?: number;
+    offset?: number;
+    search?: string;
+}
+
 export interface ResultTemplate {
     id: string;
     templateName: string;
@@ -809,6 +826,8 @@ export interface ServiceResult {
     resultConclude?: string | null;
     resultNote?: string | null;
     resultComment?: string | null;
+    /** Phương pháp thực hiện xét nghiệm (khi resultFormType = 2) */
+    testingMethodGen?: { id: string; methodName: string } | null;
 }
 
 export interface StoredService {
@@ -863,6 +882,8 @@ export interface StoredService {
     sampleTypeName?: string | null;
     stainingMethodName?: string | null;
     barcodeMapGenGpb?: string | null;
+    /** Phương pháp thực hiện xét nghiệm (form-gen-1) - từ GET /service-requests/stored/services/{serviceId} */
+    testingMethodGen?: { id: string; methodName: string } | null;
 }
 
 export interface StoreServiceRequestBody {
@@ -2871,6 +2892,55 @@ class ApiClient {
         });
     }
 
+    // ========== TESTING METHODS GEN ==========
+
+    async getTestingMethodsGen(filters?: TestingMethodGenFilters): Promise<
+        ApiResponse<{
+            testingMethodsGen: TestingMethodGen[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        params.append('limit', String(filters?.limit ?? 10));
+        params.append('offset', String(filters?.offset ?? 0));
+        if (filters?.search?.trim()) params.append('search', filters.search.trim());
+        const query = params.toString();
+        return this.request<{ testingMethodsGen: TestingMethodGen[]; total: number; limit: number; offset: number }>(
+            `/testing-methods-gen${query ? `?${query}` : ''}`
+        );
+    }
+
+    async getTestingMethodGenById(id: string): Promise<ApiResponse<TestingMethodGen>> {
+        return this.request<TestingMethodGen>(`/testing-methods-gen/${id}`);
+    }
+
+    async getTestingMethodGenByMethodName(methodName: string): Promise<ApiResponse<TestingMethodGen>> {
+        const params = new URLSearchParams({ methodName });
+        return this.request<TestingMethodGen>(`/testing-methods-gen/search/method-name?${params.toString()}`);
+    }
+
+    async createTestingMethodGen(data: { methodName: string }): Promise<ApiResponse<{ id: string }>> {
+        return this.request<{ id: string }>('/testing-methods-gen', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async updateTestingMethodGen(id: string, data: { methodName?: string }): Promise<ApiResponse<unknown>> {
+        return this.request<unknown>(`/testing-methods-gen/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteTestingMethodGen(id: string): Promise<ApiResponse<unknown>> {
+        return this.request<unknown>(`/testing-methods-gen/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
     // ========== RESULT TEMPLATE ENDPOINTS ==========
 
     async getResultTemplates(
@@ -3122,6 +3192,7 @@ class ApiClient {
             flag?: string;
             stainingMethodId?: string;
             numOfBlock?: string | number;
+            testingMethodGenId?: string;
         }
     ): Promise<ApiResponse<unknown>> {
         return this.request<unknown>(
@@ -3134,20 +3205,19 @@ class ApiClient {
     }
 
     /**
-     * Cập nhật Mã bệnh phẩm GPB (barcode_map_gen_gpb) cho stored service request.
-     * Backend cập nhật trường barcode_map_gen_gpb ở bảng bml_stored_sr_services thuộc request này.
-     * @param storedServiceReqId ID của bảng bml_stored_service_requests
-     * @param barcodeMapGenGpb Giá trị Mã bệnh phẩm GPB
+     * PATCH gpb-fields cho stored service request.
+     * PATCH /api/v1/service-requests/stored/:storedServiceReqId/gpb-fields
+     * Body: { barcodeMapGenGpb, resultConcludeMapGenGpb }
      */
-    async updateStoredServiceRequestBarcodeMapGenGpb(
+    async updateStoredServiceRequestGpbFields(
         storedServiceReqId: string,
-        barcodeMapGenGpb: string
+        data: { barcodeMapGenGpb: string; resultConcludeMapGenGpb: string }
     ): Promise<ApiResponse<unknown>> {
         return this.request<unknown>(
-            `/service-requests/stored/${storedServiceReqId}/barcode-map-gen-gpb`,
+            `/service-requests/stored/${storedServiceReqId}/gpb-fields`,
             {
                 method: 'PATCH',
-                body: JSON.stringify({ barcodeMapGenGpb }),
+                body: JSON.stringify(data),
             }
         );
     }

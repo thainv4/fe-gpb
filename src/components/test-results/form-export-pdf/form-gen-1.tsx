@@ -22,6 +22,22 @@ function calculateAge(dob: number): number {
   return currentYear - year;
 }
 
+function formatDateTime(iso?: string | null): string {
+  if (!iso) return "-";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "-";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    const h = String(d.getHours()).padStart(2, "0");
+    const m = String(d.getMinutes()).padStart(2, "0");
+    return `${h}:${m} ${day}/${month}/${year}`;
+  } catch {
+    return "-";
+  }
+}
+
 /** Lấy phần text chữ thường từ resultConclude HTML (bỏ thẻ, bỏ tiêu đề CHẨN ĐOÁN MÔ BỆNH HỌC). */
 function getResultConcludePlainText(html: string): string {
   if (!html?.trim()) return "";
@@ -69,6 +85,7 @@ export function FormGen1({
   const receptionCode = specificService?.receptionCode ?? "";
   const resultName = specificService?.resultName ?? "Phiếu kết quả xét nghiệm";
   const barcodeMapGenGpb = specificService?.barcodeMapGenGpb ?? data?.services?.[0]?.barcodeMapGenGpb ?? "";
+  const flag = data?.flag ?? "";
 
   const { data: resultConcludeData } = useQuery({
     queryKey: ["stored-services-result-conclude", barcodeMapGenGpb],
@@ -76,6 +93,22 @@ export function FormGen1({
     enabled: !!barcodeMapGenGpb?.trim(),
     staleTime: 2 * 60 * 1000,
   });
+
+  const { data: workflowActionsData } = useQuery({
+    queryKey: ["workflow-action-info", data.id],
+    queryFn: () => apiClient.getWorkflowActionInfo(data.id),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!data.id,
+  });
+  const sampleCollectorInfo = useMemo(
+    () => workflowActionsData?.data?.find((action) => action.stateOrder === 1),
+    [workflowActionsData]
+  );
+  const sampleReceiverInfo = useMemo(
+    () => workflowActionsData?.data?.find((action) => action.stateOrder === 2),
+    [workflowActionsData]
+  );
+
   const resultConcludePlainText = useMemo(() => {
     const raw = resultConcludeData?.data?.resultConclude;
     return raw ? getResultConcludePlainText(raw) : "";
@@ -308,21 +341,21 @@ export function FormGen1({
                 {/* Hàng 1 */}
                 <div className="flex">
                   <span className="font-semibold">Người lấy mẫu:</span>
-                  <span className="ml-2"></span>
+                  <span className="ml-2">{sampleCollectorInfo?.actionUserFullName ?? "-"}</span>
                 </div>
                 <div className="flex">
                   <span className="font-semibold">Thời gian lấy mẫu:</span>
-                  <span className="ml-2"></span>
+                  <span className="ml-2">{formatDateTime(sampleCollectorInfo?.createdAt)}</span>
                 </div>
 
                 {/* Hàng 2 */}
                 <div className="flex">
                   <span className="font-semibold">Người nhận mẫu:</span>
-                  <span className="ml-2"></span>
+                  <span className="ml-2">{sampleReceiverInfo?.actionUserFullName ?? "-"}</span>
                 </div>
                 <div className="flex">
                   <span className="font-semibold">Thời gian nhận mẫu:</span>
-                  <span className="ml-2"></span>
+                  <span className="ml-2">{formatDateTime(sampleReceiverInfo?.createdAt)}</span>
                 </div>
 
                 <div className="flex">
@@ -348,7 +381,7 @@ export function FormGen1({
                 {/* Hàng 4 */}
                 <div className="flex">
                   <span className="font-semibold">Phương pháp lấy mẫu:</span>
-                  <span className="ml-2"></span>
+                  <span className="ml-2">{flag || "—"}</span>
                 </div>
 
                 <div className="flex">
@@ -367,9 +400,14 @@ export function FormGen1({
           <div className="mb-2 avoid-break">
             <h2 className="font-bold mb-2">4. KỸ THUẬT THỰC HIỆN:</h2>
             <div className="ml-4 text-sm">
-              {specificService?.stainingMethodName
-                ? `Phương pháp: ${specificService.stainingMethodName}`
-                : "—"}
+              {specificService?.testingMethodGen?.methodName
+                ? `Phương pháp: ${specificService.testingMethodGen.methodName}`
+                : flag
+                  ? `Phương pháp: ${flag}`
+                  : "—"}
+            </div>
+            <div className="ml-4 text-sm">
+              Người thực hiện
             </div>
           </div>
 

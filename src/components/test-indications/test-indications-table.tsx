@@ -135,6 +135,16 @@ export default function TestIndicationsTable() {
         return prefix && PREFIX_OPTIONS.includes(prefix) ? prefix : undefined
     }, [currentRoomId, tabRoomId, myRooms])
 
+    // resultFormType của phòng: 2 = form-gen-1 → hiển thị "CHỌN LOẠI BỆNH PHẨM"
+    const resultFormType = useMemo(() => {
+        const roomId = currentRoomId ?? tabRoomId
+        if (!roomId || !myRooms.length) return 1
+        const room = myRooms.find((r) => r.roomId === roomId)
+        const raw = (room as { resultFormType?: string | number; result_form_type?: number })?.resultFormType
+            ?? (room as { result_form_type?: number })?.result_form_type ?? 1
+        return Number(raw) === 2 ? 2 : 1
+    }, [currentRoomId, tabRoomId, myRooms])
+
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient
 
@@ -256,7 +266,7 @@ export default function TestIndicationsTable() {
     }
 
     const clearSampleFields = () => {
-        // Không reset selectedSampleType để giữ lại giá trị đã chọn
+        setSelectedSampleType('')
         setSelectedPrefix('')
         setManualBarcode('')
         setIsManualInput(false)
@@ -761,7 +771,9 @@ export default function TestIndicationsTable() {
 
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium">Chọn vị trí bệnh phẩm</Label>
+                            <Label className="text-sm font-medium">
+                                {resultFormType === 2 ? 'Chọn loại bệnh phẩm' : 'Chọn vị trí bệnh phẩm'}
+                            </Label>
                             <Button
                                 type="button"
                                 variant="ghost"

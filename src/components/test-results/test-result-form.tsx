@@ -11,6 +11,7 @@ import { useCurrentRoomStore } from "@/lib/stores/current-room";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { ResultForm, RESULT_FORM_TYPE_GPB } from "@/components/test-results/form-export-pdf";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useHisStore } from "@/lib/stores/his";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
@@ -60,6 +62,13 @@ export default function TestResultForm() {
     const [attachedPdfFile, setAttachedPdfFile] = useState<File | null>(null)
     const [attachedPdfBase64, setAttachedPdfBase64] = useState<string>('')
 
+    // Phương pháp thực hiện xét nghiệm (testing-methods-gen) - chỉ dùng khi resultFormType = 2
+    const [selectedSamplingMethod, setSelectedSamplingMethod] = useState<string>('')
+    const [testingMethodGenFromResult, setTestingMethodGenFromResult] = useState<{ id: string; methodName: string } | null>(null)
+    const [samplingMethodGenSearch, setSamplingMethodGenSearch] = useState<string>('')
+    const [appliedSamplingMethodGenSearch, setAppliedSamplingMethodGenSearch] = useState<string>('')
+    const [samplingMethodGenSelectOpen, setSamplingMethodGenSelectOpen] = useState(false)
+
     // Default templates with HTML format (bold titles and indented content)
     const defaultMacroscopicComment = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
     const emptyMacroscopicComment = `<p style="padding-left: 20px;"></p>` // Không có tiêu đề, chỉ có nội dung rỗng
@@ -69,6 +78,7 @@ export default function TestResultForm() {
     const defaultResultConcludeCellBiology = `<p style="padding-left: 0; margin-left: 0;"><strong>CHẨN ĐOÁN TẾ BÀO HỌC:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultConcludeGen1 = "" // Trống hoàn toàn cho resultFormType = 2
     const defaultResultNote = `<p style="padding-left: 0; margin-left: 0;"><strong>BÀN LUẬN:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>KHUYẾN NGHỊ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>HỘI CHẨN:</strong></p><p style="padding-left: 20px;"></p>`
+    const defaultResultNoteGen1 = `<p style="padding-left: 0; margin-left: 0;"><strong>Phiên giải kết quả:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>Khuyến nghị:</strong></p><p style="padding-left: 20px;"></p>`
 
     // Helper function to parse resultDescription into macroscopic and microscopic parts
     const parseResultDescription = (description: string) => {
@@ -158,6 +168,7 @@ export default function TestResultForm() {
     }, [macroscopicComment, microscopicDescription])
     const [resultName, setResultName] = useState<string>('')
     const [numOfBlock, setNumOfBlock] = useState<string>('')
+    const [showGhiChuGen1, setShowGhiChuGen1] = useState(true) // Checkbox ẩn/hiện input ghi chú khi resultFormType === 2
     const [isSaving, setIsSaving] = useState(false)
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -266,6 +277,60 @@ export default function TestResultForm() {
         return Number(raw) === 2 ? 2 : RESULT_FORM_TYPE_GPB
     }, [storeCurrentRoomId, currentRoomId, myRooms])
 
+    // testing-methods-gen: danh sách phương pháp thực hiện xét nghiệm
+    const { data: samplingMethodsGenData } = useQuery({
+        queryKey: ['testing-methods-gen', { limit: 100, offset: 0 }],
+        queryFn: () => apiClient.getTestingMethodsGen({ limit: 100, offset: 0 }),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const { data: searchedSamplingMethodsGenData } = useQuery({
+        queryKey: ['testing-methods-gen-search', appliedSamplingMethodGenSearch],
+        queryFn: () => apiClient.getTestingMethodsGen({
+            limit: 10,
+            offset: 0,
+            search: appliedSamplingMethodGenSearch,
+        }),
+        enabled: !!appliedSamplingMethodGenSearch && appliedSamplingMethodGenSearch.trim().length > 0,
+        retry: false,
+    })
+
+    const allSamplingMethodsGen = useMemo(
+        () => samplingMethodsGenData?.data?.testingMethodsGen ?? [],
+        [samplingMethodsGenData]
+    )
+
+    const filteredSamplingMethodsGen = useMemo(() => {
+        if (appliedSamplingMethodGenSearch?.trim()) {
+            if (searchedSamplingMethodsGenData?.data?.testingMethodsGen &&
+                Array.isArray(searchedSamplingMethodsGenData.data.testingMethodsGen)) {
+                return searchedSamplingMethodsGenData.data.testingMethodsGen
+            }
+            return []
+        }
+        return allSamplingMethodsGen
+    }, [appliedSamplingMethodGenSearch, searchedSamplingMethodsGenData, allSamplingMethodsGen])
+
+    const { data: testingMethodGenByIdData } = useQuery({
+        queryKey: ['testing-method-gen-by-id', selectedSamplingMethod],
+        queryFn: () => apiClient.getTestingMethodGenById(selectedSamplingMethod),
+        enabled: resultFormType === 2 && !!selectedSamplingMethod?.trim(),
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const samplingMethodsGenOptions = useMemo(() => {
+        const list = [...filteredSamplingMethodsGen] as Array<{ id: string; methodName: string }>
+        const methodToAdd = selectedSamplingMethod && !list.some((m) => m.id === selectedSamplingMethod)
+            ? (testingMethodGenByIdData?.data
+                ? { id: testingMethodGenByIdData.data.id, methodName: testingMethodGenByIdData.data.methodName }
+                : testingMethodGenFromResult)
+            : null
+        if (methodToAdd) {
+            list.push(methodToAdd)
+        }
+        return list
+    }, [filteredSamplingMethodsGen, selectedSamplingMethod, testingMethodGenByIdData?.data, testingMethodGenFromResult])
+
     // Tự động thêm tiêu đề dựa trên barcode prefix
     // CHỈ khi chưa click vào dịch vụ (resultConclude đang ở giá trị mặc định)
     useEffect(() => {
@@ -274,9 +339,9 @@ export default function TestResultForm() {
             const barcodePrefix = receptionCode.trim().toUpperCase().charAt(0)
 
             // Kiểm tra xem resultConclude có phải là giá trị mặc định không
-            const isDefaultValue = 
-                !resultConclude || 
-                resultConclude === defaultResultConclude || 
+            const isDefaultValue =
+                !resultConclude ||
+                resultConclude === defaultResultConclude ||
                 resultConclude === defaultResultConcludeCellBiology ||
                 resultConclude === defaultResultConcludeGen1
 
@@ -313,9 +378,11 @@ export default function TestResultForm() {
             syncResultDescription(defaultResultDescription)
             // Sử dụng default khác nhau dựa trên resultFormType
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
-            setResultNote(defaultResultNote)
+            setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
             setResultName('')
             setMacroscopicComment(defaultMacroscopicComment)
+            setSelectedSamplingMethod('')
+            setTestingMethodGenFromResult(null)
             // Reset số block mỗi khi chọn bản ghi mới từ sidebar
             setNumOfBlock('')
         }
@@ -340,7 +407,7 @@ export default function TestResultForm() {
 
         // Sử dụng default đúng dựa trên resultFormType
         setResultConclude(resultConclude || (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude))
-        setResultNote(resultNote || defaultResultNote)
+        setResultNote(resultNote || (resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote))
         setResultName(templateName)
     }
 
@@ -603,23 +670,34 @@ export default function TestResultForm() {
                 setMacroscopicComment(data.resultComment ?? defaultMacroscopicComment)
 
                 setResultConclude(data.resultConclude ?? (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude))
-                setResultNote(data.resultNote ?? defaultResultNote)
+                setResultNote(data.resultNote ?? (resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote))
                 setResultName(data.resultName ?? '')
+                if (resultFormType === 2 && data.testingMethodGen?.id) {
+                    setSelectedSamplingMethod(data.testingMethodGen.id)
+                    setTestingMethodGenFromResult({ id: data.testingMethodGen.id, methodName: data.testingMethodGen.methodName })
+                } else {
+                    setSelectedSamplingMethod('')
+                    setTestingMethodGenFromResult(null)
+                }
             } else {
                 // Nếu không có kết quả, reset về default templates
                 setMicroscopicDescription(defaultMicroscopicDescription)
                 setMacroscopicComment(defaultMacroscopicComment)
                 setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
-                setResultNote(defaultResultNote)
+                setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
                 setResultName('')
+                setSelectedSamplingMethod('')
+                setTestingMethodGenFromResult(null)
             }
         } catch (error) {
             // Nếu có lỗi, reset về default templates
             setMicroscopicDescription(defaultMicroscopicDescription)
             setMacroscopicComment(defaultMacroscopicComment)
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
-            setResultNote(defaultResultNote)
+            setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
             setResultName('')
+            setSelectedSamplingMethod('')
+            setTestingMethodGenFromResult(null)
         }
     }
 
@@ -652,7 +730,7 @@ export default function TestResultForm() {
     const handlePdfFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-        
+
         // Validate file type
         if (file.type !== 'application/pdf') {
             toast({
@@ -662,7 +740,7 @@ export default function TestResultForm() {
             })
             return
         }
-        
+
         // Validate file size (giới hạn 10MB)
         if (file.size > 10 * 1024 * 1024) {
             toast({
@@ -672,9 +750,9 @@ export default function TestResultForm() {
             })
             return
         }
-        
+
         setAttachedPdfFile(file)
-        
+
         // Convert to base64 for merging later
         const reader = new FileReader()
         reader.onload = () => {
@@ -708,15 +786,15 @@ export default function TestResultForm() {
 
         try {
             const fileName = `Phieu_XN_${storedServiceRequestData.data.patientCode}_${storedServiceRequestData.data.serviceReqCode}.pdf`;
-            
+
             // Nếu resultFormType = 2 và có file đính kèm, merge PDFs
             if (resultFormType === 2 && attachedPdfBase64) {
                 // Generate PDF from form
-                const {base64: formPdfBase64} = await pdfBase64FromContainerWithPuppeteer(previewRef.current);
-                
+                const { base64: formPdfBase64 } = await pdfBase64FromContainerWithPuppeteer(previewRef.current);
+
                 // Merge với file đính kèm
                 const { base64: mergedBase64 } = await mergePdfsBase64(formPdfBase64, attachedPdfBase64);
-                
+
                 // Download merged PDF
                 const byteCharacters = atob(mergedBase64);
                 const byteNumbers = new Array(byteCharacters.length);
@@ -725,7 +803,7 @@ export default function TestResultForm() {
                 }
                 const byteArray = new Uint8Array(byteNumbers);
                 const blob = new Blob([byteArray], { type: 'application/pdf' });
-                
+
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -734,7 +812,7 @@ export default function TestResultForm() {
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                
+
                 toast({
                     title: "Thành công",
                     description: "Đã tải PDF kèm file đính kèm"
@@ -893,11 +971,11 @@ export default function TestResultForm() {
 
         // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả
         // Nếu resultFormType = 2, chỉ check resultConclude
-        const hasResult = resultFormType === 2 
+        const hasResult = resultFormType === 2
             ? resultConclude.trim()
             : (previewServiceData?.data?.resultText ||
-               previewServiceData?.data?.resultDescription ||
-               resultDescription.trim())
+                previewServiceData?.data?.resultDescription ||
+                resultDescription.trim())
         if (!hasResult) {
             toast({
                 variant: "destructive",
@@ -1444,7 +1522,7 @@ export default function TestResultForm() {
             // form-gpb: gửi đúng giá trị input, không tự chèn thêm (ví dụ: không thêm default cho mô tả vi thể)
             const savePromises = services.map(async (service) => {
                 const serviceId = service.id
-                
+
                 const payload: any = {
                     resultValue: 12.5,
                     resultValueText: "12.5",
@@ -1457,6 +1535,8 @@ export default function TestResultForm() {
                     payload.resultComment = macroscopicComment
                     payload.resultNote = resultNote
                     payload.resultName = resultName
+                } else if (showGhiChuGen1) {
+                    payload.resultNote = resultNote
                 }
 
                 const response = await apiClient.saveServiceResult(serviceId, payload)
@@ -1558,6 +1638,33 @@ export default function TestResultForm() {
                 }
             }
 
+            // Gọi API cập nhật testingMethodGenId (Phương pháp thực hiện xét nghiệm) khi resultFormType === 2
+            if (saveSuccessful > 0 && storedServiceRequest?.id && resultFormType === 2) {
+                try {
+                    const testingMethodPayload = selectedSamplingMethod?.trim()
+                        ? { testingMethodGenId: selectedSamplingMethod.trim() }
+                        : {}
+                    const testingMethodGenResponse = await apiClient.updateStoredServiceRequest(
+                        storedServiceRequest.id,
+                        testingMethodPayload
+                    )
+                    if (!testingMethodGenResponse.success && Object.keys(testingMethodPayload).length > 0) {
+                        toast({
+                            title: 'Cảnh báo',
+                            description: testingMethodGenResponse.message || 'Đã lưu kết quả nhưng không thể cập nhật phương pháp thực hiện xét nghiệm',
+                            variant: 'default',
+                        })
+                    }
+                } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
+                    toast({
+                        title: 'Cảnh báo',
+                        description: `Đã lưu kết quả nhưng không thể cập nhật phương pháp thực hiện xét nghiệm: ${errorMessage}`,
+                        variant: 'default',
+                    })
+                }
+            }
+
             // Hiển thị thông báo thành công
             if (saveSuccessful > 0) {
                 toast({
@@ -1590,7 +1697,7 @@ export default function TestResultForm() {
             syncResultDescription(defaultResultDescription)
             // Sử dụng default khác nhau dựa trên resultFormType
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
-            setResultNote(defaultResultNote)
+            setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
             setResultName('')
         } catch (error: any) {
             console.error('Error saving results:', error)
@@ -1675,7 +1782,7 @@ export default function TestResultForm() {
                                                 <Input value={patient?.address || ''} disabled
                                                     className="mt-1 font-semibold" />
                                             </div>
-                                            
+
                                             <div className="col-span-3">
                                                 <Label className="text-sm text-gray-600">Chẩn đoán</Label>
                                                 <Input value={serviceRequest.icdName || ''} disabled
@@ -1729,18 +1836,24 @@ export default function TestResultForm() {
                                                 />
                                             </div>
 
-                                            <div className="mb-4">
-                                                <Label className="text-sm font-medium mb-2 block">Phương pháp nhuộm</Label>
-                                                <Input
-                                                    type="text"
-                                                    value={storedServiceRequest?.stainingMethodName || ''}
-                                                    disabled
-                                                    className="max-w-xs"
-                                                />
-                                            </div>
+                                            {resultFormType !== 2 && (
+                                                <div className="mb-4">
+                                                    <Label className="text-sm font-medium mb-2 block">Phương pháp nhuộm</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={storedServiceRequest?.stainingMethodName || ''}
+                                                        disabled
+                                                        className="max-w-xs"
+                                                    />
+                                                </div>
+                                            )}
 
                                             <div className="mb-4">
-                                                <Label className="text-sm font-medium mb-2 block">Phân loại bệnh phẩm</Label>
+                                                <Label className="text-sm font-medium mb-2 block">
+                                                    {resultFormType === 2
+                                                        ? "Phương pháp lấy mẫu"
+                                                        : "Phân loại bệnh phẩm"}
+                                                </Label>
                                                 <Input
                                                     type="text"
                                                     value={storedServiceRequest?.flag ?? ''}
@@ -1947,6 +2060,63 @@ export default function TestResultForm() {
                                             </>
                                         )}
 
+                                        {/* Phương pháp thực hiện xét nghiệm - chỉ hiển thị khi resultFormType = 2 */}
+                                        {resultFormType === 2 && (
+                                            <div className="mt-4 mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">
+                                                    Phương pháp thực hiện xét nghiệm
+                                                </Label>
+                                                <Select
+                                                    value={selectedSamplingMethod}
+                                                    onValueChange={setSelectedSamplingMethod}
+                                                    open={samplingMethodGenSelectOpen}
+                                                    onOpenChange={setSamplingMethodGenSelectOpen}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Chọn phương pháp thực hiện xét nghiệm..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <div
+                                                            className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
+                                                            role="none"
+                                                            onKeyDown={(e) => e.stopPropagation()}
+                                                        >
+                                                            <Input
+                                                                placeholder="Tìm kiếm phương pháp thực hiện xét nghiệm..."
+                                                                value={samplingMethodGenSearch}
+                                                                onChange={(e) => setSamplingMethodGenSearch(e.target.value)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        e.preventDefault()
+                                                                        e.stopPropagation()
+                                                                        setAppliedSamplingMethodGenSearch(samplingMethodGenSearch)
+                                                                        return
+                                                                    }
+                                                                    if (e.key === 'Escape') return
+                                                                    e.stopPropagation()
+                                                                }}
+                                                                className="text-sm"
+                                                                autoComplete="off"
+                                                            />
+                                                        </div>
+                                                        {samplingMethodsGenOptions.length
+                                                            ? samplingMethodsGenOptions.map(
+                                                                (method: { id: string; methodName: string }) => (
+                                                                    <SelectItem key={method.id} value={method.id}>
+                                                                        {method.methodName}
+                                                                    </SelectItem>
+                                                                )
+                                                            )
+                                                            : (
+                                                                <div className="px-2 py-1 text-sm text-muted-foreground">
+                                                                    Không có dữ liệu
+                                                                </div>
+                                                            )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+
                                         {/* Kết luận - LUÔN hiển thị */}
                                         <div className={resultFormType !== 2 ? "mt-4" : ""}>
                                             <Label className="text-sm font-medium mb-2 block">Kết luận *</Label>
@@ -1960,60 +2130,7 @@ export default function TestResultForm() {
                                             </div>
                                         </div>
 
-                                        {/* File đính kèm PDF - Chỉ hiện khi resultFormType = 2 */}
-                                        {resultFormType === 2 && (
-                                            <div className="mt-4">
-                                                <Label className="text-sm font-medium mb-2 block">File đính kèm (PDF)</Label>
-                                                <div className="flex items-start gap-3">
-                                                    <div className="flex-1">
-                                                        <input
-                                                            type="file"
-                                                            accept="application/pdf"
-                                                            onChange={handlePdfFileChange}
-                                                            className="hidden"
-                                                            id="pdf-attachment"
-                                                        />
-                                                        <label
-                                                            htmlFor="pdf-attachment"
-                                                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                                            </svg>
-                                                            Chọn file PDF
-                                                        </label>
-                                                        
-                                                        {attachedPdfFile && (
-                                                            <div className="mt-2 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                                                                <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                </svg>
-                                                                <span className="flex-1 text-sm text-gray-700 truncate">{attachedPdfFile.name}</span>
-                                                                <span className="text-xs text-gray-500 whitespace-nowrap">
-                                                                    ({(attachedPdfFile.size / 1024).toFixed(2)} KB)
-                                                                </span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={handleRemoveAttachedPdf}
-                                                                    className="text-red-600 hover:text-red-800 flex-shrink-0 transition-colors"
-                                                                    title="Xóa file"
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                                    </svg>
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                        
-                                                        <p className="mt-1 text-xs text-gray-500">
-                                                            File PDF sẽ được nối vào sau kết quả xét nghiệm (Tối đa 10MB)
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Ghi chú - Chỉ hiện khi resultFormType !== 2 */}
+                                        {/* Ghi chú - một ô; khi resultFormType !== 2 tiêu đề "Ghi chú", khi resultFormType === 2 tiêu đề "Phiên giải kết quả" và "Khuyến nghị" */}
                                         {resultFormType !== 2 && (
                                             <div className="mt-4">
                                                 <Label className="text-sm font-medium mb-2 block">Ghi chú</Label>
@@ -2027,7 +2144,88 @@ export default function TestResultForm() {
                                                 </div>
                                             </div>
                                         )}
+                                        {resultFormType === 2 && (
+                                            <div className="mt-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Checkbox
+                                                        id="show-ghi-chu-gen1"
+                                                        checked={showGhiChuGen1}
+                                                        onCheckedChange={(checked) => setShowGhiChuGen1(checked === true)}
+                                                    />
+                                                    <label
+                                                        htmlFor="show-ghi-chu-gen1"
+                                                        className="text-sm font-medium cursor-pointer select-none"
+                                                    >
+                                                        Ghi chú (Phiên giải kết quả / Khuyến nghị)
+                                                    </label>
+                                                </div>
+                                                {showGhiChuGen1 && (
+                                                    <div className="border rounded-md">
+                                                        <RichTextEditor
+                                                            value={resultNote}
+                                                            onChange={setResultNote}
+                                                            placeholder="Nhập phiên giải kết quả và khuyến nghị (tùy chọn)..."
+                                                            minHeight="150px"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {/* File đính kèm PDF - Chỉ hiện khi resultFormType = 2 */}
+                                    {resultFormType === 2 && (
+                                        <div className="mt-4">
+                                            <Label className="text-sm font-medium mb-2 block">File đính kèm (PDF)</Label>
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex-1">
+                                                    <input
+                                                        type="file"
+                                                        accept="application/pdf"
+                                                        onChange={handlePdfFileChange}
+                                                        className="hidden"
+                                                        id="pdf-attachment"
+                                                    />
+                                                    <label
+                                                        htmlFor="pdf-attachment"
+                                                        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                        </svg>
+                                                        Chọn file PDF
+                                                    </label>
+
+                                                    {attachedPdfFile && (
+                                                        <div className="mt-2 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                                            <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
+                                                            <span className="flex-1 text-sm text-gray-700 truncate">{attachedPdfFile.name}</span>
+                                                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                                                                ({(attachedPdfFile.size / 1024).toFixed(2)} KB)
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleRemoveAttachedPdf}
+                                                                className="text-red-600 hover:text-red-800 flex-shrink-0 transition-colors"
+                                                                title="Xóa file"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    <p className="mt-1 text-xs text-gray-500">
+                                                        File PDF sẽ được nối vào sau kết quả xét nghiệm (Tối đa 10MB)
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
 
                                     {/* Action Buttons */}
                                     <div className="flex justify-end gap-3 pt-4">
