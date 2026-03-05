@@ -3404,6 +3404,9 @@ class ApiClient {
                 id?: string;
                 numOfBlock?: string | number;
             };
+            /** Trạng thái đích (dùng kiểm tra sortOrder === 5 để xóa workflow khi lưu kết quả) */
+            toState?: { id: string; stateCode?: string; stateName?: string; sortOrder: number };
+            fromState?: { id: string; stateCode?: string; stateName?: string; sortOrder: number };
         }>;
         pagination: {
             total: number;

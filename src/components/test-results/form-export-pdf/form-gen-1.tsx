@@ -108,6 +108,10 @@ export function FormGen1({
     () => workflowActionsData?.data?.find((action) => action.stateOrder === 2),
     [workflowActionsData]
   );
+  const performerInfo = useMemo(
+    () => workflowActionsData?.data?.find((action) => action.stateOrder === 5),
+    [workflowActionsData]
+  );
 
   const resultConcludePlainText = useMemo(() => {
     const raw = resultConcludeData?.data?.resultConclude;
@@ -407,7 +411,7 @@ export function FormGen1({
                   : "—"}
             </div>
             <div className="ml-4 text-sm">
-              Người thực hiện
+              Người thực hiện: {performerInfo?.actionUserFullName ?? "—"}
             </div>
           </div>
 

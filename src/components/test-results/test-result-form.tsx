@@ -1577,8 +1577,28 @@ export default function TestResultForm() {
                 }
             }
 
-            // Sau khi có ít nhất một service lưu kết quả thành công, gọi API chuyển trạng thái workflow
+            // Sau khi có ít nhất một service lưu kết quả thành công: xóa workflow (nếu toState.sortOrder=5) rồi mới transition để tạo workflow mới
             if (saveSuccessful > 0) {
+                // Gọi xóa workflow trước khi transition để có thể tạo lại workflow mới (chỉ xóa khi toState.sortOrder === 5)
+                if (storedServiceRequest?.id) {
+                    try {
+                        const cached = queryClient.getQueriesData<{ data?: { items?: Array<{ id: string; storedServiceReqId: string; toState?: { sortOrder: number } }> } }>({ queryKey: ['workflow-history'] })
+                        for (const [, cachedData] of cached) {
+                            const items = cachedData?.data?.items ?? []
+                            const item = items.find(
+                                (i) => i.storedServiceReqId === storedServiceRequest.id && i.toState?.sortOrder === 5
+                            )
+                            if (item?.id) {
+                                await apiClient.deleteWorkflowHistory(item.id)
+                                queryClient.invalidateQueries({ queryKey: ['workflow-history'] })
+                                break
+                            }
+                        }
+                    } catch (err: any) {
+                        console.error('Error deleting workflow history (toState.sortOrder=5):', err)
+                    }
+                }
+
                 try {
                     const workflowResponse = await apiClient.transitionWorkflow({
                         storedServiceReqId: storedServiceRequest.id,
@@ -2272,19 +2292,6 @@ export default function TestResultForm() {
                                             d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                     Tải PDF
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handlePrintPdf}
-                                    disabled={!storedServiceRequestData?.data || !previewServiceData?.data}
-                                    className="flex items-center gap-2 bg-white hover:bg-gray-50"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                    </svg>
-                                    In PDF
                                 </Button>
                                 <Button
                                     variant="default"
