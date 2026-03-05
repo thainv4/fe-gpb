@@ -750,8 +750,9 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                     roomName?: string;
                                     toState?: {
                                         id: string;
-                                        stateName: string;
-                                        stateCode: string;
+                                        stateName?: string;
+                                        stateCode?: string;
+                                        sortOrder?: number;
                                     };
                                     serviceRequest?: {
                                         id?: string;
