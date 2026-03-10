@@ -80,6 +80,7 @@ export default function TestResultForm() {
     const defaultResultConcludeGen1 = "" // Trống hoàn toàn cho resultFormType = 2
     const defaultResultNote = `<p style="padding-left: 0; margin-left: 0;"><strong>BÀN LUẬN:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>KHUYẾN NGHỊ:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>HỘI CHẨN:</strong></p><p style="padding-left: 20px;"></p>`
     const defaultResultNoteGen1 = `<p style="padding-left: 0; margin-left: 0;"><strong>Phiên giải kết quả:</strong></p><p style="padding-left: 20px;"></p><p style="padding-left: 0; margin-left: 0;"><strong>Khuyến nghị:</strong></p><p style="padding-left: 20px;"></p>`
+    const defaultResultRecomment = `<p style="padding-left: 0; margin-left: 0;"><strong>Khuyến cáo:</strong></p><p style="padding-left: 20px;"></p>`
 
     // Helper function to parse resultDescription into macroscopic and microscopic parts
     const parseResultDescription = (description: string) => {
@@ -161,7 +162,7 @@ export default function TestResultForm() {
     const [resultDescription, setResultDescription] = useState<string>(defaultResultDescription)
     const [resultConclude, setResultConclude] = useState<string>(defaultResultConclude)
     const [resultNote, setResultNote] = useState<string>(defaultResultNote)
-    const [resultRecomment, setResultRecomment] = useState<string>('')
+    const [resultRecomment, setResultRecomment] = useState<string>(defaultResultRecomment)
 
     // Sync when macroscopic or microscopic changes
     useEffect(() => {
@@ -170,7 +171,7 @@ export default function TestResultForm() {
     }, [macroscopicComment, microscopicDescription])
     const [resultName, setResultName] = useState<string>('')
     const [numOfBlock, setNumOfBlock] = useState<string>('')
-    /** Khi resultFormType === 2: radio chọn hiển thị input Ghi chú hay Khuyến nghị */
+    /** Khi resultFormType === 2: radio chọn hiển thị input Ghi chú hay Khuyến cáo */
     const [gen1NoteOrRecomment, setGen1NoteOrRecomment] = useState<'note' | 'recomment'>('note')
     const [isSaving, setIsSaving] = useState(false)
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
@@ -384,7 +385,7 @@ export default function TestResultForm() {
             // Sử dụng default khác nhau dựa trên resultFormType
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
-            setResultRecomment('')
+            setResultRecomment(defaultResultRecomment)
             setGen1NoteOrRecomment('note')
             setResultName('')
             setMacroscopicComment(defaultMacroscopicComment)
@@ -678,7 +679,7 @@ export default function TestResultForm() {
 
                 setResultConclude(data.resultConclude ?? (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude))
                 setResultNote(data.resultNote ?? (resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote))
-                setResultRecomment(data.resultRecomment ?? '')
+                setResultRecomment(data.resultRecomment ?? defaultResultRecomment)
                 setResultName(data.resultName ?? '')
                 if (resultFormType === 2 && data.testingMethodGen?.id) {
                     setSelectedSamplingMethod(data.testingMethodGen.id)
@@ -693,7 +694,7 @@ export default function TestResultForm() {
                 setMacroscopicComment(defaultMacroscopicComment)
                 setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
                 setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
-                setResultRecomment('')
+                setResultRecomment(defaultResultRecomment)
                 setResultName('')
                 setSelectedSamplingMethod('')
                 setTestingMethodGenFromResult(null)
@@ -704,7 +705,7 @@ export default function TestResultForm() {
             setMacroscopicComment(defaultMacroscopicComment)
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
-            setResultRecomment('')
+            setResultRecomment(defaultResultRecomment)
             setResultName('')
             setSelectedSamplingMethod('')
             setTestingMethodGenFromResult(null)
@@ -1733,7 +1734,7 @@ export default function TestResultForm() {
             // Sử dụng default khác nhau dựa trên resultFormType
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
-            setResultRecomment('')
+            setResultRecomment(defaultResultRecomment)
             setResultName('')
         } catch (error: any) {
             console.error('Error saving results:', error)
@@ -2180,7 +2181,7 @@ export default function TestResultForm() {
                                                 </div>
                                             </div>
                                         )}
-                                        {/* resultFormType === 2: radio chọn 1 trong 2 input Ghi chú hoặc Khuyến nghị */}
+                                        {/* resultFormType === 2: radio chọn 1 trong 2 input Ghi chú hoặc Khuyến cáo */}
                                         {resultFormType === 2 && (
                                             <div className="mt-4">
                                                 <Label className="text-sm font-medium mb-2 block">Chọn loại nhập</Label>
@@ -2191,11 +2192,11 @@ export default function TestResultForm() {
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <RadioGroupItem value="note" id="gen1-note" />
-                                                        <label htmlFor="gen1-note" className="text-sm cursor-pointer select-none">Ghi chú (Phiên giải kết quả / Khuyến nghị)</label>
+                                                        <label htmlFor="gen1-note" className="text-sm cursor-pointer select-none">Phiên giải kết quả & Khuyến nghị</label>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <RadioGroupItem value="recomment" id="gen1-recomment" />
-                                                        <label htmlFor="gen1-recomment" className="text-sm cursor-pointer select-none">Khuyến nghị (resultRecomment)</label>
+                                                        <label htmlFor="gen1-recomment" className="text-sm cursor-pointer select-none">Khuyến cáo</label>
                                                     </div>
                                                 </RadioGroup>
                                                 {gen1NoteOrRecomment === 'note' ? (
@@ -2212,7 +2213,7 @@ export default function TestResultForm() {
                                                         <RichTextEditor
                                                             value={resultRecomment}
                                                             onChange={setResultRecomment}
-                                                            placeholder="Nhập khuyến nghị (tùy chọn)..."
+                                                            placeholder="Nhập khuyến cáo (tùy chọn)..."
                                                             minHeight="150px"
                                                         />
                                                     </div>
