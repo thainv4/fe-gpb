@@ -872,6 +872,7 @@ export default function TestIndicationsTable() {
                                             <SelectItem value="C">C</SelectItem>
                                             <SelectItem value="F">F</SelectItem>
                                             <SelectItem value="S">S</SelectItem>
+                                            <SelectItem value="G">G</SelectItem>
                                         </>
                                     )}
                                 </SelectContent>

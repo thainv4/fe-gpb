@@ -826,6 +826,7 @@ export interface ServiceResult {
     resultConclude?: string | null;
     resultNote?: string | null;
     resultComment?: string | null;
+    resultRecomment?: string | null;
     /** Phương pháp thực hiện xét nghiệm (khi resultFormType = 2) */
     testingMethodGen?: { id: string; methodName: string } | null;
 }
@@ -855,6 +856,7 @@ export interface StoredService {
     resultConclude?: string | null;
     resultNote?: string | null;
     resultComment?: string | null;
+    resultRecomment?: string | null;
     resultValue?: number | null;
     resultValueText?: string | null;
     resultStatus?: string | null;
@@ -3232,6 +3234,7 @@ class ApiClient {
             resultConclude?: string;
             resultNote?: string;
             resultNotes?: string;
+            resultRecomment?: string;
             resultComment?: string;
             resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
             resultName?: string;

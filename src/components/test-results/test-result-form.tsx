@@ -28,6 +28,7 @@ import {
 import { ResultForm, RESULT_FORM_TYPE_GPB } from "@/components/test-results/form-export-pdf";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useHisStore } from "@/lib/stores/his";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
@@ -160,6 +161,7 @@ export default function TestResultForm() {
     const [resultDescription, setResultDescription] = useState<string>(defaultResultDescription)
     const [resultConclude, setResultConclude] = useState<string>(defaultResultConclude)
     const [resultNote, setResultNote] = useState<string>(defaultResultNote)
+    const [resultRecomment, setResultRecomment] = useState<string>('')
 
     // Sync when macroscopic or microscopic changes
     useEffect(() => {
@@ -168,7 +170,8 @@ export default function TestResultForm() {
     }, [macroscopicComment, microscopicDescription])
     const [resultName, setResultName] = useState<string>('')
     const [numOfBlock, setNumOfBlock] = useState<string>('')
-    const [showGhiChuGen1, setShowGhiChuGen1] = useState(true) // Checkbox ẩn/hiện input ghi chú khi resultFormType === 2
+    /** Khi resultFormType === 2: radio chọn hiển thị input Ghi chú hay Khuyến nghị */
+    const [gen1NoteOrRecomment, setGen1NoteOrRecomment] = useState<'note' | 'recomment'>('note')
     const [isSaving, setIsSaving] = useState(false)
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -184,6 +187,7 @@ export default function TestResultForm() {
             resultDescription,
             resultConclude,
             resultNote,
+            resultRecomment,
             resultName,
             numOfBlock,
         },
@@ -199,6 +203,7 @@ export default function TestResultForm() {
                 }
                 if (data.resultConclude) setResultConclude(data.resultConclude)
                 if (data.resultNote) setResultNote(data.resultNote)
+                if (data.resultRecomment !== undefined) setResultRecomment(data.resultRecomment)
                 if (data.resultName !== undefined) setResultName(data.resultName)
                 if (data.numOfBlock !== undefined) setNumOfBlock(data.numOfBlock)
             },
@@ -379,6 +384,8 @@ export default function TestResultForm() {
             // Sử dụng default khác nhau dựa trên resultFormType
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
+            setResultRecomment('')
+            setGen1NoteOrRecomment('note')
             setResultName('')
             setMacroscopicComment(defaultMacroscopicComment)
             setSelectedSamplingMethod('')
@@ -671,6 +678,7 @@ export default function TestResultForm() {
 
                 setResultConclude(data.resultConclude ?? (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude))
                 setResultNote(data.resultNote ?? (resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote))
+                setResultRecomment(data.resultRecomment ?? '')
                 setResultName(data.resultName ?? '')
                 if (resultFormType === 2 && data.testingMethodGen?.id) {
                     setSelectedSamplingMethod(data.testingMethodGen.id)
@@ -685,6 +693,7 @@ export default function TestResultForm() {
                 setMacroscopicComment(defaultMacroscopicComment)
                 setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
                 setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
+                setResultRecomment('')
                 setResultName('')
                 setSelectedSamplingMethod('')
                 setTestingMethodGenFromResult(null)
@@ -695,6 +704,7 @@ export default function TestResultForm() {
             setMacroscopicComment(defaultMacroscopicComment)
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
+            setResultRecomment('')
             setResultName('')
             setSelectedSamplingMethod('')
             setTestingMethodGenFromResult(null)
@@ -1535,8 +1545,13 @@ export default function TestResultForm() {
                     payload.resultComment = macroscopicComment
                     payload.resultNote = resultNote
                     payload.resultName = resultName
-                } else if (showGhiChuGen1) {
-                    payload.resultNote = resultNote
+                } else {
+                    // Chỉ gửi field tương ứng với input đang được chọn (radio)
+                    if (gen1NoteOrRecomment === 'note') {
+                        payload.resultNote = resultNote
+                    } else {
+                        payload.resultRecomment = resultRecomment
+                    }
                 }
 
                 const response = await apiClient.saveServiceResult(serviceId, payload)
@@ -1718,6 +1733,7 @@ export default function TestResultForm() {
             // Sử dụng default khác nhau dựa trên resultFormType
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
+            setResultRecomment('')
             setResultName('')
         } catch (error: any) {
             console.error('Error saving results:', error)
@@ -2036,19 +2052,19 @@ export default function TestResultForm() {
                                             )}
                                         </div>
 
+                                        <div className="mb-4">
+                                            <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
+                                            <Textarea
+                                                value={resultName}
+                                                onChange={(e) => setResultName(e.target.value)}
+                                                placeholder="Nhập tên phiếu kết quả..."
+                                                rows={3}
+                                                className="resize-none"
+                                            />
+                                        </div>
                                         {/* Chỉ hiện các input này khi resultFormType !== 2 */}
                                         {resultFormType !== 2 && (
                                             <>
-                                                <div className="mb-4">
-                                                    <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
-                                                    <Textarea
-                                                        value={resultName}
-                                                        onChange={(e) => setResultName(e.target.value)}
-                                                        placeholder="Nhập tên phiếu kết quả..."
-                                                        rows={3}
-                                                        className="resize-none"
-                                                    />
-                                                </div>
 
                                                 <div className="space-y-4">
                                                     {/* Nhận xét đại thể */}
@@ -2164,27 +2180,39 @@ export default function TestResultForm() {
                                                 </div>
                                             </div>
                                         )}
+                                        {/* resultFormType === 2: radio chọn 1 trong 2 input Ghi chú hoặc Khuyến nghị */}
                                         {resultFormType === 2 && (
                                             <div className="mt-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <Checkbox
-                                                        id="show-ghi-chu-gen1"
-                                                        checked={showGhiChuGen1}
-                                                        onCheckedChange={(checked) => setShowGhiChuGen1(checked === true)}
-                                                    />
-                                                    <label
-                                                        htmlFor="show-ghi-chu-gen1"
-                                                        className="text-sm font-medium cursor-pointer select-none"
-                                                    >
-                                                        Ghi chú (Phiên giải kết quả / Khuyến nghị)
-                                                    </label>
-                                                </div>
-                                                {showGhiChuGen1 && (
+                                                <Label className="text-sm font-medium mb-2 block">Chọn loại nhập</Label>
+                                                <RadioGroup
+                                                    value={gen1NoteOrRecomment}
+                                                    onValueChange={(v) => setGen1NoteOrRecomment(v as 'note' | 'recomment')}
+                                                    className="flex gap-4 mb-3"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <RadioGroupItem value="note" id="gen1-note" />
+                                                        <label htmlFor="gen1-note" className="text-sm cursor-pointer select-none">Ghi chú (Phiên giải kết quả / Khuyến nghị)</label>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <RadioGroupItem value="recomment" id="gen1-recomment" />
+                                                        <label htmlFor="gen1-recomment" className="text-sm cursor-pointer select-none">Khuyến nghị (resultRecomment)</label>
+                                                    </div>
+                                                </RadioGroup>
+                                                {gen1NoteOrRecomment === 'note' ? (
                                                     <div className="border rounded-md">
                                                         <RichTextEditor
                                                             value={resultNote}
                                                             onChange={setResultNote}
                                                             placeholder="Nhập phiên giải kết quả và khuyến nghị (tùy chọn)..."
+                                                            minHeight="150px"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="border rounded-md">
+                                                        <RichTextEditor
+                                                            value={resultRecomment}
+                                                            onChange={setResultRecomment}
+                                                            placeholder="Nhập khuyến nghị (tùy chọn)..."
                                                             minHeight="150px"
                                                         />
                                                     </div>

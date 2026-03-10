@@ -172,9 +172,6 @@ export default function SampleDeliveryTable() {
     const [samplingMethodType, setSamplingMethodType] = useState<string>('')
 
     // Tab persistence
-    const pathname = usePathname()
-    const { activeKey } = useTabsStore()
-    const tabKey = activeKey ?? pathname ?? 'default'
     const { scrollContainerRef } = useTabPersistence(
         {
             selectedServiceReqCode,
