@@ -528,7 +528,12 @@ export default function SampleDeliveryTable() {
     }
 
     // Handle selection from sidebar
-    const handleSelectServiceRequest = (code: string, storedId?: string, receptionCode?: string) => {
+    const handleSelectServiceRequest = (
+        code: string,
+        storedId?: string,
+        receptionCode?: string,
+        roomIdFromWorkflow?: string,
+    ) => {
         // Reset tất cả các trường trong form "Nhận bệnh phẩm"
         setSelectedServiceReqCode(code)
         setStoredServiceReqId(storedId)
@@ -547,13 +552,17 @@ export default function SampleDeliveryTable() {
             setSelectedStateId(handoverStateId)
         }
 
-        // Tự động chọn phòng hiện tại khi chọn service request từ sidebar
-        if (currentRoomId && availableRooms.length > 0) {
-            const matchingRoom = availableRooms.find(r => r.roomId === currentRoomId)
+        // Tự động chọn phòng từ workflow-history (API by-room-and-state)
+        if (roomIdFromWorkflow && availableRooms.length > 0) {
+            const matchingRoom = availableRooms.find(r => r.roomId === roomIdFromWorkflow)
             if (matchingRoom) {
                 setSelectedReceiverRoomKey(matchingRoom.key)
+                return
             }
         }
+
+        // Nếu không lấy được phòng từ workflow-history, không auto-select nữa
+        setSelectedReceiverRoomKey(undefined)
     }
 
     // Reset form whenever selectedServiceReqCode changes (as a safety measure)

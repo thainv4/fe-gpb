@@ -3414,6 +3414,8 @@ class ApiClient {
             createdAt?: string;
             numOfBlock?: string | number;
             roomName?: string;
+            /** Phòng hiện tại của workflow row (theo by-room-and-state) */
+            currentRoomId?: string;
             serviceRequest?: {
                 id?: string;
                 hisServiceReqCode?: string;

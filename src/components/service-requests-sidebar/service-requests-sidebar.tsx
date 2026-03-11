@@ -23,7 +23,12 @@ import {
 } from '@/components/ui/dialog'
 
 interface ServiceRequestsSidebarProps {
-    readonly onSelect: (serviceReqCode: string, storedServiceReqId?: string, receptionCode?: string) => void
+    readonly onSelect: (
+        serviceReqCode: string,
+        storedServiceReqId?: string,
+        receptionCode?: string,
+        roomIdFromWorkflow?: string,
+    ) => void
     readonly selectedCode?: string
     readonly serviceReqCode?: string
     readonly defaultStateId?: string
@@ -748,6 +753,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                     storedServiceReqId?: string;
                                     createdAt?: string;
                                     roomName?: string;
+                                    currentRoomId?: string;
                                     toState?: {
                                         id: string;
                                         stateName?: string;
@@ -789,7 +795,12 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                                 if ((e.target as HTMLElement).closest('[role="radio"]')) {
                                                     return
                                                 }
-                                                onSelect(serviceReqCode, item.storedServiceReqId, receptionCode)
+                                                onSelect(
+                                                    serviceReqCode,
+                                                    item.storedServiceReqId,
+                                                    receptionCode,
+                                                    item.currentRoomId,
+                                                )
                                             }}
                                             className={cn(
                                                 'cursor-pointer hover:bg-blue-50 transition-colors border-b border-gray-100',
