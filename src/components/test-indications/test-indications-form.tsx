@@ -1,4 +1,4 @@
-﻿import TestIndicationsTable from "@/components/test-indications/test-indications-table";
+import TestIndicationsTable from "@/components/test-indications/test-indications-table";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Tabs} from "@/components/ui/tabs";
 
