@@ -135,11 +135,21 @@ export default function TestIndicationsTable() {
         return prefix && PREFIX_OPTIONS.includes(prefix) ? prefix : undefined
     }, [currentRoomId, tabRoomId, myRooms])
 
-    // resultFormType từ response my-rooms (data.resultFormType): 2 = form-gen-1 → hiển thị "CHỌN LOẠI BỆNH PHẨM"
+    // resultFormType từ response my-rooms: 1 = form-gpb, 2 = form-gen-1, 3 = ẩn nhập barcode thủ công
     const resultFormType = useMemo(() => {
         const raw = myRoomsData?.data?.resultFormType
-        return raw !== undefined && raw !== null && Number(raw) === 2 ? 2 : 1
+        if (raw === undefined || raw === null) return 1
+        const n = Number(raw)
+        return n === 2 ? 2 : n === 3 ? 3 : 1
     }, [myRoomsData])
+
+    // Khi resultFormType = 3 thì tắt nhập thủ công và xóa manual barcode
+    useEffect(() => {
+        if (resultFormType === 3) {
+            setIsManualInput(false)
+            setManualBarcode('')
+        }
+    }, [resultFormType])
 
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient
@@ -819,30 +829,52 @@ export default function TestIndicationsTable() {
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
                         <div className="flex items-center gap-2 mb-1">
                             <Label className="text-sm font-medium">Chọn tiền tố sinh barcode</Label>
-                            <div className="flex items-center gap-2 ml-4">
-                                <Checkbox
-                                    id="manual-input"
-                                    checked={isManualInput}
-                                    onCheckedChange={(checked) => {
-                                        setIsManualInput(checked === true)
-                                        if (checked) {
-                                            // Khi bật checkbox, clear prefix và focus vào input
-                                            setSelectedPrefix('')
-                                        } else {
-                                            // Khi tắt checkbox, clear manual barcode
-                                            setManualBarcode('')
-                                        }
-                                    }}
-                                />
-                                <Label
-                                    htmlFor="manual-input"
-                                    className="text-sm font-normal cursor-pointer"
-                                >
-                                    Nhập thủ công
-                                </Label>
-                            </div>
+                            {resultFormType !== 3 && (
+                                <div className="flex items-center gap-2 ml-4">
+                                    <Checkbox
+                                        id="manual-input"
+                                        checked={isManualInput}
+                                        onCheckedChange={(checked) => {
+                                            setIsManualInput(checked === true)
+                                            if (checked) {
+                                                setSelectedPrefix('')
+                                            } else {
+                                                setManualBarcode('')
+                                            }
+                                        }}
+                                    />
+                                    <Label
+                                        htmlFor="manual-input"
+                                        className="text-sm font-normal cursor-pointer"
+                                    >
+                                        Nhập thủ công
+                                    </Label>
+                                </div>
+                            )}
                         </div>
-                        {isManualInput ? (
+                        {resultFormType === 3 ? (
+                            <Select
+                                value={selectedPrefix}
+                                onValueChange={setSelectedPrefix}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Chọn tiền tố" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {lockedRoomPrefix ? (
+                                        <SelectItem value={lockedRoomPrefix}>{lockedRoomPrefix}</SelectItem>
+                                    ) : (
+                                        <>
+                                            <SelectItem value="T">T</SelectItem>
+                                            <SelectItem value="C">C</SelectItem>
+                                            <SelectItem value="F">F</SelectItem>
+                                            <SelectItem value="S">S</SelectItem>
+                                            <SelectItem value="G">G</SelectItem>
+                                        </>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        ) : isManualInput ? (
                             <Input
                                 type="text"
                                 placeholder="Nhập Barcode cũ và nhấn Enter để tìm bệnh phẩm"
