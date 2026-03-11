@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useAuthStore } from '@/lib/stores/auth'
 import { useRouter, usePathname } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { apiClient } from '@/lib/api/client'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -52,6 +54,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     const [roomDialogOpen, setRoomDialogOpen] = useState(false)
     const { currentRoomId, currentRoomCode, currentDepartmentCode, currentRoomName, currentDepartmentName, currentDepartmentId, clear: clearCurrentRoom } = useCurrentRoomStore()
+
+    const { data: myRoomsData } = useQuery({
+        queryKey: ['my-rooms'],
+        queryFn: () => apiClient.getMyUserRooms(),
+        staleTime: 5 * 60 * 1000,
+    })
+    const myRooms = myRoomsData?.data?.rooms ?? []
+    const currentRoom = currentRoomId ? myRooms.find((r: { roomId?: string }) => r.roomId === currentRoomId) : null
+    const departmentTypeRaw = myRoomsData?.data?.resultFormType
+    const departmentType = departmentTypeRaw !== undefined && departmentTypeRaw !== null ? Number(departmentTypeRaw) : null
 
     // Tabs store
     const { tabs, activeKey, openTab, closeTab, setActive, reset: resetTabs } = useTabsStore()
@@ -214,11 +226,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         // }
     ] 
 
-    // Filter navigation based on role
+    // Filter navigation based on role và departmentType (3 = chỉ test-indications + change-password)
     const filteredNavigation = useMemo(() => {
         if (!user) return []
         
         const userRole = user.role?.toLowerCase()
+
+        // Khi phòng có departmentType === 3: chỉ hiển thị Dashboard, Chỉ định xét nghiệm (change-password ở menu user)
+        if (departmentType === 3) {
+            return [
+                {
+                    name: 'Trang chủ',
+                    href: '/dashboard',
+                    icon: LayoutDashboard,
+                    description: 'Tổng quan hệ thống và thống kê'
+                },
+                {
+                    name: 'Chỉ định xét nghiệm',
+                    href: '/test-indications',
+                    icon: Stethoscope,
+                    description: 'Tiếp nhận và chỉ định xét nghiệm'
+                }
+            ]
+        }
         
         // User chỉ thấy tab "Xét nghiệm"
         if (userRole === 'user') {
@@ -255,7 +285,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         
         // Admin thấy tất cả
         return navigation
-    }, [user])
+    }, [user, departmentType])
 
     // Build a map path -> label for tab naming
     const pathLabelMap = useMemo(() => {

@@ -122,7 +122,7 @@ export default function TestIndicationsTable() {
     })
 
     const myRooms = useMemo((): UserRoom[] => {
-        const raw = (myRoomsData?.data as unknown) ?? []
+        const raw = myRoomsData?.data?.rooms ?? []
         return Array.isArray(raw) ? (raw as UserRoom[]) : []
     }, [myRoomsData])
 
@@ -135,15 +135,11 @@ export default function TestIndicationsTable() {
         return prefix && PREFIX_OPTIONS.includes(prefix) ? prefix : undefined
     }, [currentRoomId, tabRoomId, myRooms])
 
-    // resultFormType của phòng: 2 = form-gen-1 → hiển thị "CHỌN LOẠI BỆNH PHẨM"
+    // resultFormType từ response my-rooms (data.resultFormType): 2 = form-gen-1 → hiển thị "CHỌN LOẠI BỆNH PHẨM"
     const resultFormType = useMemo(() => {
-        const roomId = currentRoomId ?? tabRoomId
-        if (!roomId || !myRooms.length) return 1
-        const room = myRooms.find((r) => r.roomId === roomId)
-        const raw = (room as { resultFormType?: string | number; result_form_type?: number })?.resultFormType
-            ?? (room as { result_form_type?: number })?.result_form_type ?? 1
-        return Number(raw) === 2 ? 2 : 1
-    }, [currentRoomId, tabRoomId, myRooms])
+        const raw = myRoomsData?.data?.resultFormType
+        return raw !== undefined && raw !== null && Number(raw) === 2 ? 2 : 1
+    }, [myRoomsData])
 
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient

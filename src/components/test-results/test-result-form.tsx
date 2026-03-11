@@ -268,20 +268,13 @@ export default function TestResultForm() {
     const currentDepartmentId = currentTab?.departmentId as string | undefined
     const currentUserId = profileData?.data?.id as string | undefined
 
-    const myRooms = useMemo(() => {
-        const raw = (myRoomsData?.data as unknown) ?? []
-        return Array.isArray(raw) ? raw : []
-    }, [myRoomsData])
+    const myRooms = useMemo(() => myRoomsData?.data?.rooms ?? [], [myRoomsData])
 
-    // resultFormType của phòng: 1 = form-gpb, 2 = form-gen-1.
-    // Ưu tiên storeCurrentRoomId (cập nhật ngay khi đổi phòng) để form đổi theo không cần reload.
+    // resultFormType từ response my-rooms (data.resultFormType): 1 = form-gpb, 2 = form-gen-1.
     const resultFormType = useMemo(() => {
-        const roomId = storeCurrentRoomId ?? currentRoomId
-        if (!roomId || !myRooms.length) return RESULT_FORM_TYPE_GPB
-        const room = myRooms.find((r: { roomId?: string }) => r.roomId === roomId)
-        const raw = room?.resultFormType ?? (room as { result_form_type?: number })?.result_form_type ?? RESULT_FORM_TYPE_GPB
-        return Number(raw) === 2 ? 2 : RESULT_FORM_TYPE_GPB
-    }, [storeCurrentRoomId, currentRoomId, myRooms])
+        const raw = myRoomsData?.data?.resultFormType
+        return raw !== undefined && raw !== null && Number(raw) === 2 ? 2 : RESULT_FORM_TYPE_GPB
+    }, [myRoomsData])
 
     // testing-methods-gen: danh sách phương pháp thực hiện xét nghiệm
     const { data: samplingMethodsGenData } = useQuery({

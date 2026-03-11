@@ -117,18 +117,13 @@ export default function SampleDeliveryTable() {
             }))
     }, [availableRoomsFromAPI, userRoomsData])
 
-    const myRooms = useMemo(() => {
-        const raw = (myRoomsData?.data as unknown) ?? []
-        return Array.isArray(raw) ? raw : []
-    }, [myRoomsData])
+    const myRooms = useMemo(() => myRoomsData?.data?.rooms ?? [], [myRoomsData])
 
-    // resultFormType của phòng hiện tại: 1 = form-gpb, 2 = form-gen-1 (giống test-result-form)
+    // resultFormType từ response my-rooms (data.resultFormType): 1 = form-gpb, 2 = form-gen-1
     const resultFormType = useMemo(() => {
-        if (!currentRoomId || !myRooms.length) return 1
-        const room = myRooms.find((r: { roomId?: string }) => r.roomId === currentRoomId)
-        const raw = room?.resultFormType ?? (room as { result_form_type?: number })?.result_form_type ?? 1
-        return Number(raw) === 2 ? 2 : 1
-    }, [currentRoomId, myRooms])
+        const raw = myRoomsData?.data?.resultFormType
+        return raw !== undefined && raw !== null && Number(raw) === 2 ? 2 : 1
+    }, [myRoomsData])
 
     // Query workflow states to get "Bàn giao mẫu" state ID
     const { data: statesData } = useQuery({

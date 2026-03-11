@@ -162,7 +162,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     })
 
     const userRooms = useMemo(() => {
-        const raw = (userRoomsData?.data as unknown) ?? []
+        const raw = userRoomsData?.data?.rooms ?? []
         return Array.isArray(raw) ? (raw as any[]) : []
     }, [userRoomsData])
 

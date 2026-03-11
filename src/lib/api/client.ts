@@ -1029,8 +1029,21 @@ export interface UserRoom {
     updatedAt: string;
     /** Tiền tố sinh barcode mặc định của phòng (ví dụ: T, C, F, S) */
     selectPrefix?: string;
-    /** Loại form kết quả mặc định của phòng */
+    /** Loại form kết quả mặc định của phòng (backend có thể trả departmentType thay thế) */
     resultFormType?: string;
+    departmentType?: string | number;
+}
+
+/** Response thô từ BE GET /user-rooms/my-rooms (data.userRooms, resultFormType có thể null) */
+export interface MyUserRoomsResponseRaw {
+    resultFormType: number | null;
+    userRooms: UserRoom[];
+}
+
+/** Response chuẩn hóa cho app: luôn có rooms và resultFormType (null → 1) */
+export interface MyUserRoomsResponse {
+    resultFormType: number;
+    rooms: UserRoom[];
 }
 
 export interface AssignRoomsRequest {
@@ -3078,9 +3091,16 @@ class ApiClient {
         );
     }
 
-    async getMyRooms(): Promise<ApiResponse<UserRoom[]>> {
-        // BE trả về { success, status_code, data: UserRoom[] }
-        return this.request<UserRoom[]>("/user-rooms/my-rooms");
+    async getMyRooms(): Promise<ApiResponse<MyUserRoomsResponse>> {
+        // BE trả về data: { resultFormType (có thể null), userRooms } → chuẩn hóa thành { resultFormType, rooms }
+        const res = await this.request<MyUserRoomsResponseRaw>("/user-rooms/my-rooms");
+        if (!res.success || res.data === undefined) return res as unknown as ApiResponse<MyUserRoomsResponse>;
+        const raw = res.data;
+        const data: MyUserRoomsResponse = {
+            resultFormType: raw.resultFormType != null ? raw.resultFormType : 1,
+            rooms: raw.userRooms ?? [],
+        };
+        return { ...res, data };
     }
 
     async storeServiceRequest(
@@ -3601,9 +3621,17 @@ class ApiClient {
     /**
      * Lấy danh sách phòng của user hiện tại
      * GET /user-rooms/my-rooms
+     * BE trả data: { resultFormType (có thể null), userRooms } → chuẩn hóa thành { resultFormType, rooms }
      */
-    async getMyUserRooms(): Promise<ApiResponse<UserRoom[]>> {
-        return this.request<UserRoom[]>("/user-rooms/my-rooms");
+    async getMyUserRooms(): Promise<ApiResponse<MyUserRoomsResponse>> {
+        const res = await this.request<MyUserRoomsResponseRaw>("/user-rooms/my-rooms");
+        if (!res.success || res.data === undefined) return res as unknown as ApiResponse<MyUserRoomsResponse>;
+        const raw = res.data;
+        const data: MyUserRoomsResponse = {
+            resultFormType: raw.resultFormType != null ? raw.resultFormType : 1,
+            rooms: raw.userRooms ?? [],
+        };
+        return { ...res, data };
     }
 
     /**

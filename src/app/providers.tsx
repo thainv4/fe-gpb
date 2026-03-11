@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { RoleGuard } from '@/components/auth/role-guard'
+import { DepartmentTypeGuard } from '@/components/auth/department-type-guard'
 
 export function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(() => new QueryClient({
@@ -21,7 +22,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <AuthProvider>
                 <AuthGuard>
                     <RoleGuard>
-                        {children}
+                        <DepartmentTypeGuard>
+                            {children}
+                        </DepartmentTypeGuard>
                     </RoleGuard>
                 </AuthGuard>
             </AuthProvider>

@@ -28,7 +28,7 @@ export function RoomPickerDialog({open: openProp, onOpenChange}: RoomPickerDialo
     })
 
     const rooms: UserRoom[] = useMemo(() => {
-        const raw = (data?.data as unknown) ?? []
+        const raw = data?.data?.rooms ?? []
         return Array.isArray(raw) ? (raw as UserRoom[]) : []
     }, [data])
 
