@@ -6,6 +6,7 @@ import { apiClient, User } from '@/lib/api/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Search, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { UserRoomList } from './user-room-list'
@@ -70,7 +71,9 @@ export function UserRoomManagement() {
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-muted-foreground">Khoa</label>
+                            <Label htmlFor="user-room-department" className="text-sm font-medium text-muted-foreground">
+                                Khoa
+                            </Label>
                             <Select
                                 value={selectedDepartmentId || 'all'}
                                 onValueChange={(v) => {
@@ -78,7 +81,7 @@ export function UserRoomManagement() {
                                     setPage(0)
                                 }}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger id="user-room-department">
                                     <SelectValue placeholder="Tất cả khoa" />
                                 </SelectTrigger>
                                 <SelectContent>
