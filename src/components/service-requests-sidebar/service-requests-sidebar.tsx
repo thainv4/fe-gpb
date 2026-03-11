@@ -582,7 +582,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                             <SelectValue placeholder={isLoadingUserRooms ? "Đang tải..." : "Chọn phòng..."}/>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Tất cả các phòng</SelectItem>
+                            <SelectItem value="all">Tất cả các phòng được phân quyền</SelectItem>
                             {userRooms.map((room: any) => (
                                 <SelectItem key={room.roomId} value={room.roomId}>
                                     {room.roomName} ({room.roomCode})
