@@ -39,53 +39,51 @@ import {
     ChevronLeft,
     ChevronRight,
     User as UserIcon,
-    Mail,
-    Phone,
-    MapPin,
     Building2
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { UserForm } from './user-form'
 import { RegisterForm } from './register-form'
 
+const PAGE_SIZE = 20
+
 export function UserTable() {
     const [searchTerm, setSearchTerm] = useState('')
-    const [searchEmail, setSearchEmail] = useState('')
+    const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('')
     const [selectedStatus, setSelectedStatus] = useState('all')
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<User | null>(null)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [userToDelete, setUserToDelete] = useState<User | null>(null)
     const [currentPage, setCurrentPage] = useState(0)
-    const [pageSize] = useState(10)
 
     const { toast } = useToast()
     const queryClient = useQueryClient()
 
-    // Build filters
+    // Fetch departments cho dropdown Khoa (giống user-rooms)
+    const { data: departmentsData } = useQuery({
+        queryKey: ['departments', { limit: 200, offset: 0 }],
+        queryFn: () => apiClient.getDepartments({ limit: 200, offset: 0 }),
+        staleTime: 5 * 60 * 1000,
+    })
+    const departments = departmentsData?.data?.departments || []
+
+    // Build filters - giống user-rooms: search + departmentId
     const filters: UserFilters = {
         search: searchTerm || undefined,
+        departmentId: selectedDepartmentId || undefined,
         isActive: selectedStatus && selectedStatus !== 'all' ? selectedStatus === 'active' : undefined,
-        limit: pageSize,
-        offset: currentPage * pageSize,
+        limit: PAGE_SIZE,
+        offset: currentPage * PAGE_SIZE,
     }
 
-    // Fetch users list
+    // Fetch users list (một API getUsers với search, giống user-rooms)
     const { data: usersResponse, isLoading, error } = useQuery({
         queryKey: ['users', filters],
         queryFn: () => apiClient.getUsers(filters),
-        enabled: !searchEmail, // Chỉ fetch list khi không tìm kiếm theo email
     })
 
-    // Search user by email
-    const { data: emailSearchResponse, isLoading: isSearchingEmail, error: emailSearchError } = useQuery({
-        queryKey: ['user-email', searchEmail],
-        queryFn: () => apiClient.getUserByEmail(searchEmail),
-        enabled: !!searchEmail && searchEmail.includes('@'), // Chỉ search khi có @ trong email
-    })
-
-    // Type assertion to match actual API response
-    const users = usersResponse as typeof usersResponse & {
+    const displayUsers = usersResponse as typeof usersResponse & {
         data: {
             users: User[];
             total: number;
@@ -94,20 +92,8 @@ export function UserTable() {
         }
     } | undefined
 
-    // Convert email search result to list format
-    const displayUsers = searchEmail && emailSearchResponse?.data
-        ? {
-            data: {
-                users: [emailSearchResponse.data],
-                total: 1,
-                limit: 1,
-                offset: 0
-            }
-        }
-        : users
-
-    const displayError = searchEmail ? emailSearchError : error
-    const displayLoading = searchEmail ? isSearchingEmail : isLoading
+    const displayError = error
+    const displayLoading = isLoading
 
     const createMutation = useMutation({
         mutationFn: async (newUser: RegisterWithProfileRequest) => {
@@ -241,7 +227,7 @@ export function UserTable() {
         }
     }
 
-    const totalPages = displayUsers?.data ? Math.ceil(displayUsers.data.total / pageSize) : 0
+    const totalPages = displayUsers?.data ? Math.ceil(displayUsers.data.total / PAGE_SIZE) : 0
 
     if (displayError) {
         return (
@@ -249,9 +235,7 @@ export function UserTable() {
                 <CardContent className="p-6">
                     <CardTitle className="text-xl font-semibold text-red-600">Lỗi tải dữ liệu</CardTitle>
                     <CardDescription className="text-red-500">
-                        {searchEmail
-                            ? `Không tìm thấy người dùng với email: ${searchEmail}`
-                            : 'Không thể tải dữ liệu người dùng. Vui lòng thử lại sau.'}
+                        Không thể tải dữ liệu người dùng. Vui lòng thử lại sau.
                     </CardDescription>
                     <p className="mt-2 text-sm text-red-700">{displayError.message}</p>
                 </CardContent>
@@ -293,34 +277,38 @@ export function UserTable() {
                     </Dialog>
                 </CardHeader>
                 <CardContent>
-                    <div className="mb-4 flex flex-col sm:flex-row gap-4">
-                        <div className="relative flex-1">
+                    <div className="mb-4 flex flex-col sm:flex-row gap-4 flex-wrap">
+                        <div className="relative flex-1 min-w-[200px]">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Tìm kiếm theo tên hoặc username..."
+                                placeholder="Tìm kiếm người dùng..."
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value)
-                                    setSearchEmail('') // Clear email search khi search theo term
-                                }}
-                                className="pl-8"
-                                disabled={!!searchEmail}
-                            />
-                        </div>
-                        <div className="relative flex-1">
-                            <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Tìm kiếm theo email..."
-                                value={searchEmail}
-                                onChange={(e) => {
-                                    setSearchEmail(e.target.value)
-                                    if (e.target.value) {
-                                        setSearchTerm('') // Clear term search khi search theo email
-                                    }
+                                    setCurrentPage(0)
                                 }}
                                 className="pl-8"
                             />
                         </div>
+                        <Select
+                            value={selectedDepartmentId || 'all'}
+                            onValueChange={(v) => {
+                                setSelectedDepartmentId(v === 'all' ? '' : v)
+                                setCurrentPage(0)
+                            }}
+                        >
+                            <SelectTrigger className="w-full sm:w-48">
+                                <SelectValue placeholder="Tất cả khoa" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tất cả khoa</SelectItem>
+                                {departments.map((d) => (
+                                    <SelectItem key={d.id} value={d.id}>
+                                        {d.departmentName || d.departmentCode || d.id}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                             <SelectTrigger className="w-full sm:w-48">
                                 <SelectValue placeholder="Tất cả trạng thái" />
@@ -336,9 +324,7 @@ export function UserTable() {
                     {displayLoading ? (
                         <div className="flex items-center justify-center py-8">
                             <Loader2 className="h-8 w-8 animate-spin" />
-                            <span className="ml-2">
-                                {searchEmail ? 'Đang tìm kiếm...' : 'Đang tải dữ liệu...'}
-                            </span>
+                            <span className="ml-2">Đang tải dữ liệu...</span>
                         </div>
                     ) : (
                         <>
@@ -410,7 +396,7 @@ export function UserTable() {
                                         ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                                                     <div className="flex flex-col items-center justify-center space-y-2">
                                                         <UserIcon className="h-12 w-12 text-gray-300" />
                                                         <p className="text-lg font-medium">Không có người dùng nào</p>
@@ -424,10 +410,10 @@ export function UserTable() {
                             </div>
 
                             {/* Pagination */}
-                            {totalPages > 1 && !searchEmail && (
+                            {totalPages > 1 && (
                                 <div className="flex items-center justify-between mt-4">
                                     <div className="text-sm text-muted-foreground">
-                                        Hiển thị {displayUsers?.data?.users?.length || 0} trong tổng số {displayUsers?.data?.total || 0} người dùng
+                                        Hiển thị {displayUsers?.data?.users?.length ?? 0} trong tổng số {displayUsers?.data?.total ?? 0} người dùng
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <Button
