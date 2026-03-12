@@ -21,7 +21,7 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR'): void {
             <script src="https://cdn.tailwindcss.com"></script>
             <style>
                 @page {
-                    size: 50mm 30mm;
+                    size: 42mm 25mm;
                     margin: 0;
                     padding: 0;
                 }
@@ -33,6 +33,8 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR'): void {
                 .page-two-qr {
                     display: flex;
                     align-items: stretch;
+                    justify-content: between;
+                    gap: 6mm;
                     width: 100%;
                     min-height: 100%;
                 }
@@ -51,6 +53,9 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR'): void {
                         margin: 0;
                         padding: 0;
                         overflow: hidden;
+                    }
+                    .page-two-qr {
+                        gap: 6mm;
                     }
                     .print-text-xs {
                         font-size: 0.75rem !important;
