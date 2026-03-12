@@ -347,8 +347,7 @@ export function UserTable() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Thông tin</TableHead>
-                                            <TableHead>Liên hệ</TableHead>
-                                            <TableHead>Địa chỉ</TableHead>
+                                            <TableHead>Khoa</TableHead>
                                             <TableHead>Trạng thái</TableHead>
                                             <TableHead>Thao tác</TableHead>
                                         </TableRow>
@@ -364,42 +363,20 @@ export function UserTable() {
                                                         </div>
                                                         <div>
                                                             <div className="font-medium">{user.fullName}</div>
-                                                            <div className="text-sm text-muted-foreground">@{user.username}</div>
+                                                            <div className="text-sm text-muted-foreground">{user.username}</div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
+                                                
                                                 <TableCell>
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center text-sm">
-                                                            <Mail className="h-3 w-3 mr-1" />
-                                                            {user.email}
-                                                        </div>
-                                                        {user.phoneNumber && (
-                                                            <div className="flex items-center text-sm text-muted-foreground">
-                                                                <Phone className="h-3 w-3 mr-1" />
-                                                                {user.phoneNumber}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="space-y-1">
-                                                        {user.province && (
-                                                            <div className="flex items-center text-sm">
-                                                                <MapPin className="h-3 w-3 mr-1" />
-                                                                {user.province.provinceName}
-                                                            </div>
-                                                        )}
-                                                        {user.ward && (
-                                                            <div className="text-sm text-muted-foreground">
-                                                                {user.ward.wardName}
-                                                            </div>
-                                                        )}
-                                                        {user.department && (
-                                                            <div className="flex items-center text-sm text-muted-foreground">
-                                                                <Building2 className="h-3 w-3 mr-1" />
-                                                                {user.department.departmentName}
-                                                            </div>
+                                                    <div className="flex items-center text-sm">
+                                                        {(user.departmentName ?? user.department?.departmentName) ? (
+                                                            <>
+                                                                <Building2 className="h-3 w-3 mr-1 shrink-0 text-muted-foreground" />
+                                                                {user.departmentName ?? user.department?.departmentName}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">—</span>
                                                         )}
                                                     </div>
                                                 </TableCell>
@@ -433,7 +410,7 @@ export function UserTable() {
                                         ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                                                     <div className="flex flex-col items-center justify-center space-y-2">
                                                         <UserIcon className="h-12 w-12 text-gray-300" />
                                                         <p className="text-lg font-medium">Không có người dùng nào</p>

@@ -298,6 +298,8 @@ export interface User {
     address?: string;
     createdAt: string;
     updatedAt: string;
+    /** Tên khoa (GET /users có thể trả trực tiếp hoặc qua department) */
+    departmentName?: string;
     // Profile relationship data (if populated)
     profile?: {
         provinceId?: string;

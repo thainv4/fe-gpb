@@ -105,7 +105,7 @@ export function UserRoomManagement() {
                                     </p>
                                 )
                             }
-                            
+
                             if (users.length === 0) {
                                 return (
                                     <p className="text-sm text-muted-foreground text-center py-4">
@@ -113,13 +113,13 @@ export function UserRoomManagement() {
                                     </p>
                                 )
                             }
-                            
+
                             return users.map((user) => {
                                 const isSelected = selectedUser?.id === user.id
                                 const buttonClassName = isSelected
                                     ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                
+
                                 return (
                                     <button
                                         key={user.id}
@@ -128,10 +128,13 @@ export function UserRoomManagement() {
                                         className={`w-full text-left p-3 rounded-lg border cursor-pointer transition-colors ${buttonClassName}`}
                                     >
                                         <div className="font-medium text-sm">{user.fullName}</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            @{user.username}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                                        <div className="text-xs text-muted-foreground">{user.username}</div>
+
+                                        {(user.departmentName ?? user.department?.departmentName) && (
+                                            <div className="text-xs text-muted-foreground mt-0.5">
+                                                {user.departmentName ?? user.department?.departmentName}
+                                            </div>
+                                        )}
                                     </button>
                                 )
                             })
