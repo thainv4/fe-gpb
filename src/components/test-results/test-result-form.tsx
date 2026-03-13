@@ -177,8 +177,11 @@ export default function TestResultForm() {
     const [signaturePageTotal, setSignaturePageTotal] = useState(1)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
 
+    // Room/department từ workflow history (dòng đang chọn ở sidebar) để truyền vào API transition
+    const [roomIdFromWorkflow, setRoomIdFromWorkflow] = useState<string | undefined>(undefined)
+
     // Lấy currentRoomId từ store để detect khi đổi phòng
-    const { currentRoomId: storeCurrentRoomId } = useCurrentRoomStore()
+    const { currentRoomId: storeCurrentRoomId, currentDepartmentId: storeCurrentDepartmentId } = useCurrentRoomStore()
 
     // Tab persistence hook
     const { scrollContainerRef } = useTabPersistence(
@@ -269,6 +272,13 @@ export default function TestResultForm() {
     const currentUserId = profileData?.data?.id as string | undefined
 
     const myRooms = useMemo(() => myRoomsData?.data?.rooms ?? [], [myRoomsData])
+
+    // departmentId từ workflow: lookup theo roomIdFromWorkflow trong myRooms
+    const workflowDepartmentId = useMemo(() => {
+        if (!roomIdFromWorkflow || myRooms.length === 0) return undefined
+        const room = myRooms.find((r: { roomId?: string }) => r.roomId === roomIdFromWorkflow)
+        return room?.departmentId as string | undefined
+    }, [roomIdFromWorkflow, myRooms])
 
     // resultFormType từ response my-rooms (data.resultFormType): 1 = form-gpb, 2 = form-gen-1.
     const resultFormType = useMemo(() => {
@@ -368,8 +378,9 @@ export default function TestResultForm() {
         }
     }, [storeCurrentRoomId, currentRoomId, queryClient])
 
-    const handleSelect = (serviceReqCode: string, storedServiceReqId?: string) => {
+    const handleSelect = (serviceReqCode: string, storedServiceReqId?: string, _receptionCode?: string, roomIdFromWorkflowParam?: string) => {
         setSelectedServiceReqCode(serviceReqCode)
+        setRoomIdFromWorkflow(roomIdFromWorkflowParam)
         if (storedServiceReqId) {
             setStoredServiceReqId(storedServiceReqId)
             // Reset các field về default để logic kiểm tra tiền tố có thể áp dụng
@@ -1244,8 +1255,8 @@ export default function TestResultForm() {
                             toStateId: '426df256-bc00-28d1-e065-9e6b783dd008',
                             actionType: 'COMPLETE',
                             currentUserId: currentUserId,
-                            currentDepartmentId: currentDepartmentId,
-                            currentRoomId: currentRoomId,
+                            currentDepartmentId: workflowDepartmentId ?? storeCurrentDepartmentId,
+                            currentRoomId: roomIdFromWorkflow ?? storeCurrentRoomId,
                         })
 
                         if (workflowResponse.success) {
@@ -1614,8 +1625,8 @@ export default function TestResultForm() {
                         toStateId: '426df256-bbfe-28d1-e065-9e6b783dd008',
                         actionType: 'COMPLETE',
                         currentUserId: currentUserId,
-                        currentDepartmentId: currentDepartmentId,
-                        currentRoomId: currentRoomId,
+                        currentDepartmentId: workflowDepartmentId ?? storeCurrentDepartmentId,
+                        currentRoomId: roomIdFromWorkflow ?? storeCurrentRoomId,
                     })
 
                     if (workflowResponse.success) {
