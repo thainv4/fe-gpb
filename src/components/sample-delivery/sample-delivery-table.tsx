@@ -264,7 +264,9 @@ export default function SampleDeliveryTable() {
 
     const handlePrintBarcode = () => {
         if (!barcodeRef.current || !receptionCodeFromStored) return
-        printQrCode(barcodeRef.current.innerHTML, receptionCodeFromStored)
+        const dob = storedServiceRequestData?.data?.patientDob
+        const birthYear = dob && String(dob).length >= 4 ? String(dob).substring(0, 4) : undefined
+        printQrCode(barcodeRef.current.innerHTML, receptionCodeFromStored, storedServiceRequestData?.data?.patientName, birthYear)
     }
 
     // Lưu lựa chọn phòng nhận mẫu

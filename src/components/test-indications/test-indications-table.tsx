@@ -395,7 +395,8 @@ export default function TestIndicationsTable() {
 
     const handlePrintBarcode = () => {
         if (!barcodeRef.current || !currentReceptionCode) return
-        printQrCode(barcodeRef.current.innerHTML, currentReceptionCode)
+        const birthYear = patient?.dob && String(patient.dob).length >= 4 ? String(patient.dob).substring(0, 4) : undefined
+        printQrCode(barcodeRef.current.innerHTML, currentReceptionCode, patient?.name, birthYear)
     }
 
     // Mutation để tạo mã tiếp nhận
