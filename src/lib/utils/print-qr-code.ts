@@ -42,7 +42,7 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
             <script src="https://cdn.tailwindcss.com"></script>
             <style>
                 @page {
-                    size: 66mm 32mm;
+                    size: 90mm 44mm;
                     margin: 1mm;
                     padding: 0;
                 }
@@ -53,14 +53,14 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
                 }
                 .page-two-qr {
                     display: flex;
-                    align-items: stretch;
-                    justify-content: center;
-                    gap: 14mm;
+                    align-items: center;
+                    justify-content: center; /* 2 block tụ ở giữa */
+                    gap: 26mm; /* khoảng cách rõ rệt giữa 2 block */
                     width: 100%;
                     min-height: 100%;
                 }
                 .qr-half {
-                    flex: 1;
+                    flex: 0 0 30mm; /* mỗi block rộng 30mm, giúp gap nhìn rõ */
                     display: flex;
                     flex-direction: row;
                     align-items: center;
@@ -96,7 +96,7 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
                     transform: translate(-100%, -50%) rotate(180deg);
                     writing-mode: vertical-rl;
                     text-orientation: mixed;
-                    font-size: 0.35rem;
+                    font-size: 0.5rem;
                     line-height: 1.15;
                     max-height: 100%;
                     max-width: 8mm;
@@ -115,18 +115,18 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
                         overflow: hidden;
                     }
                     .page-two-qr {
-                        gap: 14mm;
+                        gap: 26mm;
                     }
                     .patient-name-vertical {
-                        font-size: 9px !important;
+                        font-size: 11px !important;
                         line-height: 1.2 !important;
                     }
                     .patient-birth-year {
-                        font-size: 10px !important;
+                        font-size: 16px !important;
                     }
                     .print-text-xs {
-                        font-size: 0.75rem !important;
-                        line-height: 1rem !important;
+                        font-size: 1rem !important;
+                        line-height: 1.2rem !important;
                     }
                 }
             </style>
