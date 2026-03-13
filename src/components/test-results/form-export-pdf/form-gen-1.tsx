@@ -38,19 +38,20 @@ function formatDateTime(iso?: string | null): string {
   }
 }
 
-/** Lấy phần text chữ thường từ resultConclude HTML (bỏ thẻ, bỏ tiêu đề CHẨN ĐOÁN MÔ BỆNH HỌC). */
+/** Lấy phần text chữ thường từ resultConclude HTML (bỏ thẻ, bỏ tiêu đề CHẨN ĐOÁN MÔ BỆNH HỌC / CHẨN ĐOÁN TẾ BÀO HỌC). */
 function getResultConcludePlainText(html: string): string {
   if (!html?.trim()) return "";
   const div = typeof document !== "undefined" ? document.createElement("div") : null;
+  const headerMôBệnhHọc = /chẩn\s*đoán\s*mô\s*bệnh\s*học\s*:?\s*/i;
+  const headerTếBàoHọc = /chẩn\s*đoán\s*tế\s*bào\s*học\s*:?\s*/i;
   if (div) {
     div.innerHTML = html;
     let text = (div.textContent ?? div.innerText ?? "").replace(/\s+/g, " ").trim();
-    const header = /chẩn\s*đoán\s*mô\s*bệnh\s*học\s*:?\s*/i;
-    text = text.replace(header, "").trim();
+    text = text.replace(headerMôBệnhHọc, "").replace(headerTếBàoHọc, "").trim();
     return text;
   }
   const stripped = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-  return stripped.replace(/chẩn\s*đoán\s*mô\s*bệnh\s*học\s*:?\s*/i, "").trim();
+  return stripped.replace(headerMôBệnhHọc, "").replace(headerTếBàoHọc, "").trim();
 }
 
 /** Chỉ re-render khi `html` thay đổi (so sánh reference), tránh set lại innerHTML mỗi lần parent re-render → giữ được bôi đen. */
