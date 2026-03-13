@@ -66,31 +66,45 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
                     align-items: center;
                     justify-content: center;
                     min-height: 0;
-                    gap: 2mm;
+                    gap: 0.5mm; /* birth year sát QR */
                 }
+                /* Tên bệnh nhân: nằm ngang, nhiều dòng, căn giữa */
                 .patient-name-vertical {
-                    writing-mode: vertical-rl;
-                    text-orientation: mixed;
                     font-size: 0.4rem;
-                    line-height: 1.15;
-                    max-height: 100%;
-                    max-width: 10mm;
+                    line-height: 1.1;
+                    max-width: 22mm;
+                    margin-bottom: 0.5mm;
                     overflow: hidden;
                     white-space: normal;
                     word-break: break-word;
                     overflow-wrap: break-word;
-                    transform: rotate(180deg);
+                    text-align: center;
                 }
                 .qr-half .qr-code-wrap {
                     flex-shrink: 0;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 1mm;
+                    gap: 0.5mm;
+                    position: relative; /* làm container cho overlay năm sinh */
                 }
+                /* Năm sinh: dọc, overlay sát cạnh QR bên trái */
                 .patient-birth-year {
+                    position: absolute;
+                    left: 0;
+                    top: 50%;
+                    transform: translate(-100%, -50%) rotate(180deg);
+                    writing-mode: vertical-rl;
+                    text-orientation: mixed;
                     font-size: 0.35rem;
-                    line-height: 1;
+                    line-height: 1.15;
+                    max-height: 100%;
+                    max-width: 8mm;
+                    overflow: hidden;
+                    white-space: normal;
+                    word-break: break-word;
+                    overflow-wrap: break-word;
+                    z-index: 1;
                 }
                 @media print {
                     html, body {
@@ -104,12 +118,11 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
                         gap: 14mm;
                     }
                     .patient-name-vertical {
-                        font-size: 10px !important;
+                        font-size: 9px !important;
                         line-height: 1.2 !important;
                     }
                     .patient-birth-year {
-                        font-size: 18px !important;
-                        padding-bottom: 1mm;
+                        font-size: 10px !important;
                     }
                     .print-text-xs {
                         font-size: 0.75rem !important;
@@ -120,21 +133,21 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
         </head>
         <body class="min-h-screen bg-white p-2">
             <div class="page-two-qr print-container">
-                <div class="qr-half text-center">
-                    ${patientNameBlock}
-                    <div class="qr-code-wrap">
-                        ${birthYearBlock}
-                        <div class="qr-code">${qrCodeHtml}</div>
-                    </div>
-                </div>
-                <div class="qr-half text-center">
-                    ${patientNameBlock}
-                    <div class="qr-code-wrap">
-                        ${birthYearBlock}
-                        <div class="qr-code">${qrCodeHtml}</div>
-                    </div>
-                </div>
-            </div>
+              <div class="qr-half text-center">
+              <div class="qr-code-wrap">
+                 ${birthYearBlock}
+                 ${patientNameBlock}
+             <div class="qr-code">${qrCodeHtml}</div>
+        </div>
+        </div>
+         <div class="qr-half text-center">
+        <div class="qr-code-wrap">
+            ${birthYearBlock}
+            ${patientNameBlock}
+            <div class="qr-code">${qrCodeHtml}</div>
+        </div>
+        </div>
+         </div>
             <script>
                 window.onload = function() {
                     setTimeout(function() {
