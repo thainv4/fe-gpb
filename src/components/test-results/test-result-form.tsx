@@ -285,6 +285,7 @@ export default function TestResultForm() {
         const raw = myRoomsData?.data?.resultFormType
         return raw !== undefined && raw !== null && Number(raw) === 2 ? 2 : RESULT_FORM_TYPE_GPB
     }, [myRoomsData])
+    const isGenForm = resultFormType === 2
 
     // testing-methods-gen: danh sách phương pháp thực hiện xét nghiệm
     const { data: samplingMethodsGenData } = useQuery({
@@ -1545,11 +1546,10 @@ export default function TestResultForm() {
                     resultStatus: 'NORMAL',
                 }
 
-                if (resultFormType !== 2) {
+                if (!isGenForm) {
                     payload.resultDescription = microscopicDescription
                     payload.resultComment = macroscopicComment
                     payload.resultNote = resultNote
-                    payload.resultName = resultName
                 } else {
                     // Chỉ gửi field tương ứng với input đang được chọn (radio)
                     if (gen1NoteOrRecomment === 'note') {
@@ -1557,6 +1557,8 @@ export default function TestResultForm() {
                     } else {
                         payload.resultRecomment = resultRecomment
                     }
+                    // Tên phiếu kết quả: chỉ áp dụng cho form Gen (resultFormType = 2)
+                    payload.resultName = resultName
                 }
 
                 const response = await apiClient.saveServiceResult(serviceId, payload)
@@ -2057,16 +2059,18 @@ export default function TestResultForm() {
                                             )}
                                         </div>
 
-                                        <div className="mb-4">
-                                            <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
-                                            <Textarea
-                                                value={resultName}
-                                                onChange={(e) => setResultName(e.target.value)}
-                                                placeholder="Nhập tên phiếu kết quả..."
-                                                rows={3}
-                                                className="resize-none"
-                                            />
-                                        </div>
+                                        {!isGenForm && (
+                                            <div className="mb-4">
+                                                <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
+                                                <Textarea
+                                                    value={resultName}
+                                                    onChange={(e) => setResultName(e.target.value)}
+                                                    placeholder="Nhập tên phiếu kết quả..."
+                                                    rows={3}
+                                                    className="resize-none"
+                                                />
+                                            </div>
+                                        )}
                                         {/* Chỉ hiện các input này khi resultFormType !== 2 */}
                                         {resultFormType !== 2 && (
                                             <>

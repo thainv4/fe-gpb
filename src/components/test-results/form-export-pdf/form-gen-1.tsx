@@ -84,8 +84,9 @@ export function FormGen1({
   const age = calculateAge(patientDob);
   const sampleTypeName = specificService?.sampleTypeName ?? "";
   const receptionCode = specificService?.receptionCode ?? "";
-  const resultName = specificService?.resultName ?? "Phiếu kết quả xét nghiệm";
-  const barcodeMapGenGpb = specificService?.barcodeMapGenGpb ?? data?.services?.[0]?.barcodeMapGenGpb ?? "";
+  const resultName = data.services?.[0]?.serviceName ?? "";
+  const barcodeMapGenGpb =
+    specificService?.barcodeMapGenGpb ?? data?.services?.[0]?.barcodeMapGenGpb ?? "";
   const flag = data?.flag ?? "";
 
   const { data: resultConcludeData } = useQuery({
