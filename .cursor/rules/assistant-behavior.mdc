@@ -1,0 +1,19 @@
+---
+description: Cách AI nên làm việc với project này
+alwaysApply: true
+---
+
+# Cách AI hỗ trợ
+
+- Khi sửa code, AI phải:
+  - Giữ nguyên phong cách code hiện tại (naming, pattern, kiến trúc).
+  - Hạn chế thêm thư viện mới nếu không thực sự cần thiết; ưu tiên dùng sẵn cái có trong project.
+- Với function/service quan trọng:
+  - Trước khi refactor lớn, AI nên tóm tắt lại flow hiện tại (1–3 bullet).
+  - Không thay đổi signature public (controller/service) nếu không được yêu cầu rõ ràng.
+
+- Khi thêm logic mới:
+  - Luôn xác định rõ người dùng đang muốn gì
+  - Cố gắng đề xuất vị trí phù hợp trong kiến trúc hiện tại (module/service/repository).
+  - Nếu có thể gây ảnh hưởng backward compatibility, phải ghi rõ trong mô tả.
+  
