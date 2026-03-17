@@ -35,7 +35,8 @@ import {
     TestTube,
     NewspaperIcon,
     Palette,
-    Shield
+    Shield,
+    Cable
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTabsStore } from '@/lib/stores/tabs'
@@ -111,6 +112,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     href: '/test-results',
                     icon: NewspaperIcon,
                     description: 'Nhập và quản lý kết quả xét nghiệm'
+                },
+                {
+                    name: 'Kết nối máy',
+                    href: '/device-outbound',
+                    icon: Cable,
+                    description: 'Xuất dữ liệu ra thiết bị (máy nhuộm, máy quét…)'
                 }
             ]
         },
@@ -277,9 +284,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             href: '/test-results',
                             icon: NewspaperIcon,
                             description: 'Nhập và quản lý kết quả xét nghiệm'
+                        },
+                        {
+                            name: 'Kết nối máy',
+                            href: '/device-outbound',
+                            icon: Cable,
+                            description: 'Xuất dữ liệu ra thiết bị (máy nhuộm, máy quét…)'
                         }
-                    
-                
             ]
         }
         
@@ -319,7 +330,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const label = pathLabelMap.get(pathname) ?? prettifyPath(pathname)
 
         // Define paths that need room association (pages in "Mới thêm" section)
-        const roomAssociatedPaths = ['/test-indications', '/sample-delivery', '/test-results', '/sample-cabinets']
+        const roomAssociatedPaths = ['/test-indications', '/sample-delivery', '/test-results', '/sample-cabinets', '/device-outbound']
         const needsRoom = roomAssociatedPaths.includes(pathname)
 
         // openTab will handle duplicate checking internally

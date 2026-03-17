@@ -1672,6 +1672,7 @@ export default function TestResultForm() {
                     payload.resultDescription = microscopicDescription
                     payload.resultComment = macroscopicComment
                     payload.resultNote = resultNote
+                    payload.resultName = resultName
                 } else {
                     // Chỉ gửi field tương ứng với input đang được chọn (radio)
                     if (gen1NoteOrRecomment === 'note') {
@@ -1679,7 +1680,6 @@ export default function TestResultForm() {
                     } else {
                         payload.resultRecomment = resultRecomment
                     }
-                    // Tên phiếu kết quả: chỉ áp dụng cho form Gen (resultFormType = 2)
                     payload.resultName = resultName
                 }
 
@@ -2037,7 +2037,7 @@ export default function TestResultForm() {
                                             )}
                                         </div>
 
-                                        {isGenForm && (
+                                        {!isGenForm && (
                                             <div className="mb-4">
                                                 <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
                                                 <Textarea

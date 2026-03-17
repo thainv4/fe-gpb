@@ -3679,6 +3679,99 @@ class ApiClient {
         return this.request<WorkflowActionInfo[]>(`/workflow-history/action-info/${storedServiceReqId}`);
     }
 
+    // -------------------------------------------------------------------------
+    // Device Outbound – xuất dữ liệu ra thiết bị (máy nhuộm, máy quét…)
+    // -------------------------------------------------------------------------
+
+    async getDeviceOutboundList(params?: {
+        limit?: number;
+        offset?: number;
+        receptionCode?: string;
+        serviceCode?: string;
+    }): Promise<ApiResponse<DeviceOutboundListData>> {
+        const searchParams = new URLSearchParams();
+        if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
+        if (params?.offset !== undefined) searchParams.set("offset", String(params.offset));
+        if (params?.receptionCode?.trim()) searchParams.set("receptionCode", params.receptionCode.trim());
+        if (params?.serviceCode?.trim()) searchParams.set("serviceCode", params.serviceCode.trim());
+        const q = searchParams.toString();
+        return this.request<DeviceOutboundListData>(`/device-outbound${q ? `?${q}` : ""}`);
+    }
+
+    async getDeviceOutboundById(id: string): Promise<ApiResponse<DeviceOutboundItem>> {
+        return this.request<DeviceOutboundItem>(`/device-outbound/${id}`);
+    }
+
+    async getDeviceOutboundServices(receptionCode: string): Promise<ApiResponse<DeviceOutboundServiceOption[]>> {
+        const params = new URLSearchParams();
+        params.set("receptionCode", receptionCode);
+        return this.request<DeviceOutboundServiceOption[]>(`/device-outbound/services?${params.toString()}`);
+    }
+
+    async createDeviceOutbound(body: CreateDeviceOutboundBody): Promise<ApiResponse<DeviceOutboundItem>> {
+        return this.request<DeviceOutboundItem>("/device-outbound", {
+            method: "POST",
+            body: JSON.stringify(body),
+        });
+    }
+
+    async updateDeviceOutbound(id: string, body: UpdateDeviceOutboundBody): Promise<ApiResponse<DeviceOutboundItem>> {
+        return this.request<DeviceOutboundItem>(`/device-outbound/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(body),
+        });
+    }
+
+    async deleteDeviceOutbound(id: string): Promise<ApiResponse<{ message: string }>> {
+        return this.request<{ message: string }>(`/device-outbound/${id}`, { method: "DELETE" });
+    }
+}
+
+// Device Outbound types (theo device-outbound-api-for-frontend.md)
+export interface DeviceOutboundItem {
+    id: string;
+    receptionCode: string;
+    serviceCode: string;
+    blockId: string;
+    slideId: string;
+    method: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface DeviceOutboundListData {
+    items: DeviceOutboundItem[];
+    pagination: {
+        total: number;
+        limit: number;
+        offset: number;
+        has_next: boolean;
+        has_prev: boolean;
+    };
+}
+
+export interface DeviceOutboundServiceOption {
+    id: string;
+    serviceCode?: string | null;
+    serviceName?: string | null;
+    isChildService: number;
+    parentServiceId?: string | null;
+}
+
+export interface CreateDeviceOutboundBody {
+    receptionCode: string;
+    serviceCode: string;
+    blockNumber: number;
+    slideNumber: number;
+    method: string;
+}
+
+export interface UpdateDeviceOutboundBody {
+    receptionCode?: string;
+    serviceCode?: string;
+    blockNumber?: number;
+    slideNumber?: number;
+    method?: string;
 }
 
 export const apiClient = new ApiClient();
