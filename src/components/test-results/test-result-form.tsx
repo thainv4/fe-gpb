@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useTabsStore } from "@/lib/stores/tabs";
 import { usePathname } from "next/navigation";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
@@ -32,6 +32,136 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useHisStore } from "@/lib/stores/his";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
+
+/** Khối thông tin bệnh nhân (memo để tránh re-render khi state khác đổi). */
+const PatientInfoCard = React.memo(function PatientInfoCard({
+    serviceRequest,
+    patient,
+}: {
+    serviceRequest: { serviceReqCode?: string | null; icdName?: string | null; requestUsername?: string | null; requestLoginname?: string | null };
+    patient?: { code?: string | null; name?: string | null; dob?: number | null; genderName?: string | null; address?: string | null };
+}) {
+    return (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
+                Thông tin bệnh nhân
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+                <div>
+                    <Label className="text-sm text-gray-600">Mã Y lệnh</Label>
+                    <Input value={serviceRequest.serviceReqCode || ""} disabled className="mt-1 font-semibold" />
+                </div>
+                <div>
+                    <Label className="text-sm text-gray-600">Mã bệnh nhân</Label>
+                    <Input value={patient?.code || ""} disabled className="mt-1 font-semibold" />
+                </div>
+                <div>
+                    <Label className="text-sm text-gray-600">Họ và tên bệnh nhân</Label>
+                    <Input value={patient?.name || ""} disabled className="mt-1 font-semibold" />
+                </div>
+                <div>
+                    <Label className="text-sm text-gray-600">Ngày sinh</Label>
+                    <Input
+                        value={patient?.dob ? `${String(patient.dob).substring(6, 8)}/${String(patient.dob).substring(4, 6)}/${String(patient.dob).substring(0, 4)}` : ""}
+                        disabled
+                        className="mt-1 font-semibold"
+                    />
+                </div>
+                <div>
+                    <Label className="text-sm text-gray-600">Giới tính</Label>
+                    <Input value={patient?.genderName || ""} disabled className="mt-1 font-semibold" />
+                </div>
+                <div>
+                    <Label className="text-sm text-gray-600">Địa chỉ</Label>
+                    <Input value={patient?.address || ""} disabled className="mt-1 font-semibold" />
+                </div>
+                <div className="col-span-3">
+                    <Label className="text-sm text-gray-600">Chẩn đoán</Label>
+                    <Input value={serviceRequest.icdName || ""} disabled className="mt-1 font-semibold" />
+                </div>
+                <div>
+                    <Label className="text-sm text-gray-600">Bác sĩ chỉ định</Label>
+                    <Input
+                        value={
+                            serviceRequest?.requestUsername && serviceRequest?.requestLoginname
+                                ? `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`
+                                : (serviceRequest?.requestUsername ?? serviceRequest?.requestLoginname ?? "")
+                        }
+                        disabled
+                        className="mt-1 font-semibold"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+});
+
+/** Bảng danh sách dịch vụ (memo + callback ổn định để giảm re-render). */
+const ServicesTable = React.memo(function ServicesTable({
+    services,
+    onServiceClick,
+}: {
+    services: Array<{ id: string; serviceCode: string; serviceName: string; price: number; receptionCode?: string | null; resultConclude?: string | null; documentId?: string | number | null }>;
+    onServiceClick: (serviceId: string) => void;
+}) {
+    return (
+        <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                    <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã dịch vụ</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên dịch vụ</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Đơn giá</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Mã tiếp nhận</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái ký</th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {services.map((service, index) => {
+                        const firstService = services[0];
+                        const hasResult = firstService?.resultConclude ? true : false;
+                        const hasSignature = firstService?.documentId ? true : false;
+                        return (
+                            <tr
+                                key={service.id}
+                                className="hover:bg-gray-50 cursor-pointer"
+                                onClick={() => onServiceClick(service.id)}
+                            >
+                                <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{service.serviceCode}</td>
+                                <td className="px-4 py-3 text-sm text-gray-900">{service.serviceName}</td>
+                                                                    <td className="px-4 py-3 text-sm text-gray-900 text-right">{service.price.toLocaleString("vi-VN")} đ</td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-center">{service.receptionCode || "-"}</td>
+                                <td className="px-4 py-3 text-sm text-center">
+                                    {hasResult ? (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <CheckCircle2 className="w-3.5 h-3.5" /> Đã có kết quả
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                            <XCircle className="w-3.5 h-3.5" /> Chưa có kết quả
+                                        </span>
+                                    )}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-center">
+                                    {hasSignature ? (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <CheckCircle2 className="w-3.5 h-3.5" /> Đã ký
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-gray-400">Chưa ký</span>
+                                    )}
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+});
 
 export default function TestResultForm() {
     const pathname = usePathname()
@@ -244,6 +374,7 @@ export default function TestResultForm() {
         queryKey: ['stored-service-detail', previewServiceId],
         queryFn: () => apiClient.getStoredServiceById(previewServiceId!),
         enabled: !!previewServiceId && previewDialogOpen,
+        staleTime: 1 * 60 * 1000, // 1 phút cho preview
     })
 
     // Lấy thông tin người dùng hiện tại
@@ -303,6 +434,7 @@ export default function TestResultForm() {
         }),
         enabled: !!appliedSamplingMethodGenSearch && appliedSamplingMethodGenSearch.trim().length > 0,
         retry: false,
+        staleTime: 2 * 60 * 1000, // 2 phút cache kết quả tìm kiếm
     })
 
     const allSamplingMethodsGen = useMemo(
@@ -379,15 +511,13 @@ export default function TestResultForm() {
         }
     }, [storeCurrentRoomId, currentRoomId, queryClient])
 
-    const handleSelect = (serviceReqCode: string, storedServiceReqId?: string, _receptionCode?: string, roomIdFromWorkflowParam?: string) => {
+    const handleSelect = useCallback((serviceReqCode: string, storedServiceReqIdParam?: string, _receptionCode?: string, roomIdFromWorkflowParam?: string) => {
         setSelectedServiceReqCode(serviceReqCode)
         setRoomIdFromWorkflow(roomIdFromWorkflowParam)
-        if (storedServiceReqId) {
-            setStoredServiceReqId(storedServiceReqId)
-            // Reset các field về default để logic kiểm tra tiền tố có thể áp dụng
+        if (storedServiceReqIdParam) {
+            setStoredServiceReqId(storedServiceReqIdParam)
             setResultDescription(defaultResultDescription)
             syncResultDescription(defaultResultDescription)
-            // Sử dụng default khác nhau dựa trên resultFormType
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
             setResultRecomment(defaultResultRecomment)
@@ -396,10 +526,9 @@ export default function TestResultForm() {
             setMacroscopicComment(defaultMacroscopicComment)
             setSelectedSamplingMethod('')
             setTestingMethodGenFromResult(null)
-            // Reset số block mỗi khi chọn bản ghi mới từ sidebar
             setNumOfBlock('')
         }
-    }
+    }, [resultFormType, defaultResultDescription, defaultResultConcludeGen1, defaultResultConclude, defaultResultNoteGen1, defaultResultNote, defaultResultRecomment, defaultMacroscopicComment, syncResultDescription])
 
     // Handler khi chọn mẫu kết quả (backward compatibility - không dùng nữa, dùng onSelectFields)
     const handleTemplateSelect = (_templateContent: string, _templateName: string) => {
@@ -662,8 +791,7 @@ export default function TestResultForm() {
         }
     }
 
-    // Handler khi click vào dịch vụ để chọn dịch vụ
-    const handleServiceClick = async (serviceId: string) => {
+    const handleServiceClick = useCallback(async (serviceId: string) => {
         if (!storedServiceReqId) {
             toast({
                 variant: "destructive",
@@ -672,16 +800,12 @@ export default function TestResultForm() {
             })
             return
         }
-
-        // Load kết quả từ API /api/v1/service-requests/stored/services/{serviceId}/result
         try {
             const resultResponse = await apiClient.getServiceResult(serviceId)
             if (resultResponse.success && resultResponse.data) {
                 const data = resultResponse.data
-                // Gán trực tiếp từ API response - resultDescription vào Mô tả vi thể, resultComment vào Nhận xét đại thể
                 setMicroscopicDescription(data.resultDescription ?? defaultMicroscopicDescription)
                 setMacroscopicComment(data.resultComment ?? defaultMacroscopicComment)
-
                 setResultConclude(data.resultConclude ?? (resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude))
                 setResultNote(data.resultNote ?? (resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote))
                 setResultRecomment(data.resultRecomment ?? defaultResultRecomment)
@@ -694,7 +818,6 @@ export default function TestResultForm() {
                     setTestingMethodGenFromResult(null)
                 }
             } else {
-                // Nếu không có kết quả, reset về default templates
                 setMicroscopicDescription(defaultMicroscopicDescription)
                 setMacroscopicComment(defaultMacroscopicComment)
                 setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
@@ -704,8 +827,7 @@ export default function TestResultForm() {
                 setSelectedSamplingMethod('')
                 setTestingMethodGenFromResult(null)
             }
-        } catch (error) {
-            // Nếu có lỗi, reset về default templates
+        } catch {
             setMicroscopicDescription(defaultMicroscopicDescription)
             setMacroscopicComment(defaultMacroscopicComment)
             setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
@@ -715,7 +837,7 @@ export default function TestResultForm() {
             setSelectedSamplingMethod('')
             setTestingMethodGenFromResult(null)
         }
-    }
+    }, [storedServiceReqId, toast, resultFormType, defaultMicroscopicDescription, defaultMacroscopicComment, defaultResultConcludeGen1, defaultResultConclude, defaultResultNoteGen1, defaultResultNote, defaultResultRecomment])
 
     // Handler xem văn bản đã ký (stream PDF theo hisServiceReqCode)
     const handleViewSignedDocument = async () => {
@@ -1788,63 +1910,7 @@ export default function TestResultForm() {
 
                             {selectedServiceReqCode && !isLoading && serviceRequest && (
                                 <div className="space-y-6">
-                                    {/* Patient Information */}
-                                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                                        <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
-                                            Thông tin bệnh nhân
-                                        </h3>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div>
-                                                <Label className="text-sm text-gray-600">Mã Y lệnh</Label>
-                                                <Input value={serviceRequest.serviceReqCode || ''} disabled
-                                                    className="mt-1 font-semibold" />
-                                            </div>
-                                            <div>
-                                                <Label className="text-sm text-gray-600">Mã bệnh nhân</Label>
-                                                <Input value={patient?.code || ''} disabled
-                                                    className="mt-1 font-semibold" />
-                                            </div>
-                                            <div>
-                                                <Label className="text-sm text-gray-600">Họ và tên bệnh nhân</Label>
-                                                <Input value={patient?.name || ''} disabled
-                                                    className="mt-1 font-semibold" />
-                                            </div>
-                                            <div>
-                                                <Label className="text-sm text-gray-600">Ngày sinh</Label>
-                                                <Input
-                                                    value={patient?.dob ? `${String(patient.dob).substring(6, 8)}/${String(patient.dob).substring(4, 6)}/${String(patient.dob).substring(0, 4)}` : ''}
-                                                    disabled className="mt-1 font-semibold" />
-                                            </div>
-                                            <div>
-                                                <Label className="text-sm text-gray-600">Giới tính</Label>
-                                                <Input value={patient?.genderName || ''} disabled
-                                                    className="mt-1 font-semibold" />
-                                            </div>
-                                            <div>
-                                                <Label className="text-sm text-gray-600">Địa chỉ</Label>
-                                                <Input value={patient?.address || ''} disabled
-                                                    className="mt-1 font-semibold" />
-                                            </div>
-
-                                            <div className="col-span-3">
-                                                <Label className="text-sm text-gray-600">Chẩn đoán</Label>
-                                                <Input value={serviceRequest.icdName || ''} disabled
-                                                    className="mt-1 font-semibold" />
-                                            </div>
-                                            <div>
-                                                <Label className="text-sm text-gray-600">Bác sĩ chỉ định</Label>
-                                                <Input
-                                                    value={
-                                                        serviceRequest?.requestUsername && serviceRequest?.requestLoginname
-                                                            ? `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`
-                                                            : (serviceRequest?.requestUsername ?? serviceRequest?.requestLoginname ?? '')
-                                                    }
-                                                    disabled
-                                                    className="mt-1 font-semibold"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <PatientInfoCard serviceRequest={serviceRequest} patient={patient} />
 
                                     {/* Số block, Phương pháp nhuộm và Vị trí bệnh phẩm */}
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
@@ -1953,95 +2019,7 @@ export default function TestResultForm() {
                                                     </Button>
                                                 </div>
                                             </div>
-                                            <div className="overflow-x-auto">
-                                                <table className="min-w-full divide-y divide-gray-200">
-                                                    <thead className="bg-gray-50">
-                                                        <tr>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                STT
-                                                            </th>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                Mã dịch vụ
-                                                            </th>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                Tên dịch vụ
-                                                            </th>
-                                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                Đơn giá
-                                                            </th>
-                                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                Mã tiếp nhận
-                                                            </th>
-                                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                Trạng thái
-                                                            </th>
-                                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                                Trạng thái ký
-                                                            </th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="bg-white divide-y divide-gray-200">
-                                                        {services.map((service, index) => {
-                                                            // Tính trạng thái dựa trên tất cả dịch vụ - lấy từ dịch vụ đầu tiên làm chuẩn
-                                                            const firstService = services[0]
-                                                            const hasResult = firstService?.resultConclude ? true : false
-                                                            const hasSignature = firstService?.documentId ? true : false
-
-                                                            return (
-                                                                <tr
-                                                                    key={service.id}
-                                                                    className="hover:bg-gray-50 cursor-pointer"
-                                                                    onClick={() => handleServiceClick(service.id)}
-                                                                >
-                                                                    <td className="px-4 py-3 text-sm text-gray-900">
-                                                                        {index + 1}
-                                                                    </td>
-                                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                                        {service.serviceCode}
-                                                                    </td>
-                                                                    <td className="px-4 py-3 text-sm text-gray-900">
-                                                                        {service.serviceName}
-                                                                    </td>
-                                                                    <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                                                                        {service.price.toLocaleString('vi-VN')} đ
-                                                                    </td>
-                                                                    <td className="px-4 py-3 text-sm text-gray-900 text-center">
-                                                                        {service.receptionCode || '-'}
-                                                                    </td>
-                                                                    <td className="px-4 py-3 text-sm text-center">
-                                                                        {hasResult ? (
-                                                                            <span
-                                                                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                                                                Đã có kết quả
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span
-                                                                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                                                                <XCircle className="w-3.5 h-3.5" />
-                                                                                Chưa có kết quả
-                                                                            </span>
-                                                                        )}
-                                                                    </td>
-                                                                    <td className="px-4 py-3 text-sm text-center">
-                                                                        {hasSignature ? (
-                                                                            <span
-                                                                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                                                                Đã ký
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="text-xs text-gray-400">
-                                                                                Chưa ký
-                                                                            </span>
-                                                                        )}
-                                                                    </td>
-                                                                </tr>
-                                                            )
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                            <ServicesTable services={services} onServiceClick={handleServiceClick} />
                                         </div>
                                     )}
 
@@ -2059,7 +2037,7 @@ export default function TestResultForm() {
                                             )}
                                         </div>
 
-                                        {!isGenForm && (
+                                        {isGenForm && (
                                             <div className="mb-4">
                                                 <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
                                                 <Textarea

@@ -1,9 +1,22 @@
-﻿'use client'
+'use client'
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout"
-import SampleDeliveryForm from "@/components/sample-delivery/sample-delivery-form"
-import { useAuthStore } from "@/lib/stores/auth"
-import { redirect } from "next/navigation"
+import dynamic from 'next/dynamic'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { LoadingSpinner } from '@/components/ui/loading'
+import { useAuthStore } from '@/lib/stores/auth'
+import { redirect } from 'next/navigation'
+
+const SampleDeliveryForm = dynamic(
+    () => import('@/components/sample-delivery/sample-delivery-form').then((m) => m.default),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex min-h-[50vh] items-center justify-center">
+                <LoadingSpinner size="medium" />
+            </div>
+        ),
+    }
+)
 
 export default function SampleDelivery() {
     const { isAuthenticated } = useAuthStore()
@@ -14,7 +27,7 @@ export default function SampleDelivery() {
 
     return (
         <DashboardLayout>
-            <SampleDeliveryForm/>
+            <SampleDeliveryForm />
         </DashboardLayout>
     )
 }

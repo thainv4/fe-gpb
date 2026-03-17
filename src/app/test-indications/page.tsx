@@ -1,12 +1,25 @@
-﻿'use client'
+'use client'
 
-import {DashboardLayout} from "@/components/layout/dashboard-layout";
-import TestIndicationsForm from "@/components/test-indications/test-indications-form";
-import {useAuthStore} from "@/lib/stores/auth";
-import {redirect} from "next/navigation";
+import dynamic from 'next/dynamic'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { LoadingSpinner } from '@/components/ui/loading'
+import { useAuthStore } from '@/lib/stores/auth'
+import { redirect } from 'next/navigation'
+
+const TestIndicationsForm = dynamic(
+    () => import('@/components/test-indications/test-indications-form').then((m) => m.default),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex min-h-[50vh] items-center justify-center">
+                <LoadingSpinner size="medium" />
+            </div>
+        ),
+    }
+)
 
 export default function TestIndicationsPage() {
-    const {isAuthenticated} = useAuthStore()
+    const { isAuthenticated } = useAuthStore()
 
     if (!isAuthenticated) {
         redirect('/auth/login')
@@ -14,7 +27,7 @@ export default function TestIndicationsPage() {
 
     return (
         <DashboardLayout>
-            <TestIndicationsForm/>
+            <TestIndicationsForm />
         </DashboardLayout>
     )
 }

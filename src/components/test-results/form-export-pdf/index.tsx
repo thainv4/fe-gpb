@@ -1,9 +1,8 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import { StoredServiceRequestResponse, StoredService } from "@/lib/api/client";
-import { FormTemplate } from "./form-gpb";
-import { FormGen1 } from "./form-gen-1";
 
 /** resultFormType = 1 → form-gpb (Giải phẫu bệnh) */
 export const RESULT_FORM_TYPE_GPB = 1;
@@ -20,6 +19,16 @@ export interface ResultFormComponentProps extends ResultFormProps {
   /** 1 = form-gpb, 2 = form-gen-1. Mặc định 1. */
   formType?: number | string;
 }
+
+const FormTemplate = dynamic(() => import("./form-gpb").then((m) => ({ default: m.FormTemplate })), {
+  ssr: false,
+  loading: () => <div className="min-h-[400px] flex items-center justify-center text-muted-foreground">Đang tải form...</div>,
+});
+
+const FormGen1 = dynamic(() => import("./form-gen-1").then((m) => ({ default: m.FormGen1 })), {
+  ssr: false,
+  loading: () => <div className="min-h-[400px] flex items-center justify-center text-muted-foreground">Đang tải form...</div>,
+});
 
 /**
  * Registry: chọn form kết quả theo formType (resultFormType của phòng).
