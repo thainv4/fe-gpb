@@ -3715,6 +3715,13 @@ class ApiClient {
         });
     }
 
+    async createDeviceOutboundBatch(body: DeviceOutboundBatchBody): Promise<ApiResponse<DeviceOutboundItem[]>> {
+        return this.request<DeviceOutboundItem[]>("/device-outbound/batch", {
+            method: "POST",
+            body: JSON.stringify(body),
+        });
+    }
+
     async updateDeviceOutbound(id: string, body: UpdateDeviceOutboundBody): Promise<ApiResponse<DeviceOutboundItem>> {
         return this.request<DeviceOutboundItem>(`/device-outbound/${id}`, {
             method: "PUT",
@@ -3772,6 +3779,19 @@ export interface UpdateDeviceOutboundBody {
     blockNumber?: number;
     slideNumber?: number;
     method?: string;
+}
+
+// Batch create payloads (theo device-outbound-batch-api-for-frontend.md)
+export interface DeviceOutboundBatchItem {
+    blockNumber: number;
+    slideNumber: number;
+    method: string;
+}
+
+export interface DeviceOutboundBatchBody {
+    receptionCode: string;
+    serviceCode: string;
+    items: DeviceOutboundBatchItem[];
 }
 
 export const apiClient = new ApiClient();

@@ -27,8 +27,9 @@ import {
     apiClient,
     DeviceOutboundItem,
     DeviceOutboundListData,
-    CreateDeviceOutboundBody,
     UpdateDeviceOutboundBody,
+    DeviceOutboundBatchBody,
+    DeviceOutboundBatchItem,
 } from '@/lib/api/client'
 import { Plus, Search, Edit, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,6 +57,7 @@ export default function DeviceOutboundTable() {
     const [formBlockNumber, setFormBlockNumber] = useState<string>('1')
     const [formSlideNumber, setFormSlideNumber] = useState<string>('1')
     const [formMethod, setFormMethod] = useState('')
+    const [batchItems, setBatchItems] = useState<DeviceOutboundBatchItem[]>([])
 
     const listParams = {
         limit: PAGE_SIZE,
@@ -83,7 +85,7 @@ export default function DeviceOutboundTable() {
     const serviceOptions = servicesData?.data ?? []
 
     const createMutation = useMutation({
-        mutationFn: (body: CreateDeviceOutboundBody) => apiClient.createDeviceOutbound(body),
+        mutationFn: (body: DeviceOutboundBatchBody) => apiClient.createDeviceOutboundBatch(body),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['device-outbound'] })
             toast({ title: 'Thành công', description: 'Đã tạo bản ghi xuất thiết bị.' })
@@ -129,6 +131,7 @@ export default function DeviceOutboundTable() {
         setFormBlockNumber('1')
         setFormSlideNumber('1')
         setFormMethod('')
+        setBatchItems([])
     }
 
     function openCreate() {
@@ -149,50 +152,78 @@ export default function DeviceOutboundTable() {
         setIsFormOpen(true)
     }
 
-    function handleSubmit() {
+    function validateSingleInputs() {
         const blockNum = parseInt(formBlockNumber, 10)
         const slideNum = parseInt(formSlideNumber, 10)
         if (!formReceptionCode.trim()) {
             toast({ title: 'Lỗi', description: 'Vui lòng nhập mã tiếp nhận.', variant: 'destructive' })
-            return
+            return null
         }
         if (!formServiceCode.trim()) {
             toast({ title: 'Lỗi', description: 'Vui lòng chọn dịch vụ.', variant: 'destructive' })
-            return
+            return null
         }
         if (Number.isNaN(blockNum) || blockNum < 1) {
             toast({ title: 'Lỗi', description: 'Số block phải ≥ 1.', variant: 'destructive' })
-            return
+            return null
         }
         if (Number.isNaN(slideNum) || slideNum < 1) {
             toast({ title: 'Lỗi', description: 'Số slide phải ≥ 1.', variant: 'destructive' })
-            return
+            return null
         }
         if (!formMethod.trim()) {
             toast({ title: 'Lỗi', description: 'Vui lòng nhập phương pháp (vd: HE).', variant: 'destructive' })
-            return
+            return null
         }
+        return { blockNum, slideNum }
+    }
 
-        if (editingItem) {
-            updateMutation.mutate({
-                id: editingItem.id,
-                body: {
-                    receptionCode: formReceptionCode.trim(),
-                    serviceCode: formServiceCode.trim(),
-                    blockNumber: blockNum,
-                    slideNumber: slideNum,
-                    method: formMethod.trim(),
-                },
-            })
-        } else {
-            createMutation.mutate({
+    function handleSubmitEdit() {
+        if (!editingItem) return
+        const validated = validateSingleInputs()
+        if (!validated) return
+        const { blockNum, slideNum } = validated
+
+        updateMutation.mutate({
+            id: editingItem.id,
+            body: {
                 receptionCode: formReceptionCode.trim(),
                 serviceCode: formServiceCode.trim(),
                 blockNumber: blockNum,
                 slideNumber: slideNum,
                 method: formMethod.trim(),
-            })
+            },
+        })
+    }
+
+    function handleAddBatchItem() {
+        const validated = validateSingleInputs()
+        if (!validated) return
+        const { blockNum, slideNum } = validated
+        const newItem: DeviceOutboundBatchItem = {
+            blockNumber: blockNum,
+            slideNumber: slideNum,
+            method: formMethod.trim(),
         }
+        setBatchItems((prev) => [...prev, newItem])
+    }
+
+    function handleSubmitBatch() {
+        const validated = validateSingleInputs()
+        if (!validated) return
+        const { blockNum, slideNum } = validated
+
+        const itemsToSend: DeviceOutboundBatchItem[] =
+            batchItems.length > 0
+                ? batchItems
+                : [{ blockNumber: blockNum, slideNumber: slideNum, method: formMethod.trim() }]
+
+        const body: DeviceOutboundBatchBody = {
+            receptionCode: formReceptionCode.trim(),
+            serviceCode: formServiceCode.trim(),
+            items: itemsToSend,
+        }
+        createMutation.mutate(body)
     }
 
     function applyFilters() {
@@ -230,7 +261,7 @@ export default function DeviceOutboundTable() {
                             <Plus className="mr-2 h-4 w-4" /> Thêm bản ghi
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[480px]">
+                    <DialogContent className="sm:max-w-[640px] max-w-[95vw]">
                         <DialogHeader>
                             <DialogTitle>{editingItem ? 'Cập nhật bản ghi xuất thiết bị' : 'Tạo bản ghi xuất thiết bị'}</DialogTitle>
                             <DialogDescription>
@@ -264,47 +295,120 @@ export default function DeviceOutboundTable() {
                                     ))}
                                 </select>
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-2">
-                                <Label className="col-span-1">Số block *</Label>
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    className="col-span-3"
-                                    value={formBlockNumber}
-                                    onChange={(e) => setFormBlockNumber(e.target.value)}
-                                    placeholder="≥ 1"
-                                />
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Số block *</Label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={formBlockNumber}
+                                        onChange={(e) => setFormBlockNumber(e.target.value)}
+                                        placeholder="≥ 1"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Số slide *</Label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={formSlideNumber}
+                                        onChange={(e) => setFormSlideNumber(e.target.value)}
+                                        placeholder="≥ 1"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Phương pháp *</Label>
+                                    <Input
+                                        value={formMethod}
+                                        onChange={(e) => setFormMethod(e.target.value)}
+                                        placeholder="VD: HE"
+                                    />
+                                </div>
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-2">
-                                <Label className="col-span-1">Số slide *</Label>
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    className="col-span-3"
-                                    value={formSlideNumber}
-                                    onChange={(e) => setFormSlideNumber(e.target.value)}
-                                    placeholder="≥ 1"
-                                />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-2">
-                                <Label className="col-span-1">Phương pháp *</Label>
-                                <Input
-                                    className="col-span-3"
-                                    value={formMethod}
-                                    onChange={(e) => setFormMethod(e.target.value)}
-                                    placeholder="VD: HE"
-                                />
-                            </div>
+                            {!editingItem && (
+                                <div className="w-full min-w-0">
+                                    <Label className="text-sm font-medium mb-2 block">Danh sách slide trong batch</Label>
+                                    <div className="rounded-md border min-h-[280px] max-h-72 overflow-auto min-w-0 bg-muted/30">
+                                        {batchItems.length === 0 ? (
+                                            <div className="min-h-[280px] flex items-center justify-center text-muted-foreground text-sm px-4">
+                                                Chưa có slide. Nhập Block, Slide, PP ở trên và bấm &quot;Thêm slide&quot;.
+                                            </div>
+                                        ) : (
+                                            <Table className="min-w-[380px]">
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead className="w-[60px]">STT</TableHead>
+                                                        <TableHead>Block ID</TableHead>
+                                                        <TableHead>Slide ID</TableHead>
+                                                        <TableHead>Phương pháp</TableHead>
+                                                        <TableHead className="w-[60px]">Xóa</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {batchItems.map((it, idx) => {
+                                                        const blockId = formReceptionCode
+                                                            ? `${formReceptionCode}A.${it.blockNumber}`
+                                                            : `A.${it.blockNumber}`
+                                                        const slideId = formReceptionCode
+                                                            ? `${formReceptionCode}A.${it.blockNumber}.${it.slideNumber}`
+                                                            : `A.${it.blockNumber}.${it.slideNumber}`
+                                                        return (
+                                                            <TableRow key={`${it.blockNumber}-${it.slideNumber}-${idx}`}>
+                                                                <TableCell className="text-center">{idx + 1}</TableCell>                                                                <TableCell>{blockId}</TableCell>
+                                                                <TableCell>{slideId}</TableCell>
+                                                                <TableCell>{it.method}</TableCell>
+                                                                <TableCell>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="icon"
+                                                                        onClick={() =>
+                                                                            setBatchItems((prev) =>
+                                                                                prev.filter((_, i) => i !== idx)
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Trash2 className="h-3 w-3" />
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )
+                                                    })}
+                                                </TableBody>
+                                            </Table>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setIsFormOpen(false)}>Hủy</Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={createMutation.isPending || updateMutation.isPending}
-                            >
-                                {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {editingItem ? 'Cập nhật' : 'Tạo'}
-                            </Button>
+                            {editingItem ? (
+                                <Button
+                                    onClick={handleSubmitEdit}
+                                    disabled={updateMutation.isPending}
+                                >
+                                    {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Cập nhật
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={handleAddBatchItem}
+                                        disabled={createMutation.isPending}
+                                    >
+                                        Thêm slide
+                                    </Button>
+                                    <Button
+                                        onClick={handleSubmitBatch}
+                                        disabled={createMutation.isPending}
+                                    >
+                                        {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Gửi batch
+                                    </Button>
+                                </>
+                            )}
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
