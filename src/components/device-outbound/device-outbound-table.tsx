@@ -30,12 +30,14 @@ import {
     UpdateDeviceOutboundBody,
     DeviceOutboundBatchBody,
     DeviceOutboundBatchItem,
+    CreateDeviceOutboundBody,
 } from '@/lib/api/client'
 import { Plus, Search, Edit, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
+import { Checkbox } from '@/components/ui/checkbox'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 20
 
 export default function DeviceOutboundTable() {
     const queryClient = useQueryClient()
@@ -58,6 +60,7 @@ export default function DeviceOutboundTable() {
     const [formSlideNumber, setFormSlideNumber] = useState<string>('1')
     const [formMethod, setFormMethod] = useState('')
     const [batchItems, setBatchItems] = useState<DeviceOutboundBatchItem[]>([])
+    const [selectedBatchIndexes, setSelectedBatchIndexes] = useState<number[]>([])
 
     const listParams = {
         limit: PAGE_SIZE,
@@ -84,8 +87,21 @@ export default function DeviceOutboundTable() {
     })
     const serviceOptions = servicesData?.data ?? []
 
-    const createMutation = useMutation({
+    const createBatchMutation = useMutation({
         mutationFn: (body: DeviceOutboundBatchBody) => apiClient.createDeviceOutboundBatch(body),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['device-outbound'] })
+            toast({ title: 'Thành công', description: 'Đã tạo bản ghi xuất thiết bị.' })
+            resetForm()
+            setIsFormOpen(false)
+        },
+        onError: (e: Error) => {
+            toast({ title: 'Lỗi', description: e.message || 'Không thể tạo bản ghi.', variant: 'destructive' })
+        },
+    })
+
+    const createSingleMutation = useMutation({
+        mutationFn: (body: CreateDeviceOutboundBody) => apiClient.createDeviceOutbound(body),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['device-outbound'] })
             toast({ title: 'Thành công', description: 'Đã tạo bản ghi xuất thiết bị.' })
@@ -132,6 +148,7 @@ export default function DeviceOutboundTable() {
         setFormSlideNumber('1')
         setFormMethod('')
         setBatchItems([])
+        setSelectedBatchIndexes([])
     }
 
     function openCreate() {
@@ -156,7 +173,7 @@ export default function DeviceOutboundTable() {
         const blockNum = parseInt(formBlockNumber, 10)
         const slideNum = parseInt(formSlideNumber, 10)
         if (!formReceptionCode.trim()) {
-            toast({ title: 'Lỗi', description: 'Vui lòng nhập mã tiếp nhận.', variant: 'destructive' })
+            toast({ title: 'Lỗi', description: 'Vui lòng nhập mã Barcode.', variant: 'destructive' })
             return null
         }
         if (!formServiceCode.trim()) {
@@ -206,24 +223,68 @@ export default function DeviceOutboundTable() {
             method: formMethod.trim(),
         }
         setBatchItems((prev) => [...prev, newItem])
+        setSelectedBatchIndexes([])
     }
 
-    function handleSubmitBatch() {
+    function handleSubmitSend() {
         const validated = validateSingleInputs()
         if (!validated) return
         const { blockNum, slideNum } = validated
 
-        const itemsToSend: DeviceOutboundBatchItem[] =
-            batchItems.length > 0
-                ? batchItems
-                : [{ blockNumber: blockNum, slideNumber: slideNum, method: formMethod.trim() }]
+        const baseReceptionCode = formReceptionCode.trim()
+        const baseServiceCode = formServiceCode.trim()
 
-        const body: DeviceOutboundBatchBody = {
-            receptionCode: formReceptionCode.trim(),
-            serviceCode: formServiceCode.trim(),
-            items: itemsToSend,
+        // Nếu chọn nhiều slide => gọi batch API với đúng các slide đã chọn
+        if (selectedBatchIndexes.length > 1 && batchItems.length > 0) {
+            const itemsToSend: DeviceOutboundBatchItem[] = selectedBatchIndexes
+                .sort((a, b) => a - b)
+                .map((i) => batchItems[i])
+
+            const body: DeviceOutboundBatchBody = {
+                receptionCode: baseReceptionCode,
+                serviceCode: baseServiceCode,
+                items: itemsToSend,
+            }
+            createBatchMutation.mutate(body)
+            return
         }
-        createMutation.mutate(body)
+
+        // Nếu chọn đúng 1 slide trong danh sách => gửi single cho slide đó
+        if (selectedBatchIndexes.length === 1 && batchItems.length > 0) {
+            const idx = selectedBatchIndexes[0]
+            const item = batchItems[idx]
+
+            const body: CreateDeviceOutboundBody = {
+                receptionCode: baseReceptionCode,
+                serviceCode: baseServiceCode,
+                blockNumber: item.blockNumber,
+                slideNumber: item.slideNumber,
+                method: item.method,
+            }
+            createSingleMutation.mutate(body)
+            return
+        }
+
+        // Không chọn checkbox: nếu có nhiều slide trong danh sách => gửi batch cho tất cả
+        if (batchItems.length > 1) {
+            const body: DeviceOutboundBatchBody = {
+                receptionCode: baseReceptionCode,
+                serviceCode: baseServiceCode,
+                items: batchItems,
+            }
+            createBatchMutation.mutate(body)
+            return
+        }
+
+        // Trường hợp còn lại: gửi single theo form hiện tại
+        const body: CreateDeviceOutboundBody = {
+            receptionCode: baseReceptionCode,
+            serviceCode: baseServiceCode,
+            blockNumber: blockNum,
+            slideNumber: slideNum,
+            method: formMethod.trim(),
+        }
+        createSingleMutation.mutate(body)
     }
 
     function applyFilters() {
@@ -252,7 +313,7 @@ export default function DeviceOutboundTable() {
                 <div>
                     <CardTitle className="text-2xl font-bold">Kết nối máy</CardTitle>
                     <CardDescription>
-                        Quản lý dữ liệu xuất ra thiết bị (máy nhuộm, máy quét…). Mỗi bản ghi gắn mã tiếp nhận, dịch vụ, block/slide và phương pháp.
+                        Quản lý dữ liệu xuất ra thiết bị. Mỗi bản ghi gắn mã Barcode, dịch vụ, block/slide và phương pháp.
                     </CardDescription>
                 </div>
                 <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingItem(null); }}>
@@ -265,12 +326,12 @@ export default function DeviceOutboundTable() {
                         <DialogHeader>
                             <DialogTitle>{editingItem ? 'Cập nhật bản ghi xuất thiết bị' : 'Tạo bản ghi xuất thiết bị'}</DialogTitle>
                             <DialogDescription>
-                                {editingItem ? 'Chỉnh sửa thông tin. Backend sẽ tính lại blockId/slideId nếu đổi receptionCode/blockNumber/slideNumber.' : 'Nhập mã tiếp nhận để load danh sách dịch vụ, sau đó điền block, slide và phương pháp.'}
+                                {editingItem ? 'Chỉnh sửa thông tin. Backend sẽ tính lại blockId/slideId nếu đổi receptionCode/blockNumber/slideNumber.' : 'Nhập mã Barcode để load danh sách dịch vụ, sau đó điền block, slide và phương pháp.'}
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-4 items-center gap-2">
-                                <Label className="col-span-1">Mã tiếp nhận *</Label>
+                                <Label className="col-span-1">Mã Barcode *</Label>
                                 <Input
                                     className="col-span-3"
                                     value={formReceptionCode}
@@ -327,7 +388,7 @@ export default function DeviceOutboundTable() {
                             </div>
                             {!editingItem && (
                                 <div className="w-full min-w-0">
-                                    <Label className="text-sm font-medium mb-2 block">Danh sách slide trong batch</Label>
+                                    <Label className="text-sm font-medium mb-2 block">Danh sách slide</Label>
                                     <div className="rounded-md border min-h-[280px] max-h-72 overflow-auto min-w-0 bg-muted/30">
                                         {batchItems.length === 0 ? (
                                             <div className="min-h-[280px] flex items-center justify-center text-muted-foreground text-sm px-4">
@@ -337,6 +398,24 @@ export default function DeviceOutboundTable() {
                                             <Table className="min-w-[380px]">
                                                 <TableHeader>
                                                     <TableRow>
+                                                        <TableHead className="w-[40px]">
+                                                            <Checkbox
+                                                                aria-label="Chọn tất cả slide"
+                                                                checked={
+                                                                    batchItems.length > 0 &&
+                                                                    selectedBatchIndexes.length === batchItems.length
+                                                                }
+                                                                onCheckedChange={(checked) => {
+                                                                    if (checked) {
+                                                                        setSelectedBatchIndexes(
+                                                                            batchItems.map((_, i) => i)
+                                                                        )
+                                                                    } else {
+                                                                        setSelectedBatchIndexes([])
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </TableHead>
                                                         <TableHead className="w-[60px]">STT</TableHead>
                                                         <TableHead>Block ID</TableHead>
                                                         <TableHead>Slide ID</TableHead>
@@ -352,20 +431,40 @@ export default function DeviceOutboundTable() {
                                                         const slideId = formReceptionCode
                                                             ? `${formReceptionCode}A.${it.blockNumber}.${it.slideNumber}`
                                                             : `A.${it.blockNumber}.${it.slideNumber}`
+                                                        const isSelected = selectedBatchIndexes.includes(idx)
                                                         return (
                                                             <TableRow key={`${it.blockNumber}-${it.slideNumber}-${idx}`}>
-                                                                <TableCell className="text-center">{idx + 1}</TableCell>                                                                <TableCell>{blockId}</TableCell>
+                                                                <TableCell className="text-center">
+                                                                    <Checkbox
+                                                                        aria-label="Chọn slide"
+                                                                        checked={isSelected}
+                                                                        onCheckedChange={(checked) => {
+                                                                            setSelectedBatchIndexes((prev) => {
+                                                                                if (checked) {
+                                                                                    if (prev.includes(idx)) return prev
+                                                                                    return [...prev, idx]
+                                                                                }
+                                                                                return prev.filter((i) => i !== idx)
+                                                                            })
+                                                                        }}
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell className="text-center">{idx + 1}</TableCell>
+                                                                <TableCell>{blockId}</TableCell>
                                                                 <TableCell>{slideId}</TableCell>
                                                                 <TableCell>{it.method}</TableCell>
                                                                 <TableCell>
                                                                     <Button
                                                                         variant="outline"
                                                                         size="icon"
-                                                                        onClick={() =>
+                                                                        onClick={() => {
                                                                             setBatchItems((prev) =>
                                                                                 prev.filter((_, i) => i !== idx)
                                                                             )
-                                                                        }
+                                                                            setSelectedBatchIndexes((prev) =>
+                                                                                prev.filter((i) => i !== idx)
+                                                                            )
+                                                                        }}
                                                                     >
                                                                         <Trash2 className="h-3 w-3" />
                                                                     </Button>
@@ -381,7 +480,6 @@ export default function DeviceOutboundTable() {
                             )}
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsFormOpen(false)}>Hủy</Button>
                             {editingItem ? (
                                 <Button
                                     onClick={handleSubmitEdit}
@@ -396,17 +494,26 @@ export default function DeviceOutboundTable() {
                                         type="button"
                                         variant="secondary"
                                         onClick={handleAddBatchItem}
-                                        disabled={createMutation.isPending}
+                                        disabled={createBatchMutation.isPending || createSingleMutation.isPending}
                                     >
                                         Thêm slide
                                     </Button>
+                                    <Button className="bg-blue-500">Cập nhật</Button>
+                                    <Button variant="destructive" onClick={() => setIsFormOpen(false)}>Hủy</Button>
                                     <Button
+                                        className="bg-green-600"
+                                        onClick={handleSubmitSend}
+                                        disabled={createBatchMutation.isPending || createSingleMutation.isPending}
+                                    >
+                                        Gửi
+                                    </Button>
+                                    {/* <Button
                                         onClick={handleSubmitBatch}
                                         disabled={createMutation.isPending}
                                     >
                                         {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Gửi batch
-                                    </Button>
+                                        Gửi tất cả
+                                    </Button> */}
                                 </>
                             )}
                         </DialogFooter>
@@ -438,9 +545,9 @@ export default function DeviceOutboundTable() {
             <CardContent>
                 <div className="mb-4 flex flex-wrap gap-4">
                     <div className="flex items-center gap-2">
-                        <Label className="text-sm text-muted-foreground">Mã tiếp nhận</Label>
+                        <Label className="text-sm text-muted-foreground">Mã Barcode</Label>
                         <Input
-                            placeholder="Lọc theo mã tiếp nhận"
+                            placeholder="Lọc theo Barcode"
                             value={receptionCodeFilter}
                             onChange={(e) => setReceptionCodeFilter(e.target.value)}
                             className="w-40"
@@ -463,13 +570,12 @@ export default function DeviceOutboundTable() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Mã tiếp nhận</TableHead>
+                                <TableHead>Barcode</TableHead>
                                 <TableHead>Mã dịch vụ</TableHead>
                                 <TableHead>Block ID</TableHead>
                                 <TableHead>Slide ID</TableHead>
                                 <TableHead>Phương pháp</TableHead>
                                 <TableHead>Ngày tạo</TableHead>
-                                <TableHead>Ngày cập nhật</TableHead>
                                 <TableHead>Thao tác</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -489,7 +595,6 @@ export default function DeviceOutboundTable() {
                                         <TableCell>{item.slideId}</TableCell>
                                         <TableCell>{item.method}</TableCell>
                                         <TableCell>{item.createdAt ? formatDate(item.createdAt) : '—'}</TableCell>
-                                        <TableCell>{item.updatedAt ? formatDate(item.updatedAt) : '—'}</TableCell>
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
