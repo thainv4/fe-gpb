@@ -132,7 +132,7 @@ const ServicesTable = React.memo(function ServicesTable({
                                 <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{service.serviceCode}</td>
                                 <td className="px-4 py-3 text-sm text-gray-900">{service.serviceName}</td>
-                                                                    <td className="px-4 py-3 text-sm text-gray-900 text-right">{service.price.toLocaleString("vi-VN")} đ</td>
+                                <td className="px-4 py-3 text-sm text-gray-900 text-right">{service.price.toLocaleString("vi-VN")} đ</td>
                                 <td className="px-4 py-3 text-sm text-gray-900 text-center">{service.receptionCode || "-"}</td>
                                 <td className="px-4 py-3 text-sm text-center">
                                     {hasResult ? (
@@ -1109,11 +1109,11 @@ export default function TestResultForm() {
 
         // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả
         // Nếu resultFormType = 2, chỉ check resultConclude
-        const hasResult = resultFormType === 2
-            ? resultConclude.trim()
-            : (previewServiceData?.data?.resultText ||
-                previewServiceData?.data?.resultDescription ||
-                resultDescription.trim())
+        // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả (không bắt buộc ô Kết luận)
+        const hasResult =
+            previewServiceData?.data?.resultText ||
+            previewServiceData?.data?.resultDescription ||
+            resultDescription.trim()
         if (!hasResult) {
             toast({
                 variant: "destructive",
