@@ -282,7 +282,7 @@ export function FormGen1({
             </div>
 
             {/* Địa chỉ */}
-            <div className="col-span-4 flex justify-center text-sm">
+            <div className="col-span-4 flex justify-center text-sm relative top-[-38px]">
               <span className="whitespace-nowrap">
                 Tầng 16 nhà Q, 78 - Giải Phóng - Kim Liên - Hà Nội
               </span>
@@ -294,7 +294,7 @@ export function FormGen1({
             <h1 className="text-center text-xl font-bold mb-2">
               PHIẾU KẾT QUẢ XÉT NGHIỆM
             </h1>
-            <p className="text-center font-bold mb-6 italic">{resultName}</p>
+            <p className="text-center font-bold mb-6">{resultName}</p>
           </div>
 
           {/* 1. Patient Information */}
@@ -357,14 +357,14 @@ export function FormGen1({
             <div className="ml-4 w-full text-sm">
               <div className="grid grid-cols-2 gap-y-2">
                 {/* Hàng 1 */}
-                <div className="flex">
+                {/* <div className="flex">
                   <span className="font-semibold">Người lấy mẫu:</span>
                   <span className="ml-2">{sampleCollectorInfo?.actionUserFullName ?? "-"}</span>
                 </div>
                 <div className="flex">
                   <span className="font-semibold">Thời gian lấy mẫu:</span>
                   <span className="ml-2">{formatDateTime(sampleCollectorInfo?.createdAt)}</span>
-                </div>
+                </div> */}
 
                 {/* Hàng 2 */}
                 <div className="flex">
@@ -417,7 +417,7 @@ export function FormGen1({
           {/* 4. Technique */}
           <div className="mb-2 avoid-break">
             <h2 className="font-bold mb-2">4. KỸ THUẬT THỰC HIỆN:</h2>
-            <div className="ml-4 mb text-sm">
+            <div className="ml-4 mb-2 text-sm">
               <span className="font-semibold">Phương pháp:</span>
               <span className="ml-1">
                 {specificService?.testingMethodGen?.methodName ??
