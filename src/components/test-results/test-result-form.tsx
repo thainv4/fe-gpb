@@ -1224,7 +1224,7 @@ export default function TestResultForm() {
                 DocumentName: `${dateStr}-${serviceReqCode}_Signed`,
                 TreatmentCode: storedServiceRequestData.data.treatmentCode,
                 DocumentTypeId: 22,
-                DocumentGroupId: 101,
+                DocumentGroupId: resultFormType === 2 ? 121 : 101,
                 HisCode: `SERVICE_REQ_CODE:${storedServiceRequestData.data.serviceReqCode}`,
                 FileType: 0,
                 OriginalVersion: {

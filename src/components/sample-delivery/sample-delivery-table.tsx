@@ -32,6 +32,7 @@ const SAMPLING_METHOD_TYPE_OPTIONS = [
     { value: 'SINH THIẾT', label: 'SINH THIẾT' },
     { value: 'PHẪU THUẬT', label: 'PHẪU THUẬT' },
     { value: 'CHỌC DÒ DỊCH', label: 'CHỌC DÒ DỊCH' },
+    { value: 'MẪU MÁU CHỐNG ĐÔNG BẰNG EDTA', label: 'MẪU MÁU CHỐNG ĐÔNG BẰNG EDTA' },
     { value: 'CHƯA RÕ THÔNG TIN', label: 'CHƯA RÕ THÔNG TIN' },
 ] as const
 
