@@ -280,6 +280,13 @@ export function FormGen1({
                 <div>SID: {serviceReqCode}</div>
               </div>
             </div>
+
+            {/* Địa chỉ */}
+            <div className="col-span-4 flex justify-center text-sm">
+              <span className="whitespace-nowrap">
+                Tầng 16 nhà Q, 78 - Giải Phóng - Kim Liên - Hà Nội
+              </span>
+            </div>
           </div>
 
           {/* Title */}
@@ -287,7 +294,7 @@ export function FormGen1({
             <h1 className="text-center text-xl font-bold mb-2">
               PHIẾU KẾT QUẢ XÉT NGHIỆM
             </h1>
-            <p className="text-center text-sm mb-6 italic">{resultName}</p>
+            <p className="text-center font-bold mb-6 italic">{resultName}</p>
           </div>
 
           {/* 1. Patient Information */}
@@ -410,15 +417,16 @@ export function FormGen1({
           {/* 4. Technique */}
           <div className="mb-2 avoid-break">
             <h2 className="font-bold mb-2">4. KỸ THUẬT THỰC HIỆN:</h2>
-            <div className="ml-4 text-sm">
-              {specificService?.testingMethodGen?.methodName
-                ? `Phương pháp: ${specificService.testingMethodGen.methodName}`
-                : flag
-                  ? `Phương pháp: ${flag}`
-                  : "—"}
+            <div className="ml-4 mb text-sm">
+              <span className="font-semibold">Phương pháp:</span>
+              <span className="ml-1">
+                {specificService?.testingMethodGen?.methodName ??
+                  (flag || "—")}
+              </span>
             </div>
             <div className="ml-4 text-sm">
-              Người thực hiện: {performerInfo?.actionUserFullName ?? "—"}
+              <span className="font-semibold">Người thực hiện:</span>
+              <span className="ml-1">{performerInfo?.actionUserFullName ?? "—"}</span>
             </div>
           </div>
 
