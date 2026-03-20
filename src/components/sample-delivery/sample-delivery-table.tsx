@@ -623,7 +623,7 @@ export default function SampleDeliveryTable() {
                                                 <QRCodeSVG
                                                     key={receptionCodeFromStored} // Force re-render khi receptionCodeFromStored thay đổi
                                                     value={receptionCodeFromStored}
-                                                    size={50}
+                                                    size={80}
                                                     level="M"
                                                     includeMargin={false}
                                                 />
