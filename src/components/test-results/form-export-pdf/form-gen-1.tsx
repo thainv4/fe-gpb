@@ -231,7 +231,7 @@ export function FormGen1({
       />
 
       {/* Trang đầu tiên */}
-      <div className="a4-page first-page w-[210mm] h-[297mm] bg-white mx-auto box-border shadow-sm print:shadow-none
+      <div className="a4-page first-page w-[210mm] min-h-[297mm] bg-white mx-auto box-border shadow-sm print:shadow-none
                 pt-[20mm] pb-[20mm] pl-[15mm] pr-[15mm] flex flex-col">
 
         {/* Phần nội dung chính - tự động mở rộng */}

@@ -26,6 +26,7 @@ const userAllowedRoutes = [
     '/test-indications',
     '/sample-delivery',
     '/test-results',
+    '/pivka-results',
     '/change-password'
 ]
 

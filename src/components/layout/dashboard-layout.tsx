@@ -36,7 +36,8 @@ import {
     NewspaperIcon,
     Palette,
     Shield,
-    Cable
+    Cable,
+    Barcode
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTabsStore } from '@/lib/stores/tabs'
@@ -45,6 +46,30 @@ import { useCurrentRoomStore } from '@/lib/stores/current-room'
 
 interface DashboardLayoutProps {
     children: React.ReactNode
+}
+
+const PIVKA_RESULTS_NAV = {
+    name: 'Phiếu PIVKA',
+    href: '/pivka-results',
+    icon: Barcode,
+    description: 'Phiếu kết quả AFP, AFP-L3, PIVKA-II (mở từ menu)',
+}
+
+function injectPivkaNavItem<T extends { name: string; children?: Array<{ href: string }> }>(
+    items: T[],
+    show: boolean
+): T[] {
+    if (!show) return items
+    return items.map((item) => {
+        if (item.name !== 'Xét nghiệm' || !item.children) return item
+        if (item.children.some((c) => c.href === '/pivka-results')) return item
+        const idx = item.children.findIndex((c) => c.href === '/test-results')
+        const nextChildren =
+            idx >= 0
+                ? [...item.children.slice(0, idx + 1), PIVKA_RESULTS_NAV as (typeof item.children)[0], ...item.children.slice(idx + 1)]
+                : [...item.children, PIVKA_RESULTS_NAV as (typeof item.children)[0]]
+        return { ...item, children: nextChildren }
+    })
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -285,6 +310,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             icon: NewspaperIcon,
                             description: 'Nhập và quản lý kết quả xét nghiệm'
                         },
+                        // ...(departmentType === 2 ? [PIVKA_RESULTS_NAV] : []),
                         {
                             name: 'Kết nối máy',
                             href: '/device-outbound',
@@ -295,7 +321,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }
         
         // Admin thấy tất cả
-        return navigation
+        return injectPivkaNavItem(navigation, departmentType === 2)
     }, [user, departmentType])
 
     // Build a map path -> label for tab naming
@@ -330,7 +356,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const label = pathLabelMap.get(pathname) ?? prettifyPath(pathname)
 
         // Define paths that need room association (pages in "Mới thêm" section)
-        const roomAssociatedPaths = ['/test-indications', '/sample-delivery', '/test-results', '/sample-cabinets', '/device-outbound']
+        const roomAssociatedPaths = ['/test-indications', '/sample-delivery', '/test-results', '/pivka-results', '/sample-cabinets', '/device-outbound']
         const needsRoom = roomAssociatedPaths.includes(pathname)
 
         // openTab will handle duplicate checking internally
