@@ -52,7 +52,7 @@ const PIVKA_RESULTS_NAV = {
     name: 'Phiếu PIVKA',
     href: '/pivka-results',
     icon: Barcode,
-    description: 'Phiếu kết quả AFP, AFP-L3, PIVKA-II (mở từ menu)',
+    description: 'Phiếu kết quả AFP, AFP-L3, PIVKA-II',
 }
 
 function injectPivkaNavItem<T extends { name: string; children?: Array<{ href: string }> }>(
@@ -142,7 +142,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     name: 'Kết nối máy',
                     href: '/device-outbound',
                     icon: Cable,
-                    description: 'Xuất dữ liệu ra thiết bị (máy nhuộm, máy quét…)'
+                    description: 'Xuất dữ liệu ra thiết bị'
                 }
             ]
         },
@@ -315,7 +315,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             name: 'Kết nối máy',
                             href: '/device-outbound',
                             icon: Cable,
-                            description: 'Xuất dữ liệu ra thiết bị (máy nhuộm, máy quét…)'
+                            description: 'Xuất dữ liệu ra thiết bị'
                         }
             ]
         }

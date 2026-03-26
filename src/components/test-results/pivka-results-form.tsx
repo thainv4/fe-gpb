@@ -17,7 +17,7 @@ import {
   type PivkaResultValues,
 } from '@/components/test-results/pivka-result-sheet';
 
-const EMPTY_PIVKA: PivkaResultValues = { afpTotal: null, afpL3: null, pivkaIi: null };
+const EMPTY_PIVKA: PivkaResultValues = { afpTotal: '', afpL3: '', pivkaIi: '' };
 
 export default function PivkaResultsForm() {
   const queryClient = useQueryClient();
@@ -98,7 +98,7 @@ export default function PivkaResultsForm() {
       <Alert className="max-w-xl">
         <AlertTitle>Phiếu PIVKA</AlertTitle>
         <AlertDescription className="space-y-3">
-          <p>Chức năng chỉ dành cho phòng có loại form Gen (resultFormType = 2).</p>
+          <p>Chức năng chỉ dành cho Đơn vị Gen</p>
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard">Về trang chủ</Link>
           </Button>

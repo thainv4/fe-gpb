@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useMemo, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { apiClient, type StoredService, type StoredServiceRequestResponse } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -45,9 +46,9 @@ function formatInstructionTime(n?: number): string {
 }
 
 export interface PivkaResultValues {
-  afpTotal: number | null;
-  afpL3: number | null;
-  pivkaIi: number | null;
+  afpTotal: string;
+  afpL3: string;
+  pivkaIi: string;
 }
 
 type PivkaKey = keyof PivkaResultValues;
@@ -70,6 +71,17 @@ interface PivkaResultSheetProps {
   selectedService: StoredService;
   values: PivkaResultValues;
   onChange: (values: PivkaResultValues) => void;
+}
+
+function getResultTextAlign(rawValue: string | undefined | null, refNumber: number) {
+  const trimmed = rawValue?.trim() ?? '';
+  if (trimmed === '') return 'text-center';
+
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) return 'text-center';
+
+  // "bằng/ lớn hơn" => căn phải; "bé hơn" => căn giữa
+  return parsed < refNumber ? 'text-center' : 'text-right';
 }
 
 export function PivkaResultSheet({
@@ -121,25 +133,90 @@ export function PivkaResultSheet({
     `,
   });
 
-  function patch(key: keyof PivkaResultValues, raw: string) {
-    const trimmed = raw.trim();
+  const { toast } = useToast();
 
-    if (trimmed === '') {
-      onChange({ ...values, [key]: null });
-      return;
+  const createResultMutation = useMutation({
+    mutationFn: async (body: {
+      storedSrServicesId: string;
+      pivkaIiResult?: string;
+      afpFullResult?: string;
+      afpL3?: string;
+    }) => apiClient.createPivkaIiResult(body),
+    onSuccess: () => {
+      toast({
+        title: 'Thành công',
+        description: 'Đã lưu kết quả PIVKA.',
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: 'Không thể lưu',
+        description: err instanceof Error ? err.message : 'Lỗi không xác định',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  function patch(key: keyof PivkaResultValues, raw: string) {
+    onChange({ ...values, [key]: raw });
+  }
+
+  function validateAndBuildPayload() {
+    const afpFullResult = values.afpTotal ?? '';
+    const afpL3 = values.afpL3 ?? '';
+    const pivkaIiResult = values.pivkaIi ?? '';
+
+    const missing = [afpFullResult, afpL3, pivkaIiResult].some((v) => v.trim() === '');
+    if (missing) {
+      toast({
+        title: 'Thiếu dữ liệu',
+        description: 'Bạn cần nhập đầy đủ 3 ô kết quả trước khi lưu.',
+        variant: 'destructive',
+      });
+      return null;
     }
 
-    const parsed = Number(trimmed);
-    const next = Number.isFinite(parsed) && parsed > 0 && Number.isInteger(parsed) ? parsed : null;
-    onChange({ ...values, [key]: next });
+    const parsedAfpf = Number(afpFullResult.trim());
+    const parsedAfpL3 = Number(afpL3.trim());
+    const parsedPivka = Number(pivkaIiResult.trim());
+
+    // "giá trị dương"
+    if (![parsedAfpf, parsedAfpL3, parsedPivka].every((n) => Number.isFinite(n) && n > 0)) {
+      toast({
+        title: 'Giá trị không hợp lệ',
+        description: 'Kết quả phải là số dương (có thể thập phân).',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    return {
+      storedSrServicesId: selectedService.id,
+      pivkaIiResult,
+      afpFullResult,
+      afpL3,
+    };
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+      <div className="flex gap-2 justify-end print:hidden">
+        <div className="flex items-center gap-2">
         <Button type="button" variant="outline" onClick={() => handlePrint()}>
           In phiếu
         </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              const payload = validateAndBuildPayload();
+              if (!payload) return;
+              createResultMutation.mutate(payload);
+            }}
+            disabled={createResultMutation.isPending}
+          >
+            {createResultMutation.isPending ? 'Đang lưu...' : 'Lưu kết quả'}
+          </Button>
+        </div>
       </div>
 
       <div
@@ -301,17 +378,16 @@ export function PivkaResultSheet({
                     <td className="border border-black p-0 bg-amber-50/40 print:p-1">
                       <Input
                         type="number"
-                        min={1}
-                        step={1}
+                        min={0}
+                        step="any"
+                        inputMode="decimal"
                         value={values[row.key] ?? ''}
                         onChange={(e) => patch(row.key, e.target.value)}
                         className={cn(
                           'h-9 rounded-none border-0 shadow-none font-medium',
                           'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0',
                           'bg-transparent print:border-0 print:h-8',
-                          values[row.key] === null || (values[row.key] as number) < row.refNumber
-                            ? 'text-center'
-                            : 'text-right'
+                          getResultTextAlign(values[row.key], row.refNumber)
                         )}
                         placeholder="—"
                       />
@@ -356,22 +432,22 @@ interface PivkaServicePickerProps {
 
 export function PivkaServicePicker({ services, value, onChange }: PivkaServicePickerProps) {
   if (services.length <= 1) return null;
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
-      <span className="text-sm font-medium">Dịch vụ / mẫu:</span>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full max-w-md">
-          <SelectValue placeholder="Chọn dịch vụ" />
-        </SelectTrigger>
-        <SelectContent>
-          {services.map((s) => (
-            <SelectItem key={s.id} value={s.id}>
-              {s.serviceName}
-              {s.receptionCode ? ` — ${s.receptionCode}` : ''}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
+  // return (
+  //   <div className="mb-4 flex flex-wrap items-center gap-2">
+  //     <span className="text-sm font-medium">Dịch vụ / mẫu:</span>
+  //     <Select value={value} onValueChange={onChange}>
+  //       <SelectTrigger className="w-full max-w-md">
+  //         <SelectValue placeholder="Chọn dịch vụ" />
+  //       </SelectTrigger>
+  //       <SelectContent>
+  //         {services.map((s) => (
+  //           <SelectItem key={s.id} value={s.id}>
+  //             {s.serviceName}
+  //             {s.receptionCode ? ` — ${s.receptionCode}` : ''}
+  //           </SelectItem>
+  //         ))}
+  //       </SelectContent>
+  //     </Select>
+  //   </div>
+  // );
 }

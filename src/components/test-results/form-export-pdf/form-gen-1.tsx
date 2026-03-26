@@ -257,8 +257,8 @@ export function FormGen1({
               <div className="text-center text-sm leading-tight">
                 <div className="font-bold">BỘ Y TẾ</div>
                 <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
-                <div className="font-bold">TRUNG TÂM Y HỌC HẠT NHÂN VÀ UNG BƯỚU</div>
-                <div className="font-bold">ĐƠN VỊ GEN TRỊ LIỆU</div>
+                <div className="">TRUNG TÂM Y HỌC HẠT NHÂN VÀ UNG BƯỚU</div>
+                <div className="">ĐƠN VỊ GEN TRỊ LIỆU</div>
               </div>
             </div>
 
@@ -282,7 +282,7 @@ export function FormGen1({
             </div>
 
             {/* Địa chỉ */}
-            <div className="col-span-4 flex justify-center text-sm relative top-[-38px]">
+            <div className="col-span-4 flex justify-center text-sm relative top-[-20px]">
               <span className="whitespace-nowrap">
                 Tầng 16 nhà Q, 78 - Giải Phóng - Kim Liên - Hà Nội
               </span>
