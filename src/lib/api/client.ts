@@ -899,6 +899,7 @@ export interface StoreServiceRequestBody {
     sampleCollectionTime: string;
     collectedByUserId: string;
     saveRawJson: boolean;
+    barcodeXn?: string | null;
 }
 
 export interface StoredServiceRequestResponse {
@@ -984,6 +985,7 @@ export interface StoredServiceRequestResponse {
 export interface ServiceRequestDetail {
     id: number;
     serviceReqCode: string;
+    barcodeXn?: string | null;
     serviceReqSttId?: number;
     serviceReqSttCode: string;
     serviceReqTypeId?: number;
@@ -3680,7 +3682,7 @@ class ApiClient {
     }
 
     // -------------------------------------------------------------------------
-    // Device Outbound – xuất dữ liệu ra thiết bị (máy nhuộm, máy quét…)
+    // Device Outbound – xuất dữ liệu ra thiết bị
     // -------------------------------------------------------------------------
 
     async getDeviceOutboundList(params?: {
@@ -3725,6 +3727,18 @@ class ApiClient {
     async updateDeviceOutbound(id: string, body: UpdateDeviceOutboundBody): Promise<ApiResponse<DeviceOutboundItem>> {
         return this.request<DeviceOutboundItem>(`/device-outbound/${id}`, {
             method: "PUT",
+            body: JSON.stringify(body),
+        });
+    }
+
+    async createPivkaIiResult(body: {
+        storedSrServicesId: string;
+        pivkaIiResult?: string;
+        afpFullResult?: string;
+        afpL3?: string;
+    }): Promise<ApiResponse<{ id: string }>> {
+        return this.request<{ id: string }>("/pivka-ii-results", {
+            method: "POST",
             body: JSON.stringify(body),
         });
     }

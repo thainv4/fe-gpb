@@ -643,6 +643,7 @@ export default function TestIndicationsTable() {
                 sampleCollectionTime: new Date().toISOString(),
                 collectedByUserId: currentUserId,
                 saveRawJson: false,
+                barcodeXn: serviceRequest?.barcodeXn ?? null,
             };
 
             const storeResponse = await storeServiceRequestMutation.mutateAsync(body);
