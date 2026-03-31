@@ -174,6 +174,7 @@ export default function TestResultForm() {
     const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
     const [previewServiceId, setPreviewServiceId] = useState<string | null>(null)
     const previewRef = useRef<HTMLDivElement>(null)
+    const resultNameRef = useRef<HTMLTextAreaElement>(null)
 
     // Digital signature states
     const [signerInfo, setSignerInfo] = useState({
@@ -192,6 +193,9 @@ export default function TestResultForm() {
     // PDF attachment states (for resultFormType = 2)
     const [attachedPdfFile, setAttachedPdfFile] = useState<File | null>(null)
     const [attachedPdfBase64, setAttachedPdfBase64] = useState<string>('')
+    // Auto-load result for the first service (services[0]) when opening the page.
+    // Guard with last loaded serviceId to avoid multiple calls on refetch.
+    const lastAutoLoadedServiceIdRef = useRef<string | null>(null)
 
     // Phương pháp thực hiện xét nghiệm (testing-methods-gen) - chỉ dùng khi resultFormType = 2
     const [selectedSamplingMethod, setSelectedSamplingMethod] = useState<string>('')
@@ -838,6 +842,23 @@ export default function TestResultForm() {
             setTestingMethodGenFromResult(null)
         }
     }, [storedServiceReqId, toast, resultFormType, defaultMicroscopicDescription, defaultMacroscopicComment, defaultResultConcludeGen1, defaultResultConclude, defaultResultNoteGen1, defaultResultNote, defaultResultRecomment])
+
+    // Auto-fetch the "Kết quả xét nghiệm" inputs when the page has loaded services.
+    useEffect(() => {
+        if (!storedServiceReqId) return
+        if (!services || services.length === 0) return
+        const firstServiceId = services[0]?.id
+        if (!firstServiceId) return
+        if (lastAutoLoadedServiceIdRef.current === firstServiceId) return
+
+        lastAutoLoadedServiceIdRef.current = firstServiceId
+        void handleServiceClick(firstServiceId)
+    }, [storedServiceReqId, services, handleServiceClick])
+
+    // Reset guard when switching to a different storedServiceReqId.
+    useEffect(() => {
+        lastAutoLoadedServiceIdRef.current = null
+    }, [storedServiceReqId])
 
     // Handler xem văn bản đã ký (stream PDF theo hisServiceReqCode)
     const handleViewSignedDocument = async () => {
@@ -1623,6 +1644,17 @@ export default function TestResultForm() {
             return
         }
 
+        if (resultFormType !== 2 && !resultName.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng nhập Tên phiếu kết quả"
+            })
+            resultNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            resultNameRef.current?.focus()
+            return
+        }
+
         // Chỉ validate macroscopicComment và microscopicDescription khi resultFormType !== 2
         if (resultFormType !== 2) {
             const combinedDescription = combineResultDescription(macroscopicComment, microscopicDescription)
@@ -2041,6 +2073,7 @@ export default function TestResultForm() {
                                             <div className="mb-4">
                                                 <Label className="text-sm font-medium mb-2 block">Tên phiếu kết quả</Label>
                                                 <Textarea
+                                                    ref={resultNameRef}
                                                     value={resultName}
                                                     onChange={(e) => setResultName(e.target.value)}
                                                     placeholder="Nhập tên phiếu kết quả..."
