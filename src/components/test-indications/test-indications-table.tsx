@@ -633,7 +633,6 @@ export default function TestIndicationsTable() {
                 receptionCode = receptionResponse.data.receptionCode;
             }
 
-            // Bước 3: Chưa có stored service request -> Tạo mới như cũ
             const body = {
                 serviceReqCode: serviceCodeToSave,
                 currentRoomId: tabRoomId,
@@ -643,7 +642,6 @@ export default function TestIndicationsTable() {
                 sampleCollectionTime: new Date().toISOString(),
                 collectedByUserId: currentUserId,
                 saveRawJson: false,
-                barcodeXn: serviceRequest?.barcodeXn ?? null,
             };
 
             const storeResponse = await storeServiceRequestMutation.mutateAsync(body);

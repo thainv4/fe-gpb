@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { apiClient, type StoredService, type StoredServiceRequestResponse } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useHisStore } from '@/lib/stores/his';
+import { pdfBase64FromContainerWithPuppeteer } from '@/lib/utils/pdf-export';
 import {
   Select,
   SelectContent,
@@ -44,6 +46,21 @@ function formatInstructionTime(n?: number): string {
   const mi = s.slice(10, 12);
   return `${h}:${mi} ${d}/${mo}/${y}`;
 }
+
+/** yyyyMMddHHmmss (number) cho HIS UpdateResult */
+function formatHisYyyyMMddHHmmss(d: Date): number {
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  const s = String(d.getSeconds()).padStart(2, '0');
+  return Number.parseInt(`${y}${mo}${day}${h}${mi}${s}`, 10);
+}
+
+const HIS_UPDATE_RESULT_URL =
+  process.env.NEXT_PUBLIC_HIS_UPDATE_RESULT_URL ||
+  'http://192.168.7.200:1499/api/HisTestServiceReq/UpdateResult';
 
 export interface PivkaResultValues {
   afpTotal: string;
@@ -91,6 +108,8 @@ export function PivkaResultSheet({
   onChange,
 }: PivkaResultSheetProps) {
   const printRef = useRef<HTMLDivElement>(null);
+  const [isSigning, setIsSigning] = useState(false);
+  const { token: hisToken } = useHisStore();
 
   const { data: workflowActionsData, isLoading: workflowLoading } = useQuery({
     queryKey: ['workflow-action-info', stored.id],
@@ -198,13 +217,199 @@ export function PivkaResultSheet({
     };
   }
 
+  async function getHisTokenCode(): Promise<string | null> {
+    let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
+    if (!tokenCode) tokenCode = hisToken?.tokenCode || null;
+    if (!tokenCode) {
+      const hisStorage = localStorage.getItem('his-storage');
+      if (hisStorage) {
+        try {
+          const parsed = JSON.parse(hisStorage);
+          tokenCode = parsed.state?.token?.tokenCode || null;
+        } catch (e) {
+          console.error('Error parsing HIS storage:', e);
+        }
+      }
+    }
+    return tokenCode;
+  }
+
+  async function handleSignDocument() {
+    if (!printRef.current) {
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể tạo PDF để ký.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const pivkaPayload = validateAndBuildPayload();
+    if (!pivkaPayload) return;
+
+    const tokenCode = await getHisTokenCode();
+    if (!tokenCode) {
+      toast({
+        title: 'Lỗi',
+        description: 'Vui lòng đăng nhập để sử dụng tính năng ký điện tử.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSigning(true);
+    try {
+      const signerResponse = await apiClient.getEmrSigner(tokenCode, 'EMR', { Start: 0, Limit: 1 });
+      const signerData = signerResponse.data?.Data?.[0];
+      const signerId = signerData?.ID;
+      if (!signerResponse.success || !signerId) {
+        throw new Error('Không tìm thấy thông tin người ký trong hệ thống EMR');
+      }
+
+      const pdfResult = await pdfBase64FromContainerWithPuppeteer(printRef.current);
+      if (!pdfResult?.base64) {
+        throw new Error('Không thể tạo file PDF để ký');
+      }
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const pageCount = pdfResult.pageCount;
+      const signRequest = {
+        PointSign: {
+          CoorXRectangle: 405,
+          CoorYRectangle: 65,
+          PageNumber: pageCount,
+          MaxPageNumber: pageCount,
+          WidthRectangle: 150,
+          HeightRectangle: 100,
+          TextPosition: 0,
+          TypeDisplay: 2,
+          SizeFont: 14,
+          FormatRectangleText: '{SIGNTIME}',
+        },
+        DocumentName: `${dateStr}-${stored.serviceReqCode}_PIVKA_Signed`,
+        TreatmentCode: stored.treatmentCode,
+        DocumentTypeId: 22,
+        DocumentGroupId: 121,
+        HisCode: `SERVICE_REQ_CODE:${stored.serviceReqCode}`,
+        FileType: 0,
+        OriginalVersion: {
+          Base64Data: pdfResult.base64,
+        },
+        Signs: [
+          {
+            SignerId: Number(signerId),
+            SerialNumber: '',
+            NumOrder: pageCount,
+          },
+        ],
+      };
+
+      const signResponse = await apiClient.createAndSignHsm(signRequest, tokenCode, 'EMR');
+      const emrResponse = signResponse.data as any;
+      if (!signResponse.success || !signResponse.data || emrResponse?.Success !== true) {
+        throw new Error('Ký số thất bại');
+      }
+
+      const finishTime = formatHisYyyyMMddHHmmss(new Date());
+
+      const documentId = signResponse.data?.Data?.DocumentId;
+      const signedDocumentBase64 = signResponse.data?.Data?.Signs?.[0]?.Version?.Base64Data;
+
+      if (!documentId) {
+        throw new Error('Không nhận được documentId từ hệ thống ký số');
+      }
+
+      if (!signedDocumentBase64) {
+        throw new Error('Không nhận được nội dung tài liệu đã ký');
+      }
+
+      const storeSignedResponse = await apiClient.storeSignedDocuments({
+        storedServiceReqId: stored.id,
+        hisServiceReqCode: stored.hisServiceReqCode || stored.serviceReqCode || '',
+        documentId: Number(documentId),
+        signedDocumentBase64,
+      });
+      if (!storeSignedResponse.success) {
+        throw new Error(storeSignedResponse.message || 'Không thể lưu tài liệu đã ký');
+      }
+
+      const patchResponse = await apiClient.patchServiceRequestDocumentId(selectedService.id, Number(documentId));
+      if (!patchResponse.success) {
+        throw new Error(patchResponse.message || 'Không thể cập nhật documentId cho dịch vụ');
+      }
+
+      const serviceReqCodeForHis = stored.barcodeXn?.trim() || '';
+      if (!serviceReqCodeForHis) {
+        throw new Error('Thiếu barcodeXn (ServiceReqCode) trên y lệnh đã lưu');
+      }
+
+      const codeRes = await apiClient.getServiceRequestByCode(stored.serviceReqCode);
+      const svcDetail = codeRes.data;
+      const matchedSvc =
+        svcDetail?.services?.find((s) => s.serviceCode === selectedService.serviceCode) ??
+        svcDetail?.services?.[0];
+      const rawTestIndex = matchedSvc?.testIndexCodes?.trim() || stored.testIndexCode?.trim() || '';
+      const testIndexCode = rawTestIndex.split(',')[0]?.trim() || '';
+      if (!testIndexCode) {
+        throw new Error('Không tìm thấy TestIndexCode (testIndexCodes) cho dịch vụ');
+      }
+
+      const updateBody = {
+        ApiData: {
+          ServiceReqCode: serviceReqCodeForHis,
+          ApproverLoginname: signerData.LOGINNAME || '',
+          ApproverUsername: signerData.USERNAME || '',
+          FinishTime: finishTime,
+          IsCancel: null as null,
+          TestIndexDatas: [
+            {
+              TestIndexCode: testIndexCode,
+              Value: String(pivkaPayload.pivkaIiResult ?? '').trim(),
+              Description: '<40',
+              ResultCode: 0,
+              ResultDescription: 'KQ',
+              MayXetNghiemID: String(selectedService.testId ?? ''),
+            },
+          ],
+        },
+      };
+
+      const hisUpdateRes = await fetch(HIS_UPDATE_RESULT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          TokenCode: tokenCode,
+        },
+        body: JSON.stringify(updateBody),
+      });
+      if (!hisUpdateRes.ok) {
+        const errText = await hisUpdateRes.text().catch(() => '');
+        throw new Error(`HisTestServiceReq/UpdateResult: ${hisUpdateRes.status} ${errText}`.trim());
+      }
+
+      toast({
+        title: 'Thành công',
+        description: 'Đã ký số, lưu tài liệu đã ký, cập nhật documentId và gửi UpdateResult.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Lỗi',
+        description: error instanceof Error ? error.message : 'Ký số thất bại',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSigning(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2 justify-end print:hidden">
         <div className="flex items-center gap-2">
-        <Button type="button" variant="outline" onClick={() => handlePrint()}>
-          In phiếu
-        </Button>
+          <Button type="button" variant="outline" onClick={() => handlePrint()}>
+            In phiếu
+          </Button>
           <Button
             type="button"
             onClick={() => {
@@ -215,6 +420,9 @@ export function PivkaResultSheet({
             disabled={createResultMutation.isPending}
           >
             {createResultMutation.isPending ? 'Đang lưu...' : 'Lưu kết quả'}
+          </Button>
+          <Button type="button" variant="default" onClick={handleSignDocument} disabled={isSigning}>
+            {isSigning ? 'Đang ký số...' : 'Ký số'}
           </Button>
         </div>
       </div>
@@ -431,23 +639,22 @@ interface PivkaServicePickerProps {
 }
 
 export function PivkaServicePicker({ services, value, onChange }: PivkaServicePickerProps) {
-  if (services.length <= 1) return null;
-  // return (
-  //   <div className="mb-4 flex flex-wrap items-center gap-2">
-  //     <span className="text-sm font-medium">Dịch vụ / mẫu:</span>
-  //     <Select value={value} onValueChange={onChange}>
-  //       <SelectTrigger className="w-full max-w-md">
-  //         <SelectValue placeholder="Chọn dịch vụ" />
-  //       </SelectTrigger>
-  //       <SelectContent>
-  //         {services.map((s) => (
-  //           <SelectItem key={s.id} value={s.id}>
-  //             {s.serviceName}
-  //             {s.receptionCode ? ` — ${s.receptionCode}` : ''}
-  //           </SelectItem>
-  //         ))}
-  //       </SelectContent>
-  //     </Select>
-  //   </div>
-  // );
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-2">
+      <span className="text-sm font-medium">Dịch vụ / mẫu:</span>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-full max-w-md">
+          <SelectValue placeholder="Chọn dịch vụ" />
+        </SelectTrigger>
+        <SelectContent>
+          {services.map((s) => (
+            <SelectItem key={s.id} value={s.id}>
+              {s.serviceName}
+              {s.receptionCode ? ` — ${s.receptionCode}` : ''}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }

@@ -806,6 +806,8 @@ export interface ServiceRequestService {
     serviceCode: string;
     serviceName: string;
     price: number;
+    /** Mã chỉ số từ HIS (GET /service-requests/code/…) — có thể là chuỗi một hoặc nhiều mã */
+    testIndexCodes?: string | null;
     lisServiceId?: string | null;
     unitOfMeasureId?: string | null;
     unitOfMeasureCode?: string | null;
@@ -899,7 +901,6 @@ export interface StoreServiceRequestBody {
     sampleCollectionTime: string;
     collectedByUserId: string;
     saveRawJson: boolean;
-    barcodeXn?: string | null;
 }
 
 export interface StoredServiceRequestResponse {
@@ -907,6 +908,9 @@ export interface StoredServiceRequestResponse {
     hisServiceReqCode: string;
     hisServiceReqId: number;
     serviceReqCode: string;
+    /** Mã yêu cầu xét nghiệm HIS (barcodeXn) — dùng cho HisTestServiceReq/UpdateResult ServiceReqCode */
+    barcodeXn?: string | null;
+    testIndexCode?: string | null;
     serviceReqSttId: number;
     serviceReqSttCode: string;
     serviceReqTypeId: number;
