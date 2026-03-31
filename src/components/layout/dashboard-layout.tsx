@@ -121,10 +121,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             description: 'Quy trình xét nghiệm và quản lý mẫu',
             children: [
                 {
-                    name: 'Chỉ định xét nghiệm',
+                    name: 'Tiếp nhận bệnh phẩm',
                     href: '/test-indications',
                     icon: Stethoscope,
-                    description: 'Tiếp nhận và chỉ định xét nghiệm'
+                    description: 'Tiếp nhận bệnh phẩm'
                 },
                 {
                     name: 'Bàn giao mẫu',
@@ -274,10 +274,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     description: 'Tổng quan hệ thống và thống kê'
                 },
                 {
-                    name: 'Chỉ định xét nghiệm',
+                    name: 'Tiếp nhận bệnh phẩm',
                     href: '/test-indications',
                     icon: Stethoscope,
-                    description: 'Tiếp nhận và chỉ định xét nghiệm'
+                    description: 'Tiếp nhận bệnh phẩm'
                 }
             ]
         }
@@ -293,10 +293,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 },
                
                         {
-                            name: 'Chỉ định xét nghiệm',
+                            name: 'Tiếp nhận bệnh phẩm',
                             href: '/test-indications',
                             icon: Stethoscope,
-                            description: 'Tiếp nhận và chỉ định xét nghiệm'
+                            description: 'Tiếp nhận bệnh phẩm'
                         },
                         {
                             name: 'Bàn giao mẫu',

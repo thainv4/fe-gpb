@@ -3284,9 +3284,9 @@ class ApiClient {
      */
     async getStoredServicesResultConclude(
         receptionCode: string
-    ): Promise<ApiResponse<{ resultConclude?: string }>> {
+    ): Promise<ApiResponse<{ resultConclude?: string; sampleTypeName?: string }>> {
         const params = new URLSearchParams({ receptionCode });
-        return this.request<{ resultConclude?: string }>(
+        return this.request<{ resultConclude?: string; sampleTypeName?: string }>(
             `/service-requests/stored/services/result-conclude?${params.toString()}`
         );
     }

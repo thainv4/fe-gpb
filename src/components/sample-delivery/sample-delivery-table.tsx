@@ -161,6 +161,7 @@ export default function SampleDeliveryTable() {
     const [selectedStainingMethod, setSelectedStainingMethod] = useState<string>('')
     const [barcodeMapGenGpb, setBarcodeMapGenGpb] = useState<string>('')
     const [gpbResultConclude, setGpbResultConclude] = useState<string>('') // Kết quả từ API result-conclude (khi nhấn Enter ở Mã bệnh phẩm GPB)
+    const [gpbSampleTypeName, setGpbSampleTypeName] = useState<string>('') // Vị trí lấy mẫu GPB từ API result-conclude
     const [stainingMethodSearch, setStainingMethodSearch] = useState<string>('') // Từ khóa đang gõ
     const [appliedStainingMethodSearch, setAppliedStainingMethodSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
     const [stainingMethodSelectOpen, setStainingMethodSelectOpen] = useState(false)
@@ -426,6 +427,7 @@ export default function SampleDeliveryTable() {
                 throw new Error(res.message || res.error || 'Không lấy được kết quả resultConclude')
             }
             const html = res.data?.resultConclude || ''
+            const sampleTypeName = res.data?.sampleTypeName || ''
             let text: string
             if (typeof document !== 'undefined') {
                 const div = document.createElement('div')
@@ -436,14 +438,19 @@ export default function SampleDeliveryTable() {
             }
             // Chỉ lấy phần chữ thường: bỏ tiêu đề "CHẨN ĐOÁN MÔ BỆNH HỌC:"
             const header = /chẩn\s*đoán\s*mô\s*bệnh\s*học\s*:?\s*/i
-            return text.replace(header, '').trim()
+            return {
+                plainText: text.replace(header, '').trim(),
+                sampleTypeName,
+            }
         },
-        onSuccess: (plainText) => {
+        onSuccess: ({ plainText, sampleTypeName }) => {
             setGpbResultConclude(plainText)
+            setGpbSampleTypeName(sampleTypeName)
         },
         onError: (error: unknown) => {
             const msg = error instanceof Error ? error.message : 'Lỗi không xác định'
             setGpbResultConclude('')
+            setGpbSampleTypeName('')
             toast({
                 title: 'Lỗi',
                 description: `Không lấy được kết quả resultConclude: ${msg}`,
@@ -458,6 +465,7 @@ export default function SampleDeliveryTable() {
         const code = barcodeMapGenGpb.trim()
         if (!code) {
             setGpbResultConclude('')
+            setGpbSampleTypeName('')
             return
         }
         resultConcludeMutation.mutate(code)
@@ -905,6 +913,15 @@ export default function SampleDeliveryTable() {
                                             {resultConcludeMutation.isPending && (
                                                 <span className="text-xs text-muted-foreground">Đang tải kết luận mô bệnh học...</span>
                                             )}
+                                        </div>
+
+                                        <div className="flex flex-col gap-2">
+                                            <Label>Vị trí lấy mẫu GPB</Label>
+                                            <Input
+                                                type="text"
+                                                value={gpbSampleTypeName || sampleTypeNameFromStored}         
+                                                placeholder="Chưa có vị trí lấy mẫu GPB"
+                                            />
                                         </div>
 
                                         <div className="flex flex-col gap-1 md:col-span-2">
