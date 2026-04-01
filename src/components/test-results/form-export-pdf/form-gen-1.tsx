@@ -119,7 +119,7 @@ export function FormGen1({
     const raw = resultConcludeData?.data?.resultConclude;
     return raw ? getResultConcludePlainText(raw) : "";
   }, [resultConcludeData?.data?.resultConclude]);
-  const diagnosisDisplay = resultConcludePlainText || `${icdCode} - ${icdName}`;
+  const diagnosisDisplay = resultConcludePlainText;
 
   /** Nội dung mục 5 trang 1: không gộp resultNote (ghi chú đưa sang trang 2) */
   const resultText = useMemo(() => {
@@ -185,7 +185,6 @@ export function FormGen1({
         }
 
       .a4-page h1 {
-        font-size: 16px !important;   /* thay vì text-xl ~20px */
         line-height: 1.2;
       }
 
@@ -437,7 +436,7 @@ export function FormGen1({
               {resultText ? (
                 <StaticHtmlContent
                   html={resultText}
-                  className="ml-4 max-w-none text-[14px]"
+                  className="ml-4 max-w-none text-[16px]"
                 />
               ) : (
                 <p className="text-gray-500 italic">Chưa có kết quả xét nghiệm</p>
@@ -452,7 +451,7 @@ export function FormGen1({
               <div className="text-sm">
                 <StaticHtmlContent
                   html={specificService.resultRecomment}
-                  className="prose prose-sm max-w-none text-[14px] ml-4"
+                  className="prose prose-sm max-w-none text-[16px] ml-4"
                 />
               </div>
             </div>
@@ -460,7 +459,7 @@ export function FormGen1({
         </div>
 
         {/* Signature - cố định ở cuối trang */}
-        <div className="avoid-break flex flex-col items-center mb-16 ml-80">
+        <div className="avoid-break flex flex-col items-center mb-20 ml-80">
           <div className="text-center align-top">
             Ngày {new Date().getDate()} tháng{" "}
             {new Date().getMonth() + 1} năm {new Date().getFullYear()}
@@ -489,7 +488,7 @@ export function FormGen1({
             <div className="text-sm section-result-content">
               <StaticHtmlContent
                 html={specificService.resultNote}
-                className="prose prose-sm max-w-none text-[14px]"
+                className="prose prose-sm max-w-none text-[16px]"
               />
             </div>
           </div>
