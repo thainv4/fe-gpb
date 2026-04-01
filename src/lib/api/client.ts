@@ -1071,11 +1071,24 @@ export interface GetUserRoomsFilters {
     sortOrder?: 'ASC' | 'DESC';
 }
 
+/**
+ * Một bản ghi hành động trên quy trình (workflow) gắn với phiếu lưu trữ.
+ * Frontend map `stateOrder` theo quy ước nghiệp vụ (xem tài liệu `docs/workflow-history-action-info-api.md`).
+ */
 export interface WorkflowActionInfo {
+    /** Tên đăng nhập người thực hiện hành động */
     actionUsername: string;
+    /** Họ tên đầy đủ người thực hiện */
     actionUserFullName: string;
+    /** Tên trạng thái workflow tại thời điểm ghi nhận */
     stateName: string;
+    /**
+     * Thứ tự bước trong quy trình. Ứng dụng hiện dùng:
+     * - `1`: lấy mẫu (người lấy mẫu / thời gian lấy mẫu — theo `createdAt`)
+     * - `2`: nhận mẫu (người nhận mẫu / thời gian nhận mẫu)
+     */
     stateOrder: number;
+    /** Thời điểm ghi nhận hành động (ISO 8601) */
     createdAt: string;
 }
 
@@ -3676,8 +3689,12 @@ class ApiClient {
     }
 
     /**
-     * Lấy danh sách action từ workflow history theo storedServiceReqId
-     * GET /workflow-history/action-info/:storedServiceReqId
+     * Lấy danh sách hành động workflow đã ghi nhận cho một phiếu lưu trữ (stored service request).
+     *
+     * **Endpoint:** `GET /workflow-history/action-info/:storedServiceReqId`
+     *
+     * Dùng để hiển thị người/thời gian lấy mẫu và nhận mẫu (map `stateOrder` — xem `WorkflowActionInfo`).
+     * Chi tiết request/response: `docs/workflow-history-action-info-api.md`.
      */
     async getWorkflowActionInfo(
         storedServiceReqId: string

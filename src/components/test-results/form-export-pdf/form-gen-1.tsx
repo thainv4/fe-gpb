@@ -356,17 +356,17 @@ export function FormGen1({
             <h2 className="font-bold mb-2">3. THÔNG TIN MẪU BỆNH PHẨM:</h2>
             <div className="ml-4 w-full text-sm">
               <div className="grid grid-cols-2 gap-y-2">
-                {/* Hàng 1 */}
-                {/* <div className="flex">
+                {/* Hàng 1 — lấy mẫu */}
+                <div className="flex">
                   <span className="font-semibold">Người lấy mẫu:</span>
                   <span className="ml-2">{sampleCollectorInfo?.actionUserFullName ?? "-"}</span>
                 </div>
                 <div className="flex">
                   <span className="font-semibold">Thời gian lấy mẫu:</span>
                   <span className="ml-2">{formatDateTime(sampleCollectorInfo?.createdAt)}</span>
-                </div> */}
+                </div>
 
-                {/* Hàng 2 */}
+                {/* Hàng 2 — nhận mẫu */}
                 <div className="flex">
                   <span className="font-semibold">Người nhận mẫu:</span>
                   <span className="ml-2">{sampleReceiverInfo?.actionUserFullName ?? "-"}</span>

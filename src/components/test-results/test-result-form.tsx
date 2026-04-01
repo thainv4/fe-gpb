@@ -33,6 +33,23 @@ import { useHisStore } from "@/lib/stores/his";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
 
+/** Định dạng thời gian hành động workflow cho ô read-only (đồng bộ kiểu hiển thị với form PDF gen-1). */
+function formatWorkflowActionDateTime(iso?: string | null): string {
+    if (!iso) return "—";
+    try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return "—";
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        const h = String(d.getHours()).padStart(2, "0");
+        const m = String(d.getMinutes()).padStart(2, "0");
+        return `${h}:${m} ${day}/${month}/${year}`;
+    } catch {
+        return "—";
+    }
+}
+
 /** Khối thông tin bệnh nhân (memo để tránh re-render khi state khác đổi). */
 const PatientInfoCard = React.memo(function PatientInfoCard({
     serviceRequest,
@@ -364,6 +381,13 @@ export default function TestResultForm() {
         staleTime: 0, // Disable stale time để luôn fetch fresh data
     })
 
+    const { data: workflowActionInfoData } = useQuery({
+        queryKey: ['workflow-action-info', storedServiceReqId, refreshTrigger],
+        queryFn: () => apiClient.getWorkflowActionInfo(storedServiceReqId),
+        enabled: !!storedServiceReqId,
+        staleTime: 1 * 60 * 1000,
+    })
+
     // useEffect để refresh sidebar khi refreshTrigger thay đổi
     useEffect(() => {
         if (refreshTrigger > 0) {
@@ -399,6 +423,16 @@ export default function TestResultForm() {
     const patient = serviceRequest?.patient
     const storedServiceRequest = storedServiceRequestData?.data
     const services = storedServiceRequest?.services || []
+
+    const workflowActions = workflowActionInfoData?.data
+    const sampleCollectorAction = useMemo(
+        () => workflowActions?.find((a) => a.stateOrder === 1),
+        [workflowActions]
+    )
+    const sampleReceiverAction = useMemo(
+        () => workflowActions?.find((a) => a.stateOrder === 2),
+        [workflowActions]
+    )
 
     // Xác định phòng/khoa hiện tại từ tab đang hoạt động
     const currentTab = (tabs as any)?.find?.((t: any) => t?.key === activeKey) ?? (tabs as any)?.[0]
@@ -2002,6 +2036,51 @@ export default function TestResultForm() {
                                                     placeholder="—"
                                                     className="max-w-xs"
                                                 />
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                <div>
+                                                    <Label className="text-sm font-medium mb-2 block">Người lấy mẫu</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={sampleCollectorAction?.actionUserFullName ?? "—"}
+                                                        disabled
+                                                        className="max-w-xs"
+                                                        readOnly
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-sm font-medium mb-2 block">Thời gian lấy mẫu</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={formatWorkflowActionDateTime(sampleCollectorAction?.createdAt)}
+                                                        disabled
+                                                        className="max-w-xs"
+                                                        readOnly
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-sm font-medium mb-2 block">Người nhận mẫu</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={sampleReceiverAction?.actionUserFullName ?? "—"}
+                                                        disabled
+                                                        className="max-w-xs"
+                                                        readOnly
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-sm font-medium mb-2 block">Thời gian nhận mẫu</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={formatWorkflowActionDateTime(sampleReceiverAction?.createdAt)}
+                                                        disabled
+                                                        className="max-w-xs"
+                                                        readOnly
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
