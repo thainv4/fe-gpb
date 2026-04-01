@@ -1086,6 +1086,7 @@ export interface WorkflowActionInfo {
      * Thứ tự bước trong quy trình. Ứng dụng hiện dùng:
      * - `1`: lấy mẫu (người lấy mẫu / thời gian lấy mẫu — theo `createdAt`)
      * - `2`: nhận mẫu (người nhận mẫu / thời gian nhận mẫu)
+     * - `5` / `7`: ký — `stateName` thường là **Chưa ký** / **Đã ký** (xem `docs/workflow-history-action-info-api.md`)
      */
     stateOrder: number;
     /** Thời điểm ghi nhận hành động (ISO 8601) */
@@ -3250,11 +3251,15 @@ class ApiClient {
     /**
      * PATCH gpb-fields cho stored service request.
      * PATCH /api/v1/service-requests/stored/:storedServiceReqId/gpb-fields
-     * Body: { barcodeMapGenGpb, resultConcludeMapGenGpb }
+     * Body: { barcodeMapGenGpb, resultConcludeMapGenGpb, sampleTypeNameMapGenGpb }
      */
     async updateStoredServiceRequestGpbFields(
         storedServiceReqId: string,
-        data: { barcodeMapGenGpb: string; resultConcludeMapGenGpb: string }
+        data: {
+            barcodeMapGenGpb: string;
+            resultConcludeMapGenGpb: string;
+            sampleTypeNameMapGenGpb: string;
+        }
     ): Promise<ApiResponse<unknown>> {
         return this.request<unknown>(
             `/service-requests/stored/${storedServiceReqId}/gpb-fields`,

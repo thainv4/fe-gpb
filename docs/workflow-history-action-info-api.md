@@ -77,6 +77,17 @@ Body JSON theo pattern chung của backend (có thể kèm `status_code` tùy ph
 | `1` | Lấy mẫu | `createdAt` của bản ghi `stateOrder === 1` |
 | `2` | Nhận mẫu | `createdAt` của bản ghi `stateOrder === 2` |
 
+### Trạng thái ký (`stateName` theo `stateOrder`)
+
+Theo cấu hình quy trình hiện tại, **`stateName`** tương ứng với **`stateOrder`** như sau (giá trị chuỗi do backend trả về — dùng khi hiển thị hoặc đối chiếu):
+
+| `stateOrder` | `stateName` (kỳ vọng) |
+|--------------|------------------------|
+| `5` | **Chưa ký** |
+| `7` | **Đã ký** |
+
+Lưu ý: `FormGen1` (phiếu PDF gen-1) còn dùng `stateOrder === 5` để lấy **người thực hiện** (`performerInfo`). Nếu backend gán `stateName` là **Chưa ký** cho cùng `stateOrder`, cần đảm bảo không nhầm lẫn giữa **nhãn trạng thái ký** và **vai trò người thực hiện** — khi cần, ưu tiên đối chiếu thêm `stateName` hoặc tách bước workflow.
+
 Nếu backend thêm bước khác, cần cập nhật map ở frontend và tài liệu này.
 
 ### Response lỗi (ví dụ)

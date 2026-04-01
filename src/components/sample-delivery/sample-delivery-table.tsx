@@ -313,6 +313,7 @@ export default function SampleDeliveryTable() {
             selectedStainingMethod: string;
             barcodeMapGenGpb: string;
             resultConcludeMapGenGpb: string;
+            sampleTypeNameMapGenGpb: string;
         }) => {
             // Bước 1: Gọi API tổng hợp để cập nhật flag và staining method cùng lúc (nếu có) - PHẢI thành công
             if (params.storedServiceReqId && (params.selectedStainingMethod || params.selectedFlag)) {
@@ -385,12 +386,13 @@ export default function SampleDeliveryTable() {
                 throw new Error(response.error || response.message || 'Không thể bàn giao mẫu')
             }
 
-            // Bước 5: PATCH gpb-fields (barcodeMapGenGpb, resultConcludeMapGenGpb)
+            // Bước 5: PATCH gpb-fields (barcodeMapGenGpb, resultConcludeMapGenGpb, sampleTypeNameMapGenGpb)
             const gpbResponse = await apiClient.updateStoredServiceRequestGpbFields(
                 params.storedServiceReqId,
                 {
                     barcodeMapGenGpb: params.barcodeMapGenGpb,
                     resultConcludeMapGenGpb: params.resultConcludeMapGenGpb,
+                    sampleTypeNameMapGenGpb: params.sampleTypeNameMapGenGpb,
                 }
             )
             if (!gpbResponse.success) {
@@ -535,6 +537,7 @@ export default function SampleDeliveryTable() {
             selectedStainingMethod: resultFormType === 2 ? '' : selectedStainingMethod,
             barcodeMapGenGpb: barcodeMapGenGpb ?? '',
             resultConcludeMapGenGpb: gpbResultConclude ?? '',
+            sampleTypeNameMapGenGpb: gpbSampleTypeName ?? '',
         })
     }
 
@@ -919,7 +922,8 @@ export default function SampleDeliveryTable() {
                                             <Label>Vị trí lấy mẫu GPB</Label>
                                             <Input
                                                 type="text"
-                                                value={gpbSampleTypeName || sampleTypeNameFromStored}         
+                                                value={gpbSampleTypeName}      
+                                                onChange={(e) => setGpbSampleTypeName(e.target.value)}   
                                                 placeholder="Chưa có vị trí lấy mẫu GPB"
                                             />
                                         </div>

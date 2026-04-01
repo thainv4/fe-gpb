@@ -356,14 +356,14 @@ export function FormGen1({
             <div className="ml-4 w-full text-sm">
               <div className="grid grid-cols-2 gap-y-2">
                 {/* Hàng 1 — lấy mẫu */}
-                <div className="flex">
+                {/* <div className="flex">
                   <span className="font-semibold">Người lấy mẫu:</span>
                   <span className="ml-2">{sampleCollectorInfo?.actionUserFullName ?? "-"}</span>
                 </div>
                 <div className="flex">
                   <span className="font-semibold">Thời gian lấy mẫu:</span>
                   <span className="ml-2">{formatDateTime(sampleCollectorInfo?.createdAt)}</span>
-                </div>
+                </div> */}
 
                 {/* Hàng 2 — nhận mẫu */}
                 <div className="flex">
@@ -390,10 +390,6 @@ export function FormGen1({
                   <span className="ml-2">{receptionCode}</span>
                 </div> */}
 
-                <div className="flex">
-                  <span className="font-semibold">Vị trí lấy mẫu:</span>
-                  <span className="ml-2"></span>
-                </div>
 
                 {/* Hàng 4 */}
                 <div className="flex">
@@ -401,14 +397,22 @@ export function FormGen1({
                   <span className="ml-2">{flag || "—"}</span>
                 </div>
 
+              </div>
+              <div className="mt-2 flex flex-col gap-y-2">
                 <div className="flex">
                   <span className="font-semibold">Mã Giải phẫu bệnh:</span>
                   <span className="ml-2">{barcodeMapGenGpb}</span>
                 </div>
-              </div>
-              <div className="mt-2">
-                <span className="font-semibold">Chẩn đoán mô bệnh học:</span>
-                <span className="ml-2">{diagnosisDisplay}</span>
+                <div className="flex">
+                  <span className="font-semibold">Vị trí lấy mẫu:</span>
+                  <span className="ml-2">
+                    {resultConcludeData?.data?.sampleTypeName?.trim() || "-"}
+                  </span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold">Chẩn đoán mô bệnh học:</span>
+                  <span className="ml-2">{diagnosisDisplay}</span>
+                </div>
               </div>
             </div>
           </div>
