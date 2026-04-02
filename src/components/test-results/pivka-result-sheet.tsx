@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,12 @@ import { Button } from '@/components/ui/button';
 import { apiClient, type StoredService, type StoredServiceRequestResponse } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/lib/stores/auth';
 import { useHisStore } from '@/lib/stores/his';
+import { useCurrentRoomStore } from '@/lib/stores/current-room';
 import { pdfBase64FromContainerWithPuppeteer } from '@/lib/utils/pdf-export';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { LoadingSpinner } from '@/components/ui/loading';
 import {
   Select,
   SelectContent,
@@ -101,6 +105,25 @@ function getResultTextAlign(rawValue: string | undefined | null, refNumber: numb
   return parsed < refNumber ? 'text-center' : 'text-right';
 }
 
+/**
+ * Chỉ cho phép nhập số thập phân tối đa 2 chữ số sau dấu `.`.
+ * Ví dụ hợp lệ: `12`, `12.`, `12.3`, `12.34`
+ */
+function sanitizeDecimal2(raw: string): string | null {
+  const normalized = raw.trim();
+  // Chỉ cho phép dấu chấm '.' làm phân cách thập phân, không cho phép dấu phẩy ','
+  if (normalized.includes(',')) return null;
+  if (normalized === '') return '';
+  if (normalized.startsWith('-')) return null;
+
+  // Cho phép người dùng bắt đầu bằng '.' trong quá trình gõ => chuyển thành '0.'
+  const normalizedWithLeadingZero = normalized.startsWith('.') ? `0${normalized}` : normalized;
+
+  // Chỉ cho phép: số nguyên + (tuỳ chọn phần thập phân tối đa 2 chữ số)
+  if (!/^\d+(?:\.\d{0,2})?$/.test(normalizedWithLeadingZero)) return null;
+  return normalizedWithLeadingZero;
+}
+
 export function PivkaResultSheet({
   stored,
   selectedService,
@@ -110,6 +133,13 @@ export function PivkaResultSheet({
   const printRef = useRef<HTMLDivElement>(null);
   const [isSigning, setIsSigning] = useState(false);
   const { token: hisToken } = useHisStore();
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const { currentRoomId: storeCurrentRoomId, currentDepartmentId: storeCurrentDepartmentId } =
+    useCurrentRoomStore();
+  const [confirmSignDialogOpen, setConfirmSignDialogOpen] = useState(false);
+  const [confirmCancelSignDialogOpen, setConfirmCancelSignDialogOpen] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
 
   const { data: workflowActionsData, isLoading: workflowLoading } = useQuery({
     queryKey: ['workflow-action-info', stored.id],
@@ -388,6 +418,35 @@ export function PivkaResultSheet({
         throw new Error(`HisTestServiceReq/UpdateResult: ${hisUpdateRes.status} ${errText}`.trim());
       }
 
+      // Sau khi ký số thành công, chuyển trạng thái workflow (giống form GPB)
+      try {
+        const workflowResponse = await apiClient.transitionWorkflow({
+          storedServiceReqId: stored.id,
+          toStateId: '426df256-bc00-28d1-e065-9e6b783dd008',
+          actionType: 'COMPLETE',
+          currentUserId: user?.id,
+          currentDepartmentId: storeCurrentDepartmentId,
+          currentRoomId: storeCurrentRoomId,
+        })
+
+        if (!workflowResponse.success) {
+          toast({
+            title: 'Cảnh báo',
+            description: workflowResponse.message || workflowResponse.error || 'Không thể cập nhật trạng thái quy trình.',
+            variant: 'destructive',
+          });
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['workflow-history'] });
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái quy trình.';
+        toast({
+          title: 'Cảnh báo',
+          description: message,
+          variant: 'destructive',
+        });
+      }
+
       toast({
         title: 'Thành công',
         description: 'Đã ký số, lưu tài liệu đã ký, cập nhật documentId và gửi UpdateResult.',
@@ -400,6 +459,89 @@ export function PivkaResultSheet({
       });
     } finally {
       setIsSigning(false);
+    }
+  }
+
+  async function handleCancelDigitalSign() {
+    const rawDocumentId = selectedService.documentId;
+    if (rawDocumentId === undefined || rawDocumentId === null || String(rawDocumentId).trim() === '') {
+      toast({
+        title: 'Lỗi',
+        description: 'Không có chữ ký số để hủy.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const tokenCode = await getHisTokenCode();
+    if (!tokenCode) {
+      toast({
+        title: 'Lỗi',
+        description: 'Vui lòng đăng nhập để sử dụng tính năng ký điện tử.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCanceling(true);
+    try {
+      const numericDocumentId =
+        typeof rawDocumentId === 'string' ? Number.parseInt(rawDocumentId, 10) : Number(rawDocumentId);
+      if (!Number.isFinite(numericDocumentId)) {
+        throw new Error('documentId không hợp lệ');
+      }
+
+      // 1) Hủy chữ ký số trên EMR
+      const deleteResponse = await apiClient.deleteEmrDocument(numericDocumentId, tokenCode, 'EMR');
+      const emrResponse = deleteResponse.data as any;
+      if (!deleteResponse.success || !emrResponse?.Success) {
+        const emrMessage =
+          emrResponse?.Param?.Messages?.join(', ') ||
+          emrResponse?.Param?.MessageCodes?.join(', ') ||
+          deleteResponse.message ||
+          deleteResponse.error ||
+          'Không thể hủy chữ ký số';
+        throw new Error(emrMessage);
+      }
+
+      // 2) Trả documentId về null cho service
+      const patchResponse = await apiClient.patchServiceRequestDocumentId(selectedService.id, null);
+      if (!patchResponse.success) {
+        throw new Error(patchResponse.message || patchResponse.error || 'Không thể cập nhật documentId cho dịch vụ');
+      }
+
+      // 3) Xóa workflow history ở state hoàn tất
+      const stateId = '426df256-bc00-28d1-e065-9e6b783dd008';
+      const deleteWorkflowHistoryResponse = await apiClient.deleteWorkflowHistoryByStateAndRequest(stateId, stored.id);
+      if (!deleteWorkflowHistoryResponse.success) {
+        toast({
+          title: 'Cảnh báo',
+          description:
+            deleteWorkflowHistoryResponse.message ||
+            deleteWorkflowHistoryResponse.error ||
+            'Đã hủy chữ ký nhưng không thể xóa workflow history.',
+          variant: 'destructive',
+        });
+      }
+
+      // Refresh UI
+      queryClient.invalidateQueries({ queryKey: ['workflow-history'] });
+      // Parent PIVKA queryKey: ['stored-service-request', storedServiceReqId, refreshTrigger] với refreshTrigger = 0
+      queryClient.invalidateQueries({ queryKey: ['stored-service-request', stored.id, 0] });
+
+      toast({
+        title: 'Thành công',
+        description: 'Đã hủy chữ ký số.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Không thể hủy chữ ký số';
+      toast({
+        title: 'Lỗi',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCanceling(false);
     }
   }
 
@@ -421,11 +563,103 @@ export function PivkaResultSheet({
           >
             {createResultMutation.isPending ? 'Đang lưu...' : 'Lưu kết quả'}
           </Button>
-          <Button type="button" variant="default" onClick={handleSignDocument} disabled={isSigning}>
+          <Button
+            type="button"
+            className="bg-blue-500 hover:bg-blue-600"
+            onClick={() => setConfirmSignDialogOpen(true)}
+            disabled={isSigning || isCanceling}
+          >
             {isSigning ? 'Đang ký số...' : 'Ký số'}
           </Button>
+
+          {selectedService.documentId !== undefined &&
+            selectedService.documentId !== null &&
+            String(selectedService.documentId).trim() !== '' && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setConfirmCancelSignDialogOpen(true)}
+                disabled={isSigning || isCanceling}
+              >
+                {isCanceling ? 'Đang hủy...' : 'Hủy chữ ký số'}
+              </Button>
+            )}
         </div>
       </div>
+
+      <Dialog open={confirmSignDialogOpen} onOpenChange={setConfirmSignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận ký số</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn ký số cho phiếu này? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmSignDialogOpen(false)}
+              disabled={isSigning || isCanceling}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmSignDialogOpen(false);
+                handleSignDocument();
+              }}
+              disabled={isSigning || isCanceling}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSigning ? (
+                <>
+                  <LoadingSpinner size="small" className="mr-2" />
+                  Đang ký số...
+                </>
+              ) : (
+                'Xác nhận ký số'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmCancelSignDialogOpen} onOpenChange={setConfirmCancelSignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận hủy chữ ký số</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn hủy chữ ký số? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmCancelSignDialogOpen(false)}
+              disabled={isSigning || isCanceling}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmCancelSignDialogOpen(false);
+                handleCancelDigitalSign();
+              }}
+              disabled={isSigning || isCanceling}
+              variant="destructive"
+            >
+              {isCanceling ? (
+                <>
+                  <LoadingSpinner size="small" className="mr-2" />
+                  Đang hủy...
+                </>
+              ) : (
+                'Xác nhận hủy'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div
         ref={printRef}
@@ -460,7 +694,6 @@ export function PivkaResultSheet({
                   box-shadow: none;
                 }
                 .pivka-a4 table.pivka-table {
-                  table-layout: fixed;
                   width: 100%;
                 }
                 .avoid-break { page-break-inside: avoid; break-inside: avoid; }
@@ -571,7 +804,7 @@ export function PivkaResultSheet({
               <thead>
                 <tr className="bg-gray-100">
                   <th className="border border-black px-1 py-1.5 w-8">STT</th>
-                  <th className="border border-black px-1 py-1.5 text-left min-w-[200px]">Yêu cầu xét nghiệm</th>
+                  <th className="border border-black px-1 py-1.5 text-left min-w-[170px]">Yêu cầu xét nghiệm</th>
                   <th className="border border-black px-1 py-1.5 min-w-[88px] bg-amber-50/80">Kết quả</th>
                   <th className="border border-black px-1 py-1.5">Đơn vị</th>
                   <th className="border border-black px-1 py-1.5">Khoảng tham chiếu</th>
@@ -587,17 +820,28 @@ export function PivkaResultSheet({
                       <Input
                         type="number"
                         min={0}
-                        step="any"
+                        step="0.01"
                         inputMode="decimal"
                         value={values[row.key] ?? ''}
-                        onChange={(e) => patch(row.key, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === ',') e.preventDefault();
+                        }}
+                        onPaste={(e) => {
+                          const text = e.clipboardData.getData('text');
+                          if (text.includes(',')) e.preventDefault();
+                        }}
+                        onChange={(e) => {
+                          const next = sanitizeDecimal2(e.target.value);
+                          if (next === null) return;
+                          patch(row.key, next);
+                        }}
                         className={cn(
                           'h-9 rounded-none border-0 shadow-none font-medium',
                           'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0',
                           'bg-transparent print:border-0 print:h-8',
                           getResultTextAlign(values[row.key], row.refNumber)
                         )}
-                        placeholder="—"
+                        
                       />
                     </td>
                     <td className="border border-black px-1 py-1 text-center">{row.unit}</td>
@@ -612,7 +856,7 @@ export function PivkaResultSheet({
           <div className="avoid-break mb-6 text-[12px] sm:text-[13px] p-3 rounded-sm">
             <p className="font-semibold mb-1">Ghi chú:</p>
             <div>
-              Kết quả lệch trái: thấp hơn CSBT.
+              Kết quả lệch phải: cao hơn CSBT.
             </div>
             <div>
               Kết quả nằm giữa: Bình thường.

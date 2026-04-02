@@ -488,7 +488,7 @@ export function FormGen1({
       {hasResultNote && specificService?.resultNote && (
         <div className="a4-page w-[210mm] min-h-[297mm] bg-white mx-auto box-border shadow-sm print:shadow-none pt-[20mm] pb-[20mm] pl-[15mm] pr-[15mm] flex flex-col mt-4 print:mt-0">
           <div className="flex-grow flex flex-col">
-            <h2 className="font-bold mb-4 text-base">Ghi chú</h2>
+            {/* <h2 className="font-bold mb-4 text-base">Ghi chú</h2> */}
             <div className="text-sm section-result-content">
               <StaticHtmlContent
                 html={specificService.resultNote}
