@@ -96,7 +96,7 @@ export default function PivkaResultsForm() {
   if (!isGenRoom) {
     return (
       <Alert className="max-w-xl">
-        <AlertTitle>Phiếu PIVKA</AlertTitle>
+        <AlertTitle>Kết quả PIVKA</AlertTitle>
         <AlertDescription className="space-y-3">
           <p>Chức năng chỉ dành cho Đơn vị Gen</p>
           <Button asChild variant="outline" size="sm">
@@ -110,7 +110,7 @@ export default function PivkaResultsForm() {
   return (
     <Card>
       <CardHeader className="border-b border-gray-200">
-        <CardTitle className="text-2xl font-bold">Phiếu PIVKA</CardTitle>
+        <CardTitle className="text-2xl font-bold">Kết quả PIVKA</CardTitle>
         <p className="text-sm text-muted-foreground font-normal">
           Chọn yêu cầu dịch vụ bên trái. Chỉ ba ô kết quả xét nghiệm được nhập.
         </p>

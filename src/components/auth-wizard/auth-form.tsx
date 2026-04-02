@@ -117,7 +117,7 @@ export function AuthForm() {
 
         toast({
           title: "Đăng nhập thành công",
-          description: `Chào mừng ${result.data.user.username}!`,
+          description: `Chào mừng ${result.data.user.fullName}!`,
         });
 
         // Use window.location.href to ensure fresh page load

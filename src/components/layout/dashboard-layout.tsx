@@ -49,7 +49,7 @@ interface DashboardLayoutProps {
 }
 
 const PIVKA_RESULTS_NAV = {
-    name: 'Phiếu PIVKA',
+    name: 'Kết quả PIVKA',
     href: '/pivka-results',
     icon: Barcode,
     description: 'Phiếu kết quả AFP, AFP-L3, PIVKA-II',
