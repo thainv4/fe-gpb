@@ -60,7 +60,6 @@ export default function PivkaResultsForm() {
 
   const handleSelect = useCallback((serviceReqCode: string, storedId?: string) => {
     setSelectedServiceReqCode(serviceReqCode);
-    setPivkaValues(EMPTY_PIVKA);
     if (storedId) setStoredServiceReqId(storedId);
   }, []);
 
@@ -82,6 +81,39 @@ export default function PivkaResultsForm() {
   const services = servicesFromApi ?? [];
 
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? services[0];
+
+  const {
+    data: pivkaByServiceRes,
+    isFetched: pivkaByServiceFetched,
+    isFetching: pivkaByServiceFetching,
+  } = useQuery({
+    queryKey: ['pivka-ii-result', 'by-stored-sr-service', selectedServiceId],
+    queryFn: () => apiClient.getPivkaIiResultByStoredSrServiceId(selectedServiceId),
+    enabled: Boolean(stored && selectedServiceId),
+    staleTime: 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (!selectedServiceId) return;
+    setPivkaValues(EMPTY_PIVKA);
+  }, [selectedServiceId]);
+
+  useEffect(() => {
+    if (!stored || !selectedServiceId || !pivkaByServiceFetched) return;
+    const res = pivkaByServiceRes;
+    if (res?.success && res.data) {
+      const d = res.data;
+      setPivkaValues({
+        afpTotal: d.afpFullResult?.trim() ?? '',
+        afpL3: d.afpL3?.trim() ?? '',
+        pivkaIi: d.pivkaIiResult?.trim() ?? '',
+      });
+      return;
+    }
+    if (res && !res.success && res.status === 404) {
+      setPivkaValues(EMPTY_PIVKA);
+    }
+  }, [stored, selectedServiceId, pivkaByServiceFetched, pivkaByServiceRes]);
 
   const isLoading = loadingStored;
 
@@ -138,14 +170,16 @@ export default function PivkaResultsForm() {
             )}
             {selectedServiceReqCode && !isLoading && stored && selectedService && (
               <>
-                <PivkaServicePicker
-                  services={services}
-                  value={selectedService.id}
-                  onChange={(id) => {
-                    setSelectedServiceId(id);
-                    setPivkaValues(EMPTY_PIVKA);
-                  }}
-                />
+                <div className="space-y-1">
+                  <PivkaServicePicker
+                    services={services}
+                    value={selectedService.id}
+                    onChange={setSelectedServiceId}
+                  />
+                  {pivkaByServiceFetching && (
+                    <p className="text-xs text-muted-foreground">Đang tải kết quả PIVKA…</p>
+                  )}
+                </div>
                 <PivkaResultSheet
                   stored={stored}
                   selectedService={selectedService}

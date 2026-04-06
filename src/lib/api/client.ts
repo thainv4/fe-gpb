@@ -3757,6 +3757,14 @@ class ApiClient {
         });
     }
 
+    async getPivkaIiResultByStoredSrServiceId(
+        storedSrServicesId: string
+    ): Promise<ApiResponse<PivkaIiResultResponse>> {
+        return this.request<PivkaIiResultResponse>(
+            `/pivka-ii-results/by-stored-sr-service/${encodeURIComponent(storedSrServicesId)}`
+        );
+    }
+
     async createPivkaIiResult(body: {
         storedSrServicesId: string;
         pivkaIiResult?: string;
@@ -3772,6 +3780,21 @@ class ApiClient {
     async deleteDeviceOutbound(id: string): Promise<ApiResponse<{ message: string }>> {
         return this.request<{ message: string }>(`/device-outbound/${id}`, { method: "DELETE" });
     }
+}
+
+/** GET /pivka-ii-results/by-stored-sr-service/:id — chi tiết kết quả theo dòng BML_STORED_SR_SERVICES */
+export interface PivkaIiResultResponse {
+    id: string;
+    storedSrServicesId: string;
+    pivkaIiResult?: string | null;
+    afpFullResult?: string | null;
+    afpL3?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null;
+    createdBy?: string | null;
+    updatedBy?: string | null;
+    version: number;
 }
 
 // Device Outbound types (theo device-outbound-api-for-frontend.md)

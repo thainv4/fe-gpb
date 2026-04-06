@@ -191,11 +191,64 @@ export function PivkaResultSheet({
       afpFullResult?: string;
       afpL3?: string;
     }) => apiClient.createPivkaIiResult(body),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: 'Thành công',
         description: 'Đã lưu kết quả PIVKA.',
       });
+
+      queryClient.invalidateQueries({
+        queryKey: ['pivka-ii-result', 'by-stored-sr-service', selectedService.id],
+      });
+
+      // Sau khi lưu kết quả thành công, chuyển trạng thái workflow (giống các form khác)
+      try {
+        // Tương tự form-gpb: xóa workflow history cũ ở toState.sortOrder = 5
+        if (stored.id) {
+          const cached = queryClient.getQueriesData<{
+            data?: { items?: Array<{ id?: string; storedServiceReqId?: string; toState?: { sortOrder?: number } }> };
+          }>({ queryKey: ['workflow-history'] });
+
+          for (const [, cachedData] of cached) {
+            const items = cachedData?.data?.items ?? [];
+            const item = items.find(
+              (i) => i.storedServiceReqId === stored.id && i.toState?.sortOrder === 5 && i.id
+            );
+            if (item?.id) {
+              await apiClient.deleteWorkflowHistory(item.id);
+              queryClient.invalidateQueries({ queryKey: ['workflow-history'] });
+              break;
+            }
+          }
+        }
+
+        const workflowResponse = await apiClient.transitionWorkflow({
+          storedServiceReqId: stored.id,
+          toStateId: '426df256-bbfe-28d1-e065-9e6b783dd008',
+          actionType: 'COMPLETE',
+          currentUserId: user?.id,
+          currentDepartmentId: storeCurrentDepartmentId,
+          currentRoomId: storeCurrentRoomId,
+        });
+
+        if (!workflowResponse.success) {
+          toast({
+            title: 'Cảnh báo',
+            description:
+              workflowResponse.message || workflowResponse.error || 'Đã lưu nhưng không thể cập nhật trạng thái quy trình.',
+            variant: 'destructive',
+          });
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['workflow-history'] });
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái quy trình.';
+        toast({
+          title: 'Cảnh báo',
+          description: message,
+          variant: 'destructive',
+        });
+      }
     },
     onError: (err) => {
       toast({
@@ -545,6 +598,32 @@ export function PivkaResultSheet({
     }
   }
 
+  // Handler xem văn bản đã ký (stream PDF theo hisServiceReqCode/serviceReqCode)
+  async function handleViewSignedDocument() {
+    const hisCode = stored.hisServiceReqCode || stored.serviceReqCode;
+    if (!hisCode) {
+      toast({
+        title: 'Lỗi',
+        description: 'Không có mã yêu cầu dịch vụ HIS',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const blob = await apiClient.getSignedDocumentByHisCode(hisCode);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e: any) {
+      toast({
+        title: 'Lỗi',
+        description: e?.message || 'Không tải được văn bản đã ký',
+        variant: 'destructive',
+      });
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2 justify-end print:hidden">
@@ -554,6 +633,7 @@ export function PivkaResultSheet({
           </Button>
           <Button
             type="button"
+            variant="outline"
             onClick={() => {
               const payload = validateAndBuildPayload();
               if (!payload) return;
@@ -565,12 +645,20 @@ export function PivkaResultSheet({
           </Button>
           <Button
             type="button"
-            className="bg-blue-500 hover:bg-blue-600"
+            variant="outline"
             onClick={() => setConfirmSignDialogOpen(true)}
             disabled={isSigning || isCanceling}
           >
             {isSigning ? 'Đang ký số...' : 'Ký số'}
           </Button>
+
+          {selectedService.documentId !== undefined &&
+            selectedService.documentId !== null &&
+            String(selectedService.documentId).trim() !== '' && (
+              <Button type="button" variant="outline" onClick={handleViewSignedDocument} disabled={isSigning || isCanceling}>
+                Xem văn bản đã ký
+              </Button>
+            )}
 
           {selectedService.documentId !== undefined &&
             selectedService.documentId !== null &&
