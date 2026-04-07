@@ -8,7 +8,6 @@ import { useCurrentRoomStore } from '@/lib/stores/current-room'
 import { useAuthStore } from '@/lib/stores/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import {
@@ -18,26 +17,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { BarChart3, GitBranch, AlertCircle, Loader2 } from 'lucide-react'
 
 const BAR_COLORS = [
+    'bg-red-600',
+    'bg-orange-500',
+    'bg-amber-500',
+    'bg-lime-600',
     'bg-emerald-600',
-    'bg-teal-600',
-    'bg-cyan-600',
     'bg-sky-600',
-    'bg-blue-600',
-    'bg-indigo-600',
-    'bg-violet-600',
-    'bg-purple-600',
+    'bg-blue-700',
+    'bg-fuchsia-600',
 ]
 
 function defaultDateRange(): { startDate: Date; endDate: Date } {
@@ -129,10 +120,7 @@ export function DashboardHome() {
         enabled: Boolean(fromIso && toIso),
     })
 
-    const maxStateCount = useMemo(() => {
-        const items = stateQuery.data?.items ?? []
-        return items.reduce((m, i) => Math.max(m, i.count), 0) || 1
-    }, [stateQuery.data?.items])
+    const stateTotalCases = useMemo(() => stateQuery.data?.totalCases ?? 0, [stateQuery.data?.totalCases])
 
     const maxVolume = useMemo(() => {
         const series = volumeQuery.data?.series ?? []
@@ -224,8 +212,8 @@ export function DashboardHome() {
                         <div className="flex items-center gap-2">
                             <GitBranch className="h-5 w-5 text-emerald-700" />
                             <div>
-                                <CardTitle>Phân bổ ca theo trạng thái workflow</CardTitle>
-                                <CardDescription>
+                                <CardTitle>Phân bổ ca theo trạng thái</CardTitle>
+                                <CardDescription className='mt-1'>
                                     Tổng:{' '}
                                     {stateQuery.isSuccess ? stateQuery.data.totalCases : '—'}
                                     {filterByCurrentContext && currentRoomName ? (
@@ -259,42 +247,50 @@ export function DashboardHome() {
                             <p className="text-sm text-muted-foreground">Không có dữ liệu.</p>
                         ) : stateQuery.isSuccess ? (
                             <div className="space-y-4">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Mã</TableHead>
-                                            <TableHead>Tên trạng thái</TableHead>
-                                            <TableHead className="text-right">Số ca</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {stateQuery.data.items.map((row) => (
-                                            <TableRow key={row.stateId}>
-                                                <TableCell className="font-mono text-xs">
-                                                    {row.stateCode}
-                                                </TableCell>
-                                                <TableCell>{row.stateName}</TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {row.count}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                <div className="space-y-2">
+                                    <div className="h-4 w-full overflow-hidden rounded-full bg-muted">
+                                        {stateQuery.data.items.map((row, idx) => {
+                                            const color =
+                                                BAR_COLORS[idx % BAR_COLORS.length] ?? 'bg-emerald-600'
+                                            const pct =
+                                                stateTotalCases > 0
+                                                    ? (row.count / stateTotalCases) * 100
+                                                    : 0
+                                            return (
+                                                <div
+                                                    key={row.stateId}
+                                                    className={`inline-block h-full ${color}`}
+                                                    style={{ width: `${pct}%` }}
+                                                    title={`${row.stateName}: ${row.count}`}
+                                                />
+                                            )
+                                        })}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Thanh tổng 100% biểu diễn tỷ lệ số ca theo từng trạng thái.
+                                    </p>
+                                </div>
                                 <div className="space-y-2">
                                     {stateQuery.data.items.map((row, idx) => {
-                                        const pct = (row.count / maxStateCount) * 100
+                                        const pct =
+                                            stateTotalCases > 0 ? (row.count / stateTotalCases) * 100 : 0
                                         const color =
                                             BAR_COLORS[idx % BAR_COLORS.length] ?? 'bg-emerald-600'
                                         return (
-                                            <div key={row.stateId} className="space-y-1">
+                                            <div key={row.stateId} className="rounded-md border px-3 py-2">
                                                 <div className="flex justify-between text-xs text-muted-foreground">
-                                                    <span className="truncate pr-2">{row.stateName}</span>
+                                                    <span className="truncate pr-2">
+                                                        <span
+                                                            className={`mr-2 inline-block h-2 w-2 rounded-full ${color}`}
+                                                        />
+                                                        <span className="font-mono text-[11px]">{row.stateCode}</span>{' '}
+                                                        - {row.stateName}
+                                                    </span>
                                                     <span className="tabular-nums shrink-0">
-                                                        {row.count}
+                                                        {row.count} ({pct.toFixed(1)}%)
                                                     </span>
                                                 </div>
-                                                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                                                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                                                     <div
                                                         className={`h-full rounded-full ${color}`}
                                                         style={{ width: `${pct}%` }}
@@ -315,7 +311,7 @@ export function DashboardHome() {
                             <BarChart3 className="h-5 w-5 text-emerald-700" />
                             <div>
                                 <CardTitle>Khối lượng ca theo thời gian</CardTitle>
-                                <CardDescription>
+                                <CardDescription className='mt-1'>
                                     {volumeQuery.isSuccess
                                         ? `Tổng ${volumeQuery.data.total} (kỳ: ${volumeQuery.data.granularity})`
                                         : ''}
@@ -378,7 +374,7 @@ export function DashboardHome() {
                                     </div>
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    API: {dayjs(volumeQuery.data.fromDate).format('DD/MM/YYYY HH:mm')} —{' '}
+                                    {dayjs(volumeQuery.data.fromDate).format('DD/MM/YYYY HH:mm')} —{' '}
                                     {dayjs(volumeQuery.data.toDate).format('DD/MM/YYYY HH:mm')}
                                 </p>
                             </div>
