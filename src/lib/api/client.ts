@@ -3780,6 +3780,42 @@ class ApiClient {
     async deleteDeviceOutbound(id: string): Promise<ApiResponse<{ message: string }>> {
         return this.request<{ message: string }>(`/device-outbound/${id}`, { method: "DELETE" });
     }
+
+    /** GET /dashboard/workflow-state-distribution */
+    async getDashboardWorkflowStateDistribution(params?: {
+        fromDate?: string;
+        toDate?: string;
+        currentRoomId?: string;
+        currentDepartmentId?: string;
+    }): Promise<ApiResponse<DashboardStateDistributionData>> {
+        const q = new URLSearchParams();
+        if (params?.fromDate) q.append("fromDate", params.fromDate);
+        if (params?.toDate) q.append("toDate", params.toDate);
+        if (params?.currentRoomId) q.append("currentRoomId", params.currentRoomId);
+        if (params?.currentDepartmentId) q.append("currentDepartmentId", params.currentDepartmentId);
+        const qs = q.toString();
+        return this.request<DashboardStateDistributionData>(
+            `/dashboard/workflow-state-distribution${qs ? `?${qs}` : ""}`,
+        );
+    }
+
+    /** GET /dashboard/case-volume */
+    async getDashboardCaseVolume(params?: {
+        granularity?: "day" | "week" | "month";
+        fromDate?: string;
+        toDate?: string;
+        currentRoomId?: string;
+        currentDepartmentId?: string;
+    }): Promise<ApiResponse<DashboardCaseVolumeData>> {
+        const q = new URLSearchParams();
+        if (params?.granularity) q.append("granularity", params.granularity);
+        if (params?.fromDate) q.append("fromDate", params.fromDate);
+        if (params?.toDate) q.append("toDate", params.toDate);
+        if (params?.currentRoomId) q.append("currentRoomId", params.currentRoomId);
+        if (params?.currentDepartmentId) q.append("currentDepartmentId", params.currentDepartmentId);
+        const qs = q.toString();
+        return this.request<DashboardCaseVolumeData>(`/dashboard/case-volume${qs ? `?${qs}` : ""}`);
+    }
 }
 
 /** GET /pivka-ii-results/by-stored-sr-service/:id — chi tiết kết quả theo dòng BML_STORED_SR_SERVICES */
@@ -3855,6 +3891,39 @@ export interface DeviceOutboundBatchBody {
     receptionCode: string;
     serviceCode: string;
     items: DeviceOutboundBatchItem[];
+}
+
+/** Dashboard — phân bổ ca theo workflow state */
+export interface DashboardStateDistributionItem {
+    stateId: string;
+    stateCode: string;
+    stateName: string;
+    stateOrder: number;
+    count: number;
+}
+
+export interface DashboardStateDistributionData {
+    fromDate: string | null;
+    toDate: string | null;
+    /** Echo từ API; có thể thiếu nếu backend cũ */
+    currentRoomId?: string | null;
+    currentDepartmentId?: string | null;
+    items: DashboardStateDistributionItem[];
+    totalCases: number;
+}
+
+/** Dashboard — khối lượng SR theo kỳ */
+export interface DashboardCaseVolumePoint {
+    period: string;
+    count: number;
+}
+
+export interface DashboardCaseVolumeData {
+    granularity: "day" | "week" | "month";
+    fromDate: string;
+    toDate: string;
+    series: DashboardCaseVolumePoint[];
+    total: number;
 }
 
 export const apiClient = new ApiClient();
