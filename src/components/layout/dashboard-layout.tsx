@@ -315,7 +315,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             name: 'Kết nối máy',
                             href: '/device-outbound',
                             icon: Cable,
-                            description: 'Xuất dữ liệu ra thiết bị'
+                            description: 'Xuất dữ liệu ra thiết bị' 
                         }
             ]
         }
