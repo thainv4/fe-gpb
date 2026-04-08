@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { BarChart3, GitBranch, AlertCircle, Loader2 } from 'lucide-react'
+import { getCaseVolumeColumnTooltip } from '@/components/dashboard/case-volume-period-range'
 
 const BAR_COLORS = [
     'bg-red-600',
@@ -201,7 +202,7 @@ export function DashboardHome() {
                         </label>
                     </div>
                     <Button type="button" variant="outline" onClick={resetRange}>
-                        Đặt lại 30 ngày
+                        Đặt lại 30 ngày gần nhất
                     </Button>
                 </CardContent>
             </Card>
@@ -349,10 +350,16 @@ export function DashboardHome() {
                                     >
                                         {volumeQuery.data.series.map((p) => {
                                             const h = Math.max(8, (p.count / maxVolume) * 180)
+                                            const columnTitle = getCaseVolumeColumnTooltip(
+                                                p.period,
+                                                volumeQuery.data.granularity,
+                                                p.count,
+                                            )
                                             return (
                                                 <div
                                                     key={p.period}
-                                                    className="flex min-w-[24px] max-w-[48px] flex-1 flex-col items-center justify-end gap-1"
+                                                    className="flex min-w-[24px] max-w-[48px] flex-1 cursor-help flex-col items-center justify-end gap-1"
+                                                    title={columnTitle}
                                                 >
                                                     <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
                                                         {p.count}
@@ -360,12 +367,8 @@ export function DashboardHome() {
                                                     <div
                                                         className="w-full rounded-t-md bg-emerald-600/85 transition-all"
                                                         style={{ height: `${h}px` }}
-                                                        title={`${p.period}: ${p.count}`}
                                                     />
-                                                    <span
-                                                        className="max-w-full truncate text-center text-[10px] text-muted-foreground"
-                                                        title={p.period}
-                                                    >
+                                                    <span className="max-w-full truncate text-center text-[10px] text-muted-foreground">
                                                         {p.period}
                                                     </span>
                                                 </div>
