@@ -1002,7 +1002,7 @@ export interface ServiceRequestDetail {
     icdText?: string | null;
     treatmentId?: number;
     treatmentCode?: string | null;
-    note?: string | null;
+    instructionNote?: string | null;
     requestRoom?: RoomInfo;
     requestDepartment?: DepartmentInfo;
     /** Tên bác sĩ chỉ định */

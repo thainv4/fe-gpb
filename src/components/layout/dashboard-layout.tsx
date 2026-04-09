@@ -310,7 +310,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             icon: NewspaperIcon,
                             description: 'Nhập và quản lý kết quả xét nghiệm'
                         },
-                        // ...(departmentType === 2 ? [PIVKA_RESULTS_NAV] : []),
+                        ...(departmentType === 2 ? [PIVKA_RESULTS_NAV] : []),
                         {
                             name: 'Kết nối máy',
                             href: '/device-outbound',
