@@ -817,6 +817,7 @@ export interface ServiceRequestService {
     rangeHigh?: number | null;
     mapping?: string | null;
     testOrder?: number | null;
+    instructionNote?: string | null;
     lisService?: LisService;
     serviceTests?: ServiceTest[];
 }
@@ -1002,7 +1003,6 @@ export interface ServiceRequestDetail {
     icdText?: string | null;
     treatmentId?: number;
     treatmentCode?: string | null;
-    instructionNote?: string | null;
     requestRoom?: RoomInfo;
     requestDepartment?: DepartmentInfo;
     /** Tên bác sĩ chỉ định */

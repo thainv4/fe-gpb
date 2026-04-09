@@ -998,7 +998,6 @@ export default function TestIndicationsTable() {
                             />
                         </div>
 
-                        
                     </div>
 
                     <div className="space-y-6">
@@ -1035,6 +1034,7 @@ export default function TestIndicationsTable() {
                                     <th className="px-4 py-3 text-left text-sm font-semibold border-r">STT</th>
                                     <th className="px-4 py-3 text-left text-sm font-semibold border-r">Mã dịch vụ</th>
                                     <th className="px-4 py-3 text-left text-sm font-semibold border-r">Tên dịch vụ</th>
+                                    <th className="w-[32%] min-w-[320px] px-4 py-3 text-left text-sm font-semibold border-r">Ghi chú</th>
                                     <th className="px-4 py-3 text-left text-sm font-semibold">Giá</th>
                                 </tr>
                             </thead>
@@ -1050,6 +1050,7 @@ export default function TestIndicationsTable() {
                                                 <td className="px-4 py-2 text-sm border-r font-semibold">{serviceIndex + 1}</td>
                                                 <td className="px-4 py-2 text-sm border-r font-semibold">{service?.serviceCode || '-'}</td>
                                                 <td className="px-4 py-2 text-sm border-r font-semibold">{service?.serviceName || '-'}</td>
+                                                <td className="w-[32%] min-w-[320px] px-4 py-2 text-sm border-r font-semibold">{service?.instructionNote?.trim() || '-'}</td>
                                                 <td className="px-4 py-2 text-sm font-semibold">{typeof currentPrice === 'number' ? currentPrice.toLocaleString() : currentPrice}</td>
                                             </tr>
 
@@ -1062,6 +1063,7 @@ export default function TestIndicationsTable() {
                                                         <td className="px-4 py-2 text-sm border-r"></td>
                                                         <td className="px-4 py-2 text-sm border-r pl-8">{test?.testCode || '-'}</td>
                                                         <td className="px-4 py-2 text-sm border-r">{test?.testName || '-'}</td>
+                                                        <td className="w-[32%] min-w-[320px] px-4 py-2 text-sm border-r">-</td>
                                                         <td className="px-4 py-2 text-sm">{typeof testPrice === 'number' ? testPrice.toLocaleString() : testPrice}</td>
                                                     </tr>
                                                 )
@@ -1071,7 +1073,7 @@ export default function TestIndicationsTable() {
                                 })}
                                 {!isLoading && !isError && (!serviceRequest?.services || serviceRequest.services.length === 0) && (
                                     <tr>
-                                        <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                                        <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
                                             Không có dịch vụ nào.
                                         </td>
                                     </tr>
