@@ -105,25 +105,6 @@ function getResultTextAlign(rawValue: string | undefined | null, refNumber: numb
   return parsed < refNumber ? 'text-center' : 'text-right';
 }
 
-/**
- * Chỉ cho phép nhập số thập phân tối đa 2 chữ số sau dấu `.`.
- * Ví dụ hợp lệ: `12`, `12.`, `12.3`, `12.34`
- */
-function sanitizeDecimal2(raw: string): string | null {
-  const normalized = raw.trim();
-  // Chỉ cho phép dấu chấm '.' làm phân cách thập phân, không cho phép dấu phẩy ','
-  if (normalized.includes(',')) return null;
-  if (normalized === '') return '';
-  if (normalized.startsWith('-')) return null;
-
-  // Cho phép người dùng bắt đầu bằng '.' trong quá trình gõ => chuyển thành '0.'
-  const normalizedWithLeadingZero = normalized.startsWith('.') ? `0${normalized}` : normalized;
-
-  // Chỉ cho phép: số nguyên + (tuỳ chọn phần thập phân tối đa 2 chữ số)
-  if (!/^\d+(?:\.\d{0,2})?$/.test(normalizedWithLeadingZero)) return null;
-  return normalizedWithLeadingZero;
-}
-
 export function PivkaResultSheet({
   stored,
   selectedService,
@@ -273,20 +254,6 @@ export function PivkaResultSheet({
       toast({
         title: 'Thiếu dữ liệu',
         description: 'Bạn cần nhập đầy đủ 3 ô kết quả trước khi lưu.',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    const parsedAfpf = Number(afpFullResult.trim());
-    const parsedAfpL3 = Number(afpL3.trim());
-    const parsedPivka = Number(pivkaIiResult.trim());
-
-    // "giá trị dương"
-    if (![parsedAfpf, parsedAfpL3, parsedPivka].every((n) => Number.isFinite(n) && n > 0)) {
-      toast({
-        title: 'Giá trị không hợp lệ',
-        description: 'Kết quả phải là số dương (có thể thập phân).',
         variant: 'destructive',
       });
       return null;
@@ -906,22 +873,10 @@ export function PivkaResultSheet({
                     <td className="border border-black px-1 py-1">{row.label}</td>
                     <td className="border border-black p-0 bg-amber-50/40 print:p-1">
                       <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        inputMode="decimal"
+                        type="text"
                         value={values[row.key] ?? ''}
-                        onKeyDown={(e) => {
-                          if (e.key === ',') e.preventDefault();
-                        }}
-                        onPaste={(e) => {
-                          const text = e.clipboardData.getData('text');
-                          if (text.includes(',')) e.preventDefault();
-                        }}
                         onChange={(e) => {
-                          const next = sanitizeDecimal2(e.target.value);
-                          if (next === null) return;
-                          patch(row.key, next);
+                          patch(row.key, e.target.value);
                         }}
                         className={cn(
                           'h-9 rounded-none border-0 shadow-none font-medium',
