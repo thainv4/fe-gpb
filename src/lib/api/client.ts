@@ -905,7 +905,9 @@ export interface StoredService {
     documentId?: string | number | null;
     sampleTypeName?: string | null;
     stainingMethodName?: string | null;
-    barcodeMapGenGpb?: string | null;
+    barcodeGenGpb?: string | null;
+    resultConcludeGenGpb?: string | null;
+    sampleTypeNameGenGpb?: string | null;
     /** Phương pháp thực hiện xét nghiệm (form-gen-1) - từ GET /service-requests/stored/services/{serviceId} */
     testingMethodGen?: { id: string; methodName: string } | null;
 }
@@ -929,6 +931,9 @@ export interface StoredServiceRequestResponse {
     /** Mã yêu cầu xét nghiệm HIS (barcodeXn) — dùng cho HisTestServiceReq/UpdateResult ServiceReqCode */
     barcodeXn?: string | null;
     testIndexCode?: string | null;
+    barcodeGenGpb?: string | null;
+    resultConcludeGenGpb?: string | null;
+    sampleTypeNameGenGpb?: string | null;
     serviceReqSttId: number;
     serviceReqSttCode: string;
     serviceReqTypeId: number;
@@ -3274,16 +3279,16 @@ class ApiClient {
     }
 
     /**
-     * PATCH gpb-fields cho stored service request.
+     * PATCH gpb-fields cho stored service request (header BML_STORED_SERVICE_REQUESTS).
      * PATCH /api/v1/service-requests/stored/:storedServiceReqId/gpb-fields
-     * Body: { barcodeMapGenGpb, resultConcludeMapGenGpb, sampleTypeNameMapGenGpb }
+     * Body: { barcodeGenGpb, resultConcludeGenGpb, sampleTypeNameGenGpb }
      */
     async updateStoredServiceRequestGpbFields(
         storedServiceReqId: string,
         data: {
-            barcodeMapGenGpb: string;
-            resultConcludeMapGenGpb: string;
-            sampleTypeNameMapGenGpb: string;
+            barcodeGenGpb: string;
+            resultConcludeGenGpb: string;
+            sampleTypeNameGenGpb: string;
         }
     ): Promise<ApiResponse<unknown>> {
         return this.request<unknown>(

@@ -85,14 +85,17 @@ export function FormGen1({
   const sampleTypeName = specificService?.sampleTypeName ?? "";
   const receptionCode = specificService?.receptionCode ?? "";
   const resultName = data.services?.[0]?.serviceName ?? "";
-  const barcodeMapGenGpb =
-    specificService?.barcodeMapGenGpb ?? data?.services?.[0]?.barcodeMapGenGpb ?? "";
+  const barcodeGenGpb =
+    specificService?.barcodeGenGpb ??
+    data?.barcodeGenGpb ??
+    data?.services?.[0]?.barcodeGenGpb ??
+    "";
   const flag = data?.flag ?? "";
 
   const { data: resultConcludeData } = useQuery({
-    queryKey: ["stored-services-result-conclude", barcodeMapGenGpb],
-    queryFn: () => apiClient.getStoredServicesResultConclude(barcodeMapGenGpb),
-    enabled: !!barcodeMapGenGpb?.trim(),
+    queryKey: ["stored-services-result-conclude", barcodeGenGpb],
+    queryFn: () => apiClient.getStoredServicesResultConclude(barcodeGenGpb),
+    enabled: !!barcodeGenGpb?.trim(),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -119,7 +122,18 @@ export function FormGen1({
     const raw = resultConcludeData?.data?.resultConclude;
     return raw ? getResultConcludePlainText(raw) : "";
   }, [resultConcludeData?.data?.resultConclude]);
-  const diagnosisDisplay = resultConcludePlainText;
+
+  const headerResultConclude =
+    specificService?.resultConcludeGenGpb?.trim() ||
+    data?.resultConcludeGenGpb?.trim() ||
+    "";
+  const diagnosisDisplay =
+    headerResultConclude || resultConcludePlainText;
+
+  const headerSampleTypeName =
+    specificService?.sampleTypeNameGenGpb?.trim() ||
+    data?.sampleTypeNameGenGpb?.trim() ||
+    "";
 
   /** Nội dung mục 5 trang 1: không gộp resultNote (ghi chú đưa sang trang 2) */
   const resultText = useMemo(() => {
@@ -401,12 +415,14 @@ export function FormGen1({
               <div className="mt-2 flex flex-col gap-y-2">
                 <div className="flex">
                   <span className="font-semibold">Mã Giải phẫu bệnh:</span>
-                  <span className="ml-2">{barcodeMapGenGpb}</span>
+                  <span className="ml-2">{barcodeGenGpb}</span>
                 </div>
                 <div className="flex">
                   <span className="font-semibold">Vị trí lấy mẫu:</span>
                   <span className="ml-2">
-                    {resultConcludeData?.data?.sampleTypeName?.trim() || "-"}
+                    {headerSampleTypeName ||
+                      resultConcludeData?.data?.sampleTypeName?.trim() ||
+                      "-"}
                   </span>
                 </div>
                 <div className="flex">

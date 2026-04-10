@@ -159,7 +159,7 @@ export default function SampleDeliveryTable() {
     const [selectedFlag, setSelectedFlag] = useState<string>('')
     // State cho phương pháp nhuộm
     const [selectedStainingMethod, setSelectedStainingMethod] = useState<string>('')
-    const [barcodeMapGenGpb, setBarcodeMapGenGpb] = useState<string>('')
+    const [barcodeGenGpb, setBarcodeGenGpb] = useState<string>('')
     const [gpbResultConclude, setGpbResultConclude] = useState<string>('') // Kết quả từ API result-conclude (khi nhấn Enter ở Mã bệnh phẩm GPB)
     const [gpbSampleTypeName, setGpbSampleTypeName] = useState<string>('') // Vị trí lấy mẫu GPB từ API result-conclude
     const [stainingMethodSearch, setStainingMethodSearch] = useState<string>('') // Từ khóa đang gõ
@@ -180,7 +180,7 @@ export default function SampleDeliveryTable() {
             selectedFlag,
             samplingMethodType,
             selectedStainingMethod,
-            barcodeMapGenGpb,
+            barcodeGenGpb,
         },
         {
             saveScroll: true,
@@ -195,7 +195,7 @@ export default function SampleDeliveryTable() {
                 if (data.selectedFlag) setSelectedFlag(data.selectedFlag)
                 if (data.samplingMethodType) setSamplingMethodType(data.samplingMethodType)
                 if (data.selectedStainingMethod) setSelectedStainingMethod(data.selectedStainingMethod)
-                if (data.barcodeMapGenGpb !== undefined) setBarcodeMapGenGpb(data.barcodeMapGenGpb)
+                if (data.barcodeGenGpb !== undefined) setBarcodeGenGpb(data.barcodeGenGpb)
             },
         }
     )
@@ -311,9 +311,9 @@ export default function SampleDeliveryTable() {
             currentRoomId: string;
             selectedFlag: string;
             selectedStainingMethod: string;
-            barcodeMapGenGpb: string;
-            resultConcludeMapGenGpb: string;
-            sampleTypeNameMapGenGpb: string;
+            barcodeGenGpb: string;
+            resultConcludeGenGpb: string;
+            sampleTypeNameGenGpb: string;
         }) => {
             // Bước 1: Gọi API tổng hợp để cập nhật flag và staining method cùng lúc (nếu có) - PHẢI thành công
             if (params.storedServiceReqId && (params.selectedStainingMethod || params.selectedFlag)) {
@@ -386,13 +386,13 @@ export default function SampleDeliveryTable() {
                 throw new Error(response.error || response.message || 'Không thể bàn giao mẫu')
             }
 
-            // Bước 5: PATCH gpb-fields (barcodeMapGenGpb, resultConcludeMapGenGpb, sampleTypeNameMapGenGpb)
+            // Bước 5: PATCH gpb-fields (barcodeGenGpb, resultConcludeGenGpb, sampleTypeNameGenGpb)
             const gpbResponse = await apiClient.updateStoredServiceRequestGpbFields(
                 params.storedServiceReqId,
                 {
-                    barcodeMapGenGpb: params.barcodeMapGenGpb,
-                    resultConcludeMapGenGpb: params.resultConcludeMapGenGpb,
-                    sampleTypeNameMapGenGpb: params.sampleTypeNameMapGenGpb,
+                    barcodeGenGpb: params.barcodeGenGpb,
+                    resultConcludeGenGpb: params.resultConcludeGenGpb,
+                    sampleTypeNameGenGpb: params.sampleTypeNameGenGpb,
                 }
             )
             if (!gpbResponse.success) {
@@ -461,17 +461,17 @@ export default function SampleDeliveryTable() {
         },
     })
 
-    // Tự động gọi API result-conclude khi barcodeMapGenGpb thay đổi (không cần Enter)
+    // Tự động gọi API result-conclude khi barcodeGenGpb thay đổi (không cần Enter)
     useEffect(() => {
         if (resultFormType !== 2) return
-        const code = barcodeMapGenGpb.trim()
+        const code = barcodeGenGpb.trim()
         if (!code) {
             setGpbResultConclude('')
             setGpbSampleTypeName('')
             return
         }
         resultConcludeMutation.mutate(code)
-    }, [barcodeMapGenGpb, resultFormType])
+    }, [barcodeGenGpb, resultFormType])
 
     const handleConfirmHandover = () => {
         if (!storedServiceReqId) {
@@ -535,9 +535,9 @@ export default function SampleDeliveryTable() {
             currentRoomId: receiverRoomId,
             selectedFlag: resultFormType === 2 ? samplingMethodType : selectedFlag,
             selectedStainingMethod: resultFormType === 2 ? '' : selectedStainingMethod,
-            barcodeMapGenGpb: barcodeMapGenGpb ?? '',
-            resultConcludeMapGenGpb: gpbResultConclude ?? '',
-            sampleTypeNameMapGenGpb: gpbSampleTypeName ?? '',
+            barcodeGenGpb: barcodeGenGpb ?? '',
+            resultConcludeGenGpb: gpbResultConclude ?? '',
+            sampleTypeNameGenGpb: gpbSampleTypeName ?? '',
         })
     }
 
@@ -909,8 +909,8 @@ export default function SampleDeliveryTable() {
                                             <Input
                                                 type="text"
                                                 className="font-semibold"
-                                                value={barcodeMapGenGpb}
-                                                onChange={(e) => setBarcodeMapGenGpb(e.target.value)}
+                                                value={barcodeGenGpb}
+                                                onChange={(e) => setBarcodeGenGpb(e.target.value)}
                                                 placeholder="Nhập mã bệnh phẩm GPB"
                                             />
                                             {resultConcludeMutation.isPending && (
