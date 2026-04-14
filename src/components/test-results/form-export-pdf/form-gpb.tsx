@@ -4,6 +4,12 @@ import React, { useMemo, useCallback, useEffect, useState, useRef } from "react"
 import { StoredServiceRequestResponse, StoredService, apiClient, WorkflowActionInfo } from "@/lib/api/client";
 import { QRCodeSVG } from "qrcode.react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerTime } from "@/hooks/use-server-time";
+import {
+  formatVietnamSigningDateLineFromIso,
+  SERVER_TIME_ERROR_LABEL,
+  SERVER_TIME_LOADING_LABEL,
+} from "@/lib/server-time";
 
 // ==================== TYPES ====================
 interface FormTemplateProps {
@@ -475,6 +481,13 @@ export function FormTemplate({
     [workflowActionsData]
   );
 
+  const { data: serverTimeIso, isError: serverTimeError } = useServerTime();
+  const signingDateLine =
+    serverTimeIso != null
+      ? formatVietnamSigningDateLineFromIso(serverTimeIso)
+      : serverTimeError
+        ? SERVER_TIME_ERROR_LABEL
+        : SERVER_TIME_LOADING_LABEL;
   const resultText = useMemo(() => {
     if (!specificService) return "";
 
@@ -778,8 +791,7 @@ export function FormTemplate({
               <div className="signature-section">
                 <div className="text-center">
                   <div className="text-sm text-gray-600 border-t border-gray-400 px-10">
-                    Ngày {new Date().getDate()} tháng{" "}
-                    {new Date().getMonth() + 1} năm {new Date().getFullYear()}
+                    {signingDateLine}
                   </div>
 
                   <div className="font-bold text-base mb-4">

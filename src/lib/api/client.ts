@@ -1663,6 +1663,16 @@ class ApiClient {
         return this.request<LoginResponse["user"]>("/auth/profile");
     }
 
+    /**
+     * GET /server-time — JSON { serverTime: ISO-8601 string } (authoritative backend clock).
+     * When not implemented, the app falls back to Next.js GET /api/server-time.
+     */
+    async getServerTime(): Promise<ApiResponse<{ serverTime: string }>> {
+        return this.request<{ serverTime: string }>("/server-time", {
+            method: "GET",
+        });
+    }
+
     async changePassword(passwordData: ChangePasswordRequest): Promise<ApiResponse> {
         return this.request("/auth/change-password", {
             method: "POST",

@@ -8,6 +8,12 @@ import {
 } from "@/lib/api/client";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
+import { useServerTime } from "@/hooks/use-server-time";
+import {
+  formatVietnamSigningDateLineFromIso,
+  SERVER_TIME_ERROR_LABEL,
+  SERVER_TIME_LOADING_LABEL,
+} from "@/lib/server-time";
 
 export interface FormGen1Props {
   data: StoredServiceRequestResponse;
@@ -105,6 +111,14 @@ export function FormGen1({
     staleTime: 5 * 60 * 1000,
     enabled: !!data.id,
   });
+
+  const { data: serverTimeIso, isError: serverTimeError } = useServerTime();
+  const signingDateLine =
+    serverTimeIso != null
+      ? formatVietnamSigningDateLineFromIso(serverTimeIso)
+      : serverTimeError
+        ? SERVER_TIME_ERROR_LABEL
+        : SERVER_TIME_LOADING_LABEL;
   const sampleCollectorInfo = useMemo(
     () => workflowActionsData?.data?.find((action) => action.stateOrder === 1),
     [workflowActionsData]
@@ -481,8 +495,7 @@ export function FormGen1({
         {/* Signature - cố định ở cuối trang */}
         <div className="avoid-break flex flex-col items-center mb-20 ml-80">
           <div className="text-center align-top">
-            Ngày {new Date().getDate()} tháng{" "}
-            {new Date().getMonth() + 1} năm {new Date().getFullYear()}
+            {signingDateLine}
           </div>
           <div className="font-bold">
             Người phê duyệt kết quả

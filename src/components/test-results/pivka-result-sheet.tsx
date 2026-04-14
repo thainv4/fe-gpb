@@ -13,6 +13,15 @@ import { useAuthStore } from '@/lib/stores/auth';
 import { useHisStore } from '@/lib/stores/his';
 import { useCurrentRoomStore } from '@/lib/stores/current-room';
 import { pdfBase64FromContainerWithPuppeteer } from '@/lib/utils/pdf-export';
+import { useServerTime } from '@/hooks/use-server-time';
+import {
+  formatHisYyyyMMddHHmmssFromIso,
+  formatVietnamSigningDateLineFromIso,
+  formatVietnamYyyyMmDdFromIso,
+  getServerTimeIso,
+  SERVER_TIME_ERROR_LABEL,
+  SERVER_TIME_LOADING_LABEL,
+} from '@/lib/server-time';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/ui/loading';
 import {
@@ -49,17 +58,6 @@ function formatInstructionTime(n?: number): string {
   const h = s.slice(8, 10);
   const mi = s.slice(10, 12);
   return `${h}:${mi} ${d}/${mo}/${y}`;
-}
-
-/** yyyyMMddHHmmss (number) cho HIS UpdateResult */
-function formatHisYyyyMMddHHmmss(d: Date): number {
-  const y = d.getFullYear();
-  const mo = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const h = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  const s = String(d.getSeconds()).padStart(2, '0');
-  return Number.parseInt(`${y}${mo}${day}${h}${mi}${s}`, 10);
 }
 
 const HIS_UPDATE_RESULT_URL =
@@ -148,8 +146,15 @@ export function PivkaResultSheet({
   const yearOfBirth = stored.patientDob ? String(stored.patientDob).slice(0, 4) : '—';
   const orderCode = stored.serviceReqCode || stored.hisServiceReqCode || '—';
 
-  const now = new Date();
-  const approvalDateLine = `Ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`;
+  const { data: serverTimeIso, isError: serverTimeError } = useServerTime();
+  const approvalDateLine =
+    serverTimeIso != null
+      ? formatVietnamSigningDateLineFromIso(serverTimeIso)
+      : serverTimeError
+        ? SERVER_TIME_ERROR_LABEL
+        : SERVER_TIME_LOADING_LABEL;
+
+  const serverTimeReady = serverTimeIso != null;
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -321,8 +326,8 @@ export function PivkaResultSheet({
         throw new Error('Không thể tạo file PDF để ký');
       }
 
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const signTimeIso = await getServerTimeIso();
+      const dateStr = formatVietnamYyyyMmDdFromIso(signTimeIso);
       const pageCount = pdfResult.pageCount;
       const signRequest = {
         PointSign: {
@@ -361,7 +366,7 @@ export function PivkaResultSheet({
         throw new Error('Ký số thất bại');
       }
 
-      const finishTime = formatHisYyyyMMddHHmmss(new Date());
+      const finishTime = formatHisYyyyMMddHHmmssFromIso(signTimeIso);
 
       const documentId = signResponse.data?.Data?.DocumentId;
       const signedDocumentBase64 = signResponse.data?.Data?.Signs?.[0]?.Version?.Base64Data;
@@ -595,7 +600,12 @@ export function PivkaResultSheet({
     <div className="space-y-4">
       <div className="flex gap-2 justify-end print:hidden">
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => handlePrint()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handlePrint()}
+            disabled={!serverTimeReady}
+          >
             In phiếu
           </Button>
           <Button
@@ -614,7 +624,7 @@ export function PivkaResultSheet({
             type="button"
             variant="outline"
             onClick={() => setConfirmSignDialogOpen(true)}
-            disabled={isSigning || isCanceling}
+            disabled={isSigning || isCanceling || !serverTimeReady}
           >
             {isSigning ? 'Đang ký số...' : 'Ký số'}
           </Button>
@@ -663,7 +673,7 @@ export function PivkaResultSheet({
                 setConfirmSignDialogOpen(false);
                 handleSignDocument();
               }}
-              disabled={isSigning || isCanceling}
+              disabled={isSigning || isCanceling || !serverTimeReady}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isSigning ? (
