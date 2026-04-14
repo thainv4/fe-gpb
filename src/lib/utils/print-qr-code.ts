@@ -26,11 +26,20 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
     const safeBirthYear = patientBirthYear ? escapeHtml(String(patientBirthYear)) : ''
 
     const patientNameBlock = safePatientName
-        ? `<div class="patient-name-vertical">${safePatientName}</div>`
+        ? `<div class="patient-name">${safePatientName}</div>`
         : ''
     const birthYearBlock = safeBirthYear
-        ? `<div class="patient-birth-year">${safeBirthYear}</div>`
+        ? `<div class="birth-year">${safeBirthYear}</div>`
         : ''
+
+    const qrBlock = `
+        <div class="qr-half">
+            ${patientNameBlock}
+            <div class="qr-row">
+                ${birthYearBlock}
+                <div class="qr-code">${qrCodeHtml}</div>
+            </div>
+        </div>`
 
     printWindow.document.write(`
         <!DOCTYPE html>
@@ -39,7 +48,6 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>In mã QR - ${safeTitle}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
             <style>
                 @page {
                     size: 90mm 44mm;
@@ -51,103 +59,79 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
                     padding: 0;
                     box-sizing: border-box;
                 }
+                html, body {
+                    width: 100%;
+                    height: 100%;
+                    font-family: Arial, Helvetica, sans-serif;
+                }
                 .page-two-qr {
                     display: flex;
                     align-items: center;
-                    justify-content: center; /* 2 block tụ ở giữa */
-                    gap: 26mm; /* khoảng cách rõ rệt giữa 2 block */
+                    justify-content: center;
+                    gap: 20mm;
                     width: 100%;
-                    min-height: 100%;
+                    height: 100%;
                 }
                 .qr-half {
-                    flex: 0 0 30mm; /* mỗi block rộng 30mm, giúp gap nhìn rõ */
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    width: 35mm;
+                }
+                .patient-name {
+                    font-size: 3.5mm;
+                    font-weight: 700;
+                    line-height: 1.25;
+                    text-align: center;
+                    max-width: 35mm;
+                    overflow: hidden;
+                    word-break: break-word;
+                    margin-bottom: 0.5mm;
+                }
+                .qr-row {
                     display: flex;
                     flex-direction: row;
                     align-items: center;
-                    justify-content: center;
-                    min-height: 0;
-                    gap: 0.5mm; /* birth year sát QR */
+                    gap: 1mm;
                 }
-                /* Tên bệnh nhân: nằm ngang, nhiều dòng, căn giữa */
-                .patient-name-vertical {
-                    font-size: 0.4rem;
-                    line-height: 1.1;
-                    max-width: 22mm;
-                    margin-bottom: 0.5mm;
-                    overflow: hidden;
-                    white-space: normal;
-                    word-break: break-word;
-                    overflow-wrap: break-word;
-                    text-align: center;
+                .birth-year {
+                    writing-mode: vertical-rl;
+                    transform: rotate(180deg);
+                    font-size: 4.2mm;
+                    font-weight: 700;
+                    line-height: 1;
+                    white-space: nowrap;
+                    flex-shrink: 0;
                 }
-                .qr-half .qr-code-wrap {
+                .qr-code {
                     flex-shrink: 0;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    gap: 0.5mm;
-                    position: relative; /* làm container cho overlay năm sinh */
                 }
-                /* Năm sinh: dọc, overlay sát cạnh QR bên trái */
-                .patient-birth-year {
-                    position: absolute;
-                    left: 0;
-                    top: 50%;
-                    transform: translate(-100%, -50%) rotate(180deg);
-                    writing-mode: vertical-rl;
-                    text-orientation: mixed;
-                    font-size: 0.5rem;
-                    line-height: 1.15;
-                    max-height: 100%;
-                    max-width: 8mm;
-                    overflow: hidden;
-                    white-space: normal;
-                    word-break: break-word;
-                    overflow-wrap: break-word;
-                    z-index: 1;
+                .qr-code svg {
+                    display: block;
+                }
+                .print-text-xs {
+                    font-size: 5mm;
+                    font-weight: 700;
+                    line-height: 1.3;
+                    margin-top: 0.5mm;
                 }
                 @media print {
                     html, body {
-                        width: 100%;
-                        height: 100%;
                         margin: 0;
                         padding: 0;
                         overflow: hidden;
                     }
-                    .page-two-qr {
-                        gap: 26mm;
-                    }
-                    .patient-name-vertical {
-                        font-size: 11px !important;
-                        line-height: 1.2 !important;
-                    }
-                    .patient-birth-year {
-                        font-size: 16px !important;
-                    }
-                    .print-text-xs {
-                        font-size: 1rem !important;
-                        line-height: 1.2rem !important;
-                    }
                 }
             </style>
         </head>
-        <body class="min-h-screen bg-white p-2">
-            <div class="page-two-qr print-container">
-              <div class="qr-half text-center">
-              <div class="qr-code-wrap">
-                 ${birthYearBlock}
-                 ${patientNameBlock}
-             <div class="qr-code">${qrCodeHtml}</div>
-        </div>
-        </div>
-         <div class="qr-half text-center">
-        <div class="qr-code-wrap">
-            ${birthYearBlock}
-            ${patientNameBlock}
-            <div class="qr-code">${qrCodeHtml}</div>
-        </div>
-        </div>
-         </div>
+        <body>
+            <div class="page-two-qr">
+                ${qrBlock}
+                ${qrBlock}
+            </div>
             <script>
                 window.onload = function() {
                     setTimeout(function() {
