@@ -905,7 +905,7 @@ export default function SampleDeliveryTable() {
 
                                 {resultFormType === 2 && (
                                     <>
-                                        <div className="md:col-span-2 flex justify-end">
+                                        <div className="md:col-span-2">
                                             <Button
                                                 type="button"
                                                 variant="outline"
