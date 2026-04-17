@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Plus, Minus } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading";
 import {
     Dialog,
@@ -32,6 +32,37 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useHisStore } from "@/lib/stores/his";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
+
+/** Vai trò mặc định trong kíp thực hiện xét nghiệm (dropdown). */
+const TESTING_EXECUTION_TEAM_ROLE_OPTIONS = [
+    "Phẫu Thuật Viên Chính",
+    "Phụ Phẫu Thuật",
+    "Phụ Phẫu Thuật 2",
+    "Gây Mê / Tê Chính",
+    "Gây Mê / Tê Phụ",
+    "Dụng Cụ Vòng Trong",
+    "Dụng Cụ Vòng Ngoài",
+] as const;
+
+interface TestingExecutionTeamRow {
+    id: string;
+    role: string;
+    fullName: string;
+    department: string;
+}
+
+function createTestingExecutionTeamRowId(): string {
+    return `team-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function createDefaultTestingExecutionTeamRows(): TestingExecutionTeamRow[] {
+    return TESTING_EXECUTION_TEAM_ROLE_OPTIONS.map((role) => ({
+        id: createTestingExecutionTeamRowId(),
+        role,
+        fullName: "",
+        department: "",
+    }));
+}
 
 /** Định dạng thời gian hành động workflow cho ô read-only (đồng bộ kiểu hiển thị với form PDF gen-1). */
 function formatWorkflowActionDateTime(iso?: string | null): string {
@@ -220,6 +251,11 @@ export default function TestResultForm() {
     const [samplingMethodGenSearch, setSamplingMethodGenSearch] = useState<string>('')
     const [appliedSamplingMethodGenSearch, setAppliedSamplingMethodGenSearch] = useState<string>('')
     const [samplingMethodGenSelectOpen, setSamplingMethodGenSelectOpen] = useState(false)
+
+    /** Kíp thực hiện xét nghiệm: vai trò, họ tên, khoa (UI; reset khi đổi phiếu). */
+    const [testingExecutionTeamRows, setTestingExecutionTeamRows] = useState<TestingExecutionTeamRow[]>(() =>
+        createDefaultTestingExecutionTeamRows()
+    )
 
     // Default templates with HTML format (bold titles and indented content)
     const defaultMacroscopicComment = `<p style="padding-left: 0; margin-left: 0;"><strong>NHẬN XÉT ĐẠI THỂ:</strong></p><p style="padding-left: 20px;"></p>`
@@ -892,6 +928,10 @@ export default function TestResultForm() {
     // Reset guard when switching to a different storedServiceReqId.
     useEffect(() => {
         lastAutoLoadedServiceIdRef.current = null
+    }, [storedServiceReqId])
+
+    useEffect(() => {
+        setTestingExecutionTeamRows(createDefaultTestingExecutionTeamRows())
     }, [storedServiceReqId])
 
     // Handler xem văn bản đã ký (stream PDF theo hisServiceReqCode)
@@ -2090,7 +2130,7 @@ export default function TestResultForm() {
                                         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                                             <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
                                                 <h3 className="text-lg font-semibold">
-                                                    Chọn danh sách dịch vụ để trả kết quả
+                                                    Danh sách dịch vụ trả kết quả
                                                 </h3>
                                                 <div className="flex gap-2">
                                                     <Button
@@ -2134,7 +2174,142 @@ export default function TestResultForm() {
                                         </div>
                                     )}
 
-
+                                    {/* <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                                        <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
+                                            <h3 className="text-lg font-semibold">
+                                                Kíp thực hiện xét nghiệm
+                                            </h3>
+                                        </div>
+                                        <div className="max-h-[min(420px,55vh)] overflow-y-auto rounded-md border border-gray-300">
+                                            <table className="w-full border-collapse text-sm">
+                                                <thead className="sticky top-0 z-[1] bg-gray-100">
+                                                    <tr>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center font-medium text-gray-700">
+                                                            Vai trò
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center font-medium text-gray-700">
+                                                            Họ và tên
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center font-medium text-gray-700">
+                                                            Khoa
+                                                        </th>
+                                                        <th className="w-11 border border-gray-300 px-1 py-2" aria-hidden />
+                                                        <th className="w-11 border border-gray-300 px-1 py-2" aria-hidden />
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {testingExecutionTeamRows.map((row, index) => {
+                                                        const roleValue = TESTING_EXECUTION_TEAM_ROLE_OPTIONS.includes(
+                                                            row.role as (typeof TESTING_EXECUTION_TEAM_ROLE_OPTIONS)[number]
+                                                        )
+                                                            ? row.role
+                                                            : TESTING_EXECUTION_TEAM_ROLE_OPTIONS[0];
+                                                        return (
+                                                            <tr
+                                                                key={row.id}
+                                                                className={index === 0 ? "bg-sky-50/80" : "bg-white"}
+                                                            >
+                                                                <td className="border border-gray-300 p-1 align-middle">
+                                                                    <Select
+                                                                        value={roleValue}
+                                                                        onValueChange={(value) => {
+                                                                            setTestingExecutionTeamRows((prev) =>
+                                                                                prev.map((r) =>
+                                                                                    r.id === row.id ? { ...r, role: value } : r
+                                                                                )
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <SelectTrigger className="h-9 border-0 shadow-none focus:ring-0">
+                                                                            <SelectValue placeholder="Chọn vai trò" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {TESTING_EXECUTION_TEAM_ROLE_OPTIONS.map((opt) => (
+                                                                                <SelectItem key={opt} value={opt}>
+                                                                                    {opt}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </td>
+                                                                <td className="border border-gray-300 p-1 align-middle">
+                                                                    <Input
+                                                                        value={row.fullName}
+                                                                        onChange={(e) => {
+                                                                            const v = e.target.value;
+                                                                            setTestingExecutionTeamRows((prev) =>
+                                                                                prev.map((r) =>
+                                                                                    r.id === row.id ? { ...r, fullName: v } : r
+                                                                                )
+                                                                            );
+                                                                        }}
+                                                                        placeholder="Họ và tên"
+                                                                        className="h-9 border-0 shadow-none focus-visible:ring-0"
+                                                                    />
+                                                                </td>
+                                                                <td className="border border-gray-300 p-1 align-middle">
+                                                                    <Input
+                                                                        value={row.department}
+                                                                        onChange={(e) => {
+                                                                            const v = e.target.value;
+                                                                            setTestingExecutionTeamRows((prev) =>
+                                                                                prev.map((r) =>
+                                                                                    r.id === row.id ? { ...r, department: v } : r
+                                                                                )
+                                                                            );
+                                                                        }}
+                                                                        placeholder="Khoa"
+                                                                        className="h-9 border-0 shadow-none focus-visible:ring-0"
+                                                                    />
+                                                                </td>
+                                                                <td className="border border-gray-300 p-1 text-center align-middle">
+                                                                    {index === 0 ? (
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 shrink-0"
+                                                                            aria-label="Thêm dòng"
+                                                                            onClick={() => {
+                                                                                setTestingExecutionTeamRows((prev) => [
+                                                                                    ...prev,
+                                                                                    {
+                                                                                        id: createTestingExecutionTeamRowId(),
+                                                                                        role: TESTING_EXECUTION_TEAM_ROLE_OPTIONS[0],
+                                                                                        fullName: "",
+                                                                                        department: "",
+                                                                                    },
+                                                                                ]);
+                                                                            }}
+                                                                        >
+                                                                            <Plus className="h-4 w-4" />
+                                                                        </Button>
+                                                                    ) : null}
+                                                                </td>
+                                                                <td className="border border-gray-300 p-1 text-center align-middle">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 shrink-0"
+                                                                        aria-label="Xóa dòng"
+                                                                        disabled={testingExecutionTeamRows.length <= 1}
+                                                                        onClick={() => {
+                                                                            setTestingExecutionTeamRows((prev) =>
+                                                                                prev.filter((r) => r.id !== row.id)
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Minus className="h-4 w-4" />
+                                                                    </Button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div> */}
 
                                     {/* Test Results */}
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">

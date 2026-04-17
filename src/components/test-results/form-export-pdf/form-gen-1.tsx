@@ -148,6 +148,13 @@ export function FormGen1({
     specificService?.sampleTypeNameGenGpb?.trim() ||
     data?.sampleTypeNameGenGpb?.trim() ||
     "";
+  const sampleTypeDisplay =
+    headerSampleTypeName ||
+    resultConcludeData?.data?.sampleTypeName?.trim() ||
+    "";
+  const shouldShowGpbInfo = Boolean(
+    barcodeGenGpb?.trim() || sampleTypeDisplay || diagnosisDisplay?.trim()
+  );
 
   /** Nội dung mục 5 trang 1: không gộp resultNote (ghi chú đưa sang trang 2) */
   const resultText = useMemo(() => {
@@ -426,24 +433,22 @@ export function FormGen1({
                 </div>
 
               </div>
-              <div className="mt-2 flex flex-col gap-y-2">
-                <div className="flex">
-                  <span className="font-semibold">Mã Giải phẫu bệnh:</span>
-                  <span className="ml-2">{barcodeGenGpb}</span>
+              {shouldShowGpbInfo && (
+                <div className="mt-2 flex flex-col gap-y-2">
+                  <div className="flex">
+                    <span className="font-semibold">Mã Giải phẫu bệnh:</span>
+                    <span className="ml-2">{barcodeGenGpb || "-"}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="font-semibold">Vị trí lấy mẫu:</span>
+                    <span className="ml-2">{sampleTypeDisplay || "-"}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="font-semibold">Chẩn đoán mô bệnh học:</span>
+                    <span className="ml-2">{diagnosisDisplay || "-"}</span>
+                  </div>
                 </div>
-                <div className="flex">
-                  <span className="font-semibold">Vị trí lấy mẫu:</span>
-                  <span className="ml-2">
-                    {headerSampleTypeName ||
-                      resultConcludeData?.data?.sampleTypeName?.trim() ||
-                      "-"}
-                  </span>
-                </div>
-                <div className="flex">
-                  <span className="font-semibold">Chẩn đoán mô bệnh học:</span>
-                  <span className="ml-2">{diagnosisDisplay}</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 

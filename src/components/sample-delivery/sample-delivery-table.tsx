@@ -162,6 +162,7 @@ export default function SampleDeliveryTable() {
     const [barcodeGenGpb, setBarcodeGenGpb] = useState<string>('')
     const [gpbResultConclude, setGpbResultConclude] = useState<string>('') // Kết quả từ API result-conclude (khi nhấn Enter ở Mã bệnh phẩm GPB)
     const [gpbSampleTypeName, setGpbSampleTypeName] = useState<string>('') // Vị trí lấy mẫu GPB từ API result-conclude
+    const [showGpbInputs, setShowGpbInputs] = useState(true)
     const [stainingMethodSearch, setStainingMethodSearch] = useState<string>('') // Từ khóa đang gõ
     const [appliedStainingMethodSearch, setAppliedStainingMethodSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
     const [stainingMethodSelectOpen, setStainingMethodSelectOpen] = useState(false)
@@ -904,39 +905,62 @@ export default function SampleDeliveryTable() {
 
                                 {resultFormType === 2 && (
                                     <>
-                                        <div className="flex flex-col gap-2 md:col-span-2">
-                                            <Label>Mã bệnh phẩm GPB</Label>
-                                            <Input
-                                                type="text"
-                                                className="font-semibold"
-                                                value={barcodeGenGpb}
-                                                onChange={(e) => setBarcodeGenGpb(e.target.value)}
-                                                placeholder="Nhập mã bệnh phẩm GPB"
-                                            />
-                                            {resultConcludeMutation.isPending && (
-                                                <span className="text-xs text-muted-foreground">Đang tải kết luận mô bệnh học...</span>
-                                            )}
+                                        <div className="md:col-span-2 flex justify-end">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setShowGpbInputs((prev) => {
+                                                    const next = !prev
+                                                    if (!next) {
+                                                        setBarcodeGenGpb('')
+                                                        setGpbSampleTypeName('')
+                                                        setGpbResultConclude('')
+                                                    }
+                                                    return next
+                                                })}
+                                            >
+                                                {showGpbInputs ? 'Ẩn thông tin GPB' : 'Hiện thông tin GPB'}
+                                            </Button>
                                         </div>
 
-                                        <div className="flex flex-col gap-2">
-                                            <Label>Vị trí lấy mẫu GPB</Label>
-                                            <Input
-                                                type="text"
-                                                value={gpbSampleTypeName}      
-                                                onChange={(e) => setGpbSampleTypeName(e.target.value)}   
-                                                placeholder="Chưa có vị trí lấy mẫu GPB"
-                                            />
-                                        </div>
+                                        {showGpbInputs && (
+                                            <>
+                                                <div className="flex flex-col gap-2 md:col-span-2">
+                                                    <Label>Mã bệnh phẩm GPB</Label>
+                                                    <Input
+                                                        type="text"
+                                                        className="font-semibold"
+                                                        value={barcodeGenGpb}
+                                                        onChange={(e) => setBarcodeGenGpb(e.target.value)}
+                                                        placeholder="Nhập mã bệnh phẩm GPB"
+                                                    />
+                                                    {resultConcludeMutation.isPending && (
+                                                        <span className="text-xs text-muted-foreground">Đang tải kết luận mô bệnh học...</span>
+                                                    )}
+                                                </div>
 
-                                        <div className="flex flex-col gap-1 md:col-span-2">
-                                            <Label className="text-sm font-medium">Chẩn đoán mô bệnh học</Label>
-                                            <Textarea
-                                                value={gpbResultConclude}
-                                                onChange={(e) => setGpbResultConclude(e.target.value)}
-                                                className="resize-y min-h-[40px] text-sm bg-muted/30"
-                                                placeholder="Kết luận mô bệnh học sẽ được lấy tự động từ hệ thống, bạn có thể nhập thủ công tại đây..."
-                                            />
-                                        </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <Label>Vị trí lấy mẫu GPB</Label>
+                                                    <Input
+                                                        type="text"
+                                                        value={gpbSampleTypeName}
+                                                        onChange={(e) => setGpbSampleTypeName(e.target.value)}
+                                                        placeholder="Chưa có vị trí lấy mẫu GPB"
+                                                    />
+                                                </div>
+
+                                                <div className="flex flex-col gap-1 md:col-span-2">
+                                                    <Label className="text-sm font-medium">Chẩn đoán mô bệnh học</Label>
+                                                    <Textarea
+                                                        value={gpbResultConclude}
+                                                        onChange={(e) => setGpbResultConclude(e.target.value)}
+                                                        className="resize-y min-h-[40px] text-sm bg-muted/30"
+                                                        placeholder="Kết luận mô bệnh học sẽ được lấy tự động từ hệ thống, bạn có thể nhập thủ công tại đây..."
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
                                     </>
                                 )}
 
