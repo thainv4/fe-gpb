@@ -19,8 +19,9 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Search, FileText, Loader2, CheckCircle2 } from 'lucide-react'
+import { Search, FileText, Loader2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
 import { apiClient, ResultTemplate } from '@/lib/api/client'
+import { htmlToPlainText } from '@/lib/html'
 
 interface ResultTemplateSelectorProps {
     open: boolean
@@ -37,6 +38,7 @@ export function ResultTemplateSelector({
 }: ResultTemplateSelectorProps) {
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
 
     // Fetch templates
     const { data: templatesData, isLoading } = useQuery({
@@ -121,6 +123,16 @@ export function ResultTemplateSelector({
             onOpenChange(false)
             setSelectedTemplateId(null)
             setSearchTerm('')
+            setExpandedRows({})
+        }
+    }
+
+    const handleDialogOpenChange = (nextOpen: boolean) => {
+        onOpenChange(nextOpen)
+        if (!nextOpen) {
+            setSelectedTemplateId(null)
+            setSearchTerm('')
+            setExpandedRows({})
         }
     }
 
@@ -128,6 +140,7 @@ export function ResultTemplateSelector({
         onOpenChange(false)
         setSelectedTemplateId(null)
         setSearchTerm('')
+        setExpandedRows({})
     }
 
     const emptyMessage = searchTerm ? 'Không tìm thấy mẫu kết quả phù hợp' : 'Chưa có mẫu kết quả nào'
@@ -163,65 +176,102 @@ export function ResultTemplateSelector({
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {templates.map((template) => (
-                        <TableRow
-                            key={template.id}
-                            className={`cursor-pointer hover:bg-muted/50 ${selectedTemplateId === template.id
-                                ? 'bg-medical-50 hover:bg-medical-100'
-                                : ''
-                                }`}
-                            onClick={() => handleSelectTemplate(template)}
-                        >
-                            <TableCell className="text-center">
-                                {selectedTemplateId === template.id && (
-                                    <CheckCircle2
-                                        className="h-5 w-5 text-medical-600 inline-block" />
-                                )}
-                            </TableCell>
-                            <TableCell>
-                                <div className="text-sm font-medium text-gray-700">
-                                    {template.resultTemplateCode || (
-                                        <span className="text-muted-foreground italic text-xs">
-                                            Chưa có mã
-                                        </span>
+                    {templates.map((template) => {
+                        const descriptionText = htmlToPlainText(template.resultDescription)
+                        const concludeText = htmlToPlainText(template.resultConclude)
+                        const noteText = htmlToPlainText(template.resultNote)
+                        const isExpanded = !!expandedRows[template.id]
+                        const shouldShowExpand =
+                            descriptionText.length > 140 ||
+                            concludeText.length > 100 ||
+                            noteText.length > 80
+
+                        return (
+                            <TableRow
+                                key={template.id}
+                                className={`cursor-pointer hover:bg-muted/50 ${selectedTemplateId === template.id
+                                    ? 'bg-medical-50 hover:bg-medical-100'
+                                    : ''
+                                    }`}
+                                onClick={() => handleSelectTemplate(template)}
+                            >
+                                <TableCell className="text-center">
+                                    {selectedTemplateId === template.id && (
+                                        <CheckCircle2
+                                            className="h-5 w-5 text-medical-600 inline-block" />
                                     )}
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex items-start space-x-3">
-                                    <div
-                                        className="p-2 bg-medical-100 rounded-full flex-shrink-0 mt-1">
-                                        <FileText className="h-4 w-4 text-medical-600" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-semibold text-gray-900 mb-1">
-                                            {template.templateName}
-                                        </div>
-                                        <div className="text-xs text-gray-600 line-clamp-3 whitespace-pre-wrap">
-                                            {template.resultDescription}
-                                        </div>
-                                        {template.resultNote && (
-                                            <div className="text-xs text-muted-foreground mt-1 italic">
-                                                Ghi chú: {template.resultNote.substring(0, 50)}...
-                                            </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="text-sm font-medium text-gray-700">
+                                        {template.resultTemplateCode || (
+                                            <span className="text-muted-foreground italic text-xs">
+                                                Chưa có mã
+                                            </span>
                                         )}
                                     </div>
-                                </div>
-                            </TableCell>
-                            <TableCell>
-                                <div className="text-xs text-gray-600 line-clamp-2 whitespace-pre-wrap">
-                                    {template.resultConclude}
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    ))}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex items-start space-x-3">
+                                        <div
+                                            className="p-2 bg-medical-100 rounded-full flex-shrink-0 mt-1">
+                                            <FileText className="h-4 w-4 text-medical-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-sm font-semibold text-gray-900 mb-1">
+                                                {template.templateName}
+                                            </div>
+                                            <div className={`text-xs text-gray-600 whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}>
+                                                {descriptionText || '---'}
+                                            </div>
+                                            {noteText && (
+                                                <div className={`text-xs text-muted-foreground mt-1 italic whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-2'}`}>
+                                                    Ghi chú: {noteText}
+                                                </div>
+                                            )}
+                                            {shouldShowExpand && (
+                                                <button
+                                                    type="button"
+                                                    title={isExpanded ? 'Thu gọn' : 'Xem đầy đủ'}
+                                                    className="mt-1 inline-flex items-center gap-1 text-xs text-medical-700 hover:underline"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setExpandedRows((prev) => ({
+                                                            ...prev,
+                                                            [template.id]: !prev[template.id],
+                                                        }))
+                                                    }}
+                                                >
+                                                    {isExpanded ? (
+                                                        <>
+                                                            <ChevronUp className="h-3 w-3" />
+                                                            Thu gọn
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ChevronDown className="h-3 w-3" />
+                                                            Xem đầy đủ
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className={`text-xs text-gray-600 whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-2'}`}>
+                                        {concludeText || '---'}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        )
+                    })}
                 </TableBody>
             </Table>
         )
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent className="max-w-4xl max-h-[85vh]">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold">

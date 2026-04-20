@@ -42,6 +42,8 @@ import {
   Search,
   FileText,
   Copy,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   Card,
@@ -57,6 +59,7 @@ import {
   ResultTemplateRequest,
   ResultTemplateFilters,
 } from "@/lib/api/client";
+import { htmlToPlainText } from "@/lib/html";
 
 // Validation schema
 const resultTemplateSchema = z.object({
@@ -344,6 +347,7 @@ export default function ResultTemplateForm() {
     useState<ResultTemplate | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize] = useState(10);
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -495,10 +499,13 @@ export default function ResultTemplateForm() {
   };
 
   const handleCopyTemplate = (template: ResultTemplate) => {
+    const descriptionText = htmlToPlainText(template.resultDescription);
+    const concludeText = htmlToPlainText(template.resultConclude);
+    const noteText = htmlToPlainText(template.resultNote);
     const templateText = `Tên mẫu: ${template.templateName}\n\nMô tả: ${
-      template.resultDescription
-    }\n\nKết luận: ${template.resultConclude}\n\nGhi chú: ${
-      template.resultNote || "Không có"
+      descriptionText || "Không có"
+    }\n\nKết luận: ${concludeText || "Không có"}\n\nGhi chú: ${
+      noteText || "Không có"
     }`;
     navigator.clipboard.writeText(templateText);
     toast({
@@ -588,8 +595,22 @@ export default function ResultTemplateForm() {
                   <TableBody>
                     {templatesData?.data?.data &&
                     templatesData.data.data.length > 0 ? (
-                      templatesData.data.data.map((template) => (
-                        <TableRow key={template.id}>
+                      templatesData.data.data.map((template) => {
+                        const descriptionText = htmlToPlainText(
+                          template.resultDescription
+                        );
+                        const concludeText = htmlToPlainText(
+                          template.resultConclude
+                        );
+                        const noteText = htmlToPlainText(template.resultNote);
+                        const isExpanded = !!expandedRows[template.id];
+                        const shouldShowExpand =
+                          descriptionText.length > 140 ||
+                          concludeText.length > 100 ||
+                          noteText.length > 80;
+
+                        return (
+                          <TableRow key={template.id}>
                           <TableCell>
                             <div className="text-sm font-medium text-gray-700">
                               {template.resultTemplateCode || (
@@ -612,21 +633,57 @@ export default function ResultTemplateForm() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm text-gray-700 line-clamp-3 whitespace-pre-wrap">
-                              {template.resultDescription}
+                            <div
+                              className={`text-sm text-gray-700 whitespace-pre-wrap ${
+                                isExpanded ? "" : "line-clamp-3"
+                              }`}
+                            >
+                              {descriptionText || "---"}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {template.resultDescription?.length || 0} ký tự
+                              {descriptionText.length} ký tự
                             </div>
+                            {shouldShowExpand && (
+                              <button
+                                type="button"
+                                title={isExpanded ? "Thu gọn" : "Xem đầy đủ"}
+                                className="mt-1 inline-flex items-center gap-1 text-xs text-medical-700 hover:underline"
+                                onClick={() =>
+                                  setExpandedRows((prev) => ({
+                                    ...prev,
+                                    [template.id]: !prev[template.id],
+                                  }))
+                                }
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp className="h-3 w-3" />
+                                    Thu gọn
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-3 w-3" />
+                                    Xem đầy đủ
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm text-gray-700 line-clamp-2 whitespace-pre-wrap">
-                              {template.resultConclude}
+                            <div
+                              className={`text-sm text-gray-700 whitespace-pre-wrap ${
+                                isExpanded ? "" : "line-clamp-2"
+                              }`}
+                            >
+                              {concludeText || "---"}
                             </div>
-                            {template.resultNote && (
-                              <div className="text-xs text-muted-foreground mt-1 italic">
-                                Ghi chú: {template.resultNote.substring(0, 50)}
-                                ...
+                            {noteText && (
+                              <div
+                                className={`text-xs text-muted-foreground mt-1 italic whitespace-pre-wrap ${
+                                  isExpanded ? "" : "line-clamp-3"
+                                }`}
+                              >
+                                Ghi chú: {noteText}
                               </div>
                             )}
                           </TableCell>
@@ -658,8 +715,9 @@ export default function ResultTemplateForm() {
                               </Button>
                             </div>
                           </TableCell>
-                        </TableRow>
-                      ))
+                          </TableRow>
+                        );
+                      })
                     ) : (
                       <TableRow>
                         <TableCell
@@ -743,19 +801,21 @@ export default function ResultTemplateForm() {
               <div>
                 <span className="text-sm font-semibold">Mô tả: </span>
                 <span className="text-sm">
-                  {templateToDelete.resultDescription}
+                  {htmlToPlainText(templateToDelete.resultDescription)}
                 </span>
               </div>
               <div>
                 <span className="text-sm font-semibold">Kết luận: </span>
                 <span className="text-sm">
-                  {templateToDelete.resultConclude}
+                  {htmlToPlainText(templateToDelete.resultConclude)}
                 </span>
               </div>
               {templateToDelete.resultNote && (
                 <div>
                   <span className="text-sm font-semibold">Ghi chú: </span>
-                  <span className="text-sm">{templateToDelete.resultNote}</span>
+                  <span className="text-sm">
+                    {htmlToPlainText(templateToDelete.resultNote)}
+                  </span>
                 </div>
               )}
             </div>
