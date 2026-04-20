@@ -57,8 +57,7 @@ export default function TestIndicationsTable() {
     const [selectedSampleType, setSelectedSampleType] = useState<string>('')
     const [selectOpen, setSelectOpen] = useState<boolean>(false)
     const [sampleCode, setSampleCode] = useState<string>('') // Mã bệnh phẩm từ API response
-    const [sampleTypeSearch, setSampleTypeSearch] = useState<string>('') // Từ khóa đang gõ
-    const [appliedSearch, setAppliedSearch] = useState<string>('') // Từ khóa đã apply (sau khi nhấn Enter)
+    const [sampleTypeSearch, setSampleTypeSearch] = useState<string>('') // Từ khóa tìm kiếm bệnh phẩm
     const [storedServiceReqId, setStoredServiceReqId] = useState<string | undefined>()
     const [selectedPrefix, setSelectedPrefix] = useState<string>('') // Prefix chưa được chọn
     const [manualBarcode, setManualBarcode] = useState<string>('') // Barcode nhập thủ công
@@ -70,6 +69,7 @@ export default function TestIndicationsTable() {
     const sidInputRef = useRef<HTMLInputElement>(null)
     const sampleTriggerRef = useRef<HTMLButtonElement>(null)
     const barcodeRef = useRef<HTMLDivElement>(null)
+    const autoSelectedByInstructionRef = useRef<string>('')
 
     // Tab persistence hook
     const { scrollContainerRef } = useTabPersistence(
@@ -79,7 +79,6 @@ export default function TestIndicationsTable() {
             selectedSampleType,
             sampleCode,
             sampleTypeSearch,
-            appliedSearch,
             selectedPrefix,
             manualBarcode,
             isManualInput,
@@ -93,7 +92,6 @@ export default function TestIndicationsTable() {
                 if (data.selectedSampleType) setSelectedSampleType(data.selectedSampleType)
                 if (data.sampleCode) setSampleCode(data.sampleCode)
                 if (data.sampleTypeSearch) setSampleTypeSearch(data.sampleTypeSearch)
-                if (data.appliedSearch) setAppliedSearch(data.appliedSearch)
                 if (data.selectedPrefix) setSelectedPrefix(data.selectedPrefix)
                 if (data.manualBarcode) setManualBarcode(data.manualBarcode)
                 if (data.isManualInput !== undefined) setIsManualInput(data.isManualInput)
@@ -155,6 +153,21 @@ export default function TestIndicationsTable() {
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient
 
+    const normalizeText = (value: string) =>
+        value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, ' ')
+
+    // Lấy instructionNote đầu tiên khác rỗng từ danh sách dịch vụ.
+    const firstInstructionNote = useMemo(() => {
+        const services = serviceRequest?.services ?? []
+        const serviceWithNote = services.find((service) => typeof service?.instructionNote === 'string' && service.instructionNote.trim())
+        return serviceWithNote?.instructionNote?.trim() ?? ''
+    }, [serviceRequest])
+
     // Autofocus SID on mount
     useEffect(() => {
         sidInputRef.current?.focus()
@@ -205,26 +218,6 @@ export default function TestIndicationsTable() {
         }
     }
 
-    const handleSampleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        // Ngăn chặn tất cả keyboard events lan truyền đến Select component
-        // để tránh tự động highlight/chọn items khi đang gõ
-        if (e.key === 'Enter') {
-            e.preventDefault()
-            e.stopPropagation()
-            setAppliedSearch(sampleTypeSearch)
-            return
-        }
-
-        // Cho phép Escape để đóng dropdown
-        if (e.key === 'Escape') {
-            return
-        }
-
-        // Ngăn tất cả các phím khác lan truyền để tránh Select tự động filter/chọn
-        e.stopPropagation()
-    }
-
-
     // Handler khi nhấn Enter trong input nhập barcode thủ công
     const handleManualBarcodeKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && isManualInput && manualBarcode.trim()) {
@@ -235,7 +228,6 @@ export default function TestIndicationsTable() {
                 if (response.success && response.data?.sampleTypeId) {
                     // Xóa search để dropdown hiển thị full list, giúp Select tìm thấy option tương ứng
                     setSampleTypeSearch('')
-                    setAppliedSearch('')
                     // Set sampleTypeId vào dropdown
                     setSelectedSampleType(response.data.sampleTypeId)
                     toast({
@@ -294,15 +286,50 @@ export default function TestIndicationsTable() {
 
     const errorMessage = error ? error.message : ''
 
+    const normalizedSampleTypeSearch = sampleTypeSearch.trim()
+
     // Fetch sample types based on search
-    const { data: searchedSampleTypeData } = useQuery({
-        queryKey: ['sample-type-search', appliedSearch],
-        queryFn: () => apiClient.getSampleTypeByTypeName(appliedSearch),
-        enabled: !!appliedSearch && appliedSearch.trim().length > 0,
+    const {
+        data: searchedSampleTypeData,
+        isError: isSampleTypeSearchError,
+        error: sampleTypeSearchError,
+        isFetching: isSearchingSampleType,
+    } = useQuery({
+        queryKey: ['sample-type-search', normalizedSampleTypeSearch],
+        queryFn: () => apiClient.getSampleTypes({
+            search: normalizedSampleTypeSearch,
+            limit: 100,
+            offset: 0,
+        }),
+        enabled: normalizedSampleTypeSearch.length > 0,
+        placeholderData: (previousData) => previousData,
         retry: false,
     })
 
     const sampleTypeItems: SampleType[] = (sampleTypesData?.data?.sampleTypes ?? []) as SampleType[]
+
+    const matchedSampleTypeIdByInstruction = useMemo(() => {
+        if (!firstInstructionNote || !sampleTypeItems.length) return undefined
+        const normalizedInstruction = normalizeText(firstInstructionNote)
+        const matched = sampleTypeItems.find((sampleType) => normalizeText(sampleType.typeName ?? '') === normalizedInstruction)
+        return matched?.id
+    }, [firstInstructionNote, sampleTypeItems])
+
+    // Mỗi mã y lệnh chỉ auto chọn một lần để tránh ghi đè thao tác người dùng.
+    useEffect(() => {
+        autoSelectedByInstructionRef.current = ''
+    }, [searchCode])
+
+    useEffect(() => {
+        const currentSearchCode = searchCode.trim()
+        if (!currentSearchCode || !matchedSampleTypeIdByInstruction) return
+        if (storedServiceReqId) return
+        if (autoSelectedByInstructionRef.current === currentSearchCode) return
+
+        setSelectedSampleType(matchedSampleTypeIdByInstruction)
+        setSelectOpen(true)
+        autoSelectedByInstructionRef.current = currentSearchCode
+    }, [searchCode, matchedSampleTypeIdByInstruction, storedServiceReqId])
 
     // Mutation để tạo loại mẫu mới
     const createSampleTypeMutation = useMutation({
@@ -342,9 +369,9 @@ export default function TestIndicationsTable() {
     // Luôn đảm bảo item đang chọn (selectedSampleType) có trong list để Select hiển thị đúng sau khi tra barcode.
     const filteredSampleTypeItems = useMemo(() => {
         let list: SampleType[]
-        if (appliedSearch && appliedSearch.trim()) {
-            if (searchedSampleTypeData?.data && Array.isArray(searchedSampleTypeData.data)) {
-                list = searchedSampleTypeData.data
+        if (normalizedSampleTypeSearch) {
+            if (searchedSampleTypeData?.data?.sampleTypes && Array.isArray(searchedSampleTypeData.data.sampleTypes)) {
+                list = searchedSampleTypeData.data.sampleTypes
             } else {
                 list = []
             }
@@ -357,7 +384,7 @@ export default function TestIndicationsTable() {
             if (selected) list = [selected, ...list]
         }
         return list
-    }, [appliedSearch, searchedSampleTypeData, sampleTypeItems, selectedSampleType])
+    }, [normalizedSampleTypeSearch, searchedSampleTypeData, sampleTypeItems, selectedSampleType])
 
 
     const { data: profileData } = useQuery({
@@ -899,7 +926,7 @@ export default function TestIndicationsTable() {
                                 <div
                                     className="sticky top-0 z-10 px-2 py-2 bg-white border-b"
                                     role="none"
-                                    onKeyDown={(e) => {
+                                    onKeyDownCapture={(e) => {
                                         // Ngăn tất cả keyboard events lan truyền ra ngoài container
                                         e.stopPropagation()
                                     }}
@@ -908,19 +935,28 @@ export default function TestIndicationsTable() {
                                         placeholder="Tìm kiếm bệnh phẩm..."
                                         value={sampleTypeSearch}
                                         onChange={e => setSampleTypeSearch(e.target.value)}
-                                        onKeyDown={handleSampleSearchKeyDown}
+                                        onKeyDownCapture={(e) => e.stopPropagation()}
                                         className="text-sm"
                                         autoComplete="off"
                                     />
                                 </div>
+                                {isSampleTypeSearchError ? (
+                                    <div className="px-2 py-1 text-sm text-red-600">
+                                        Lỗi tìm kiếm: {sampleTypeSearchError instanceof Error ? sampleTypeSearchError.message : 'Không thể tải dữ liệu bệnh phẩm'}
+                                    </div>
+                                ) : null}
                                 {filteredSampleTypeItems.length
                                     ? filteredSampleTypeItems.map((sampleType) => (
                                         <SelectItem key={sampleType.id} value={sampleType.id}>
                                             {sampleType.typeName}
                                         </SelectItem>
                                     ))
-                                    : <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>
-                                }
+                                    : !isSearchingSampleType && (
+                                        <div className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu</div>
+                                    )}
+                                {isSearchingSampleType && (
+                                    <div className="px-2 py-1 text-sm text-muted-foreground">Đang tìm kiếm...</div>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
