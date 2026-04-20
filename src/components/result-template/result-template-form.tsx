@@ -42,8 +42,6 @@ import {
   Search,
   FileText,
   Copy,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import {
   Card,
@@ -60,6 +58,7 @@ import {
   ResultTemplateFilters,
 } from "@/lib/api/client";
 import { htmlToPlainText } from "@/lib/html";
+import { ExpandableClampText } from "@/components/ui/expandable-clamp-text";
 
 // Validation schema
 const resultTemplateSchema = z.object({
@@ -347,7 +346,6 @@ export default function ResultTemplateForm() {
     useState<ResultTemplate | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize] = useState(10);
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -603,11 +601,6 @@ export default function ResultTemplateForm() {
                           template.resultConclude
                         );
                         const noteText = htmlToPlainText(template.resultNote);
-                        const isExpanded = !!expandedRows[template.id];
-                        const shouldShowExpand =
-                          descriptionText.length > 140 ||
-                          concludeText.length > 100 ||
-                          noteText.length > 80;
 
                         return (
                           <TableRow key={template.id}>
@@ -632,59 +625,29 @@ export default function ResultTemplateForm() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div
-                              className={`text-sm text-gray-700 whitespace-pre-wrap ${
-                                isExpanded ? "" : "line-clamp-3"
-                              }`}
-                            >
-                              {descriptionText || "---"}
-                            </div>
+                          <TableCell className="align-top">
+                            <ExpandableClampText
+                              text={descriptionText}
+                              collapsedLines={3}
+                              className="text-sm text-gray-700"
+                            />
                             <div className="text-xs text-muted-foreground mt-1">
                               {descriptionText.length} ký tự
                             </div>
-                            {shouldShowExpand && (
-                              <button
-                                type="button"
-                                title={isExpanded ? "Thu gọn" : "Xem đầy đủ"}
-                                className="mt-1 inline-flex items-center gap-1 text-xs text-medical-700 hover:underline"
-                                onClick={() =>
-                                  setExpandedRows((prev) => ({
-                                    ...prev,
-                                    [template.id]: !prev[template.id],
-                                  }))
-                                }
-                              >
-                                {isExpanded ? (
-                                  <>
-                                    <ChevronUp className="h-3 w-3" />
-                                    Thu gọn
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="h-3 w-3" />
-                                    Xem đầy đủ
-                                  </>
-                                )}
-                              </button>
-                            )}
                           </TableCell>
-                          <TableCell>
-                            <div
-                              className={`text-sm text-gray-700 whitespace-pre-wrap ${
-                                isExpanded ? "" : "line-clamp-2"
-                              }`}
-                            >
-                              {concludeText || "---"}
-                            </div>
+                          <TableCell className="align-top">
+                            <ExpandableClampText
+                              text={concludeText}
+                              collapsedLines={2}
+                              className="text-sm text-gray-700"
+                              preferAutoExpand
+                            />
                             {noteText && (
-                              <div
-                                className={`text-xs text-muted-foreground mt-1 italic whitespace-pre-wrap ${
-                                  isExpanded ? "" : "line-clamp-3"
-                                }`}
-                              >
-                                Ghi chú: {noteText}
-                              </div>
+                              <ExpandableClampText
+                                text={`Ghi chú: ${noteText}`}
+                                collapsedLines={3}
+                                className="mt-1 text-xs text-muted-foreground italic"
+                              />
                             )}
                           </TableCell>
                           <TableCell className="text-right">

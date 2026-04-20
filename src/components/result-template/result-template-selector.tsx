@@ -19,9 +19,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Search, FileText, Loader2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, FileText, Loader2, CheckCircle2 } from 'lucide-react'
 import { apiClient, ResultTemplate } from '@/lib/api/client'
 import { htmlToPlainText } from '@/lib/html'
+import { ExpandableClampText } from '@/components/ui/expandable-clamp-text'
 
 interface ResultTemplateSelectorProps {
     open: boolean
@@ -38,7 +39,6 @@ export function ResultTemplateSelector({
 }: ResultTemplateSelectorProps) {
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
-    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
 
     // Fetch templates
     const { data: templatesData, isLoading } = useQuery({
@@ -123,7 +123,6 @@ export function ResultTemplateSelector({
             onOpenChange(false)
             setSelectedTemplateId(null)
             setSearchTerm('')
-            setExpandedRows({})
         }
     }
 
@@ -132,7 +131,6 @@ export function ResultTemplateSelector({
         if (!nextOpen) {
             setSelectedTemplateId(null)
             setSearchTerm('')
-            setExpandedRows({})
         }
     }
 
@@ -140,7 +138,6 @@ export function ResultTemplateSelector({
         onOpenChange(false)
         setSelectedTemplateId(null)
         setSearchTerm('')
-        setExpandedRows({})
     }
 
     const emptyMessage = searchTerm ? 'Không tìm thấy mẫu kết quả phù hợp' : 'Chưa có mẫu kết quả nào'
@@ -180,11 +177,6 @@ export function ResultTemplateSelector({
                         const descriptionText = htmlToPlainText(template.resultDescription)
                         const concludeText = htmlToPlainText(template.resultConclude)
                         const noteText = htmlToPlainText(template.resultNote)
-                        const isExpanded = !!expandedRows[template.id]
-                        const shouldShowExpand =
-                            descriptionText.length > 140 ||
-                            concludeText.length > 100 ||
-                            noteText.length > 80
 
                         return (
                             <TableRow
@@ -210,7 +202,7 @@ export function ResultTemplateSelector({
                                         )}
                                     </div>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="align-top">
                                     <div className="flex items-start space-x-3">
                                         <div
                                             className="p-2 bg-medical-100 rounded-full flex-shrink-0 mt-1">
@@ -220,47 +212,31 @@ export function ResultTemplateSelector({
                                             <div className="text-sm font-semibold text-gray-900 mb-1">
                                                 {template.templateName}
                                             </div>
-                                            <div className={`text-xs text-gray-600 whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-3'}`}>
-                                                {descriptionText || '---'}
-                                            </div>
+                                            <ExpandableClampText
+                                                text={descriptionText}
+                                                collapsedLines={3}
+                                                className="text-xs text-gray-600"
+                                                preventToggleBubble
+                                            />
                                             {noteText && (
-                                                <div className={`text-xs text-muted-foreground mt-1 italic whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-2'}`}>
-                                                    Ghi chú: {noteText}
-                                                </div>
-                                            )}
-                                            {shouldShowExpand && (
-                                                <button
-                                                    type="button"
-                                                    title={isExpanded ? 'Thu gọn' : 'Xem đầy đủ'}
-                                                    className="mt-1 inline-flex items-center gap-1 text-xs text-medical-700 hover:underline"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        setExpandedRows((prev) => ({
-                                                            ...prev,
-                                                            [template.id]: !prev[template.id],
-                                                        }))
-                                                    }}
-                                                >
-                                                    {isExpanded ? (
-                                                        <>
-                                                            <ChevronUp className="h-3 w-3" />
-                                                            Thu gọn
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <ChevronDown className="h-3 w-3" />
-                                                            Xem đầy đủ
-                                                        </>
-                                                    )}
-                                                </button>
+                                                <ExpandableClampText
+                                                    text={`Ghi chú: ${noteText}`}
+                                                    collapsedLines={2}
+                                                    className="mt-1 text-xs text-muted-foreground italic"
+                                                    preventToggleBubble
+                                                />
                                             )}
                                         </div>
                                     </div>
                                 </TableCell>
-                                <TableCell>
-                                    <div className={`text-xs text-gray-600 whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-2'}`}>
-                                        {concludeText || '---'}
-                                    </div>
+                                <TableCell className="align-top">
+                                    <ExpandableClampText
+                                        text={concludeText}
+                                        collapsedLines={2}
+                                        className="text-xs text-gray-600"
+                                        preventToggleBubble
+                                        preferAutoExpand
+                                    />
                                 </TableCell>
                             </TableRow>
                         )
