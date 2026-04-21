@@ -38,7 +38,8 @@ import {
     Palette,
     Shield,
     Cable,
-    Barcode
+    Barcode,
+    Archive
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTabsStore } from '@/lib/stores/tabs'
@@ -138,6 +139,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     href: '/sample-delivery',
                     icon: Package,
                     description: 'Quản lý trạng thái và bàn giao mẫu'
+                },
+                {
+                    name: 'Tủ lưu mẫu',
+                    href: '/sample-cabinets',
+                    icon: Archive,
+                    description: 'Quản lý vị trí lưu mẫu'
                 },
                 {
                     name: 'Kết quả xét nghiệm',
@@ -311,6 +318,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             icon: Package,
                             description: 'Quản lý trạng thái và bàn giao mẫu'
                         },
+                        // {
+                        //     name: 'Tủ lưu mẫu',
+                        //     href: '/sample-cabinets',
+                        //     icon: Archive,
+                        //     description: 'Quản lý vị trí lưu mẫu'
+                        // },
                         {
                             name: 'Kết quả xét nghiệm',
                             href: '/test-results',
