@@ -902,7 +902,7 @@ export default function TestIndicationsTable() {
                 )} */}
 
                 {/* Controls area: keep SID and specimen select isolated from patient inputs */}
-                <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-end gap-3 md:gap-8 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">
+                <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-start gap-3 md:gap-8 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
                         <Label className="text-sm font-medium">Nhập mã y lệnh</Label>
                         <div className="flex gap-2">
@@ -1078,7 +1078,7 @@ export default function TestIndicationsTable() {
                                 <QRCodeSVG
                                     key={currentReceptionCode} // Force re-render khi currentReceptionCode thay đổi
                                     value={currentReceptionCode}
-                                    size={80}
+                                    size={50}
                                     level="M"
                                     includeMargin={false}
                                 />

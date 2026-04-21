@@ -268,7 +268,7 @@ export function DashboardHome() {
                                         })}
                                     </div>
                                     <p className="text-xs text-muted-foreground">
-                                        Thanh tổng 100% biểu diễn tỷ lệ số ca theo từng trạng thái.
+                                        Thanh tổng 100% biểu diễn tỷ lệ số y lệnh theo từng trạng thái.
                                     </p>
                                 </div>
                                 <div className="space-y-2">
