@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
     LayoutDashboard,
+    BarChart3,
     Users,
     Settings,
     LogOut,
@@ -114,6 +115,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             href: '/dashboard',
             icon: LayoutDashboard,
             description: 'Tổng quan hệ thống và thống kê'
+        },
+        {
+            name: 'Báo cáo & Thống kê',
+            href: '/reports',
+            icon: BarChart3,
+            description: 'Tạo báo cáo linh hoạt và xuất Excel'
         },
         {
             name: 'Xét nghiệm',
