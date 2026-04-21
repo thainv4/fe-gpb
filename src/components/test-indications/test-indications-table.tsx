@@ -6,7 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest, type UserRoom } from "@/lib/api/client";
-import { cn, formatDobFromHis } from "@/lib/utils";
+import { formatDobDisplay } from "@/lib/utils";
+import {
+    PatientInfoReadRow,
+    PatientInfoSectionLabel,
+    PatientInfoPanel,
+} from "@/components/patient-info/patient-info-read-row";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -32,38 +37,6 @@ import { logFrontendApiStatus } from "@/lib/logging/frontend-api-logger";
 
 /** Các giá trị tiền tố có trong dropdown chọn tiền tố */
 const PREFIX_OPTIONS = ['T', 'C', 'F', 'S'];
-
-interface PatientInfoReadRowProps {
-    label: string
-    children: React.ReactNode
-    multiline?: boolean
-}
-
-function PatientInfoReadRow({ label, children, multiline }: PatientInfoReadRowProps) {
-    const isEmpty =
-        children == null ||
-        children === '' ||
-        (typeof children === 'string' && !children.trim())
-    const display = isEmpty ? '—' : children
-    return (
-        <div
-            className={cn(
-                'grid min-w-0 gap-x-2 gap-y-0.5 text-sm sm:grid-cols-[minmax(7rem,auto)_1fr]',
-                multiline ? 'items-start' : 'items-baseline',
-            )}
-        >
-            <span className="text-muted-foreground shrink-0 leading-snug">{label}</span>
-            <div
-                className={cn(
-                    'min-w-0 break-words font-medium leading-snug text-foreground',
-                    multiline && 'whitespace-pre-wrap',
-                )}
-            >
-                {display}
-            </div>
-        </div>
-    )
-}
 
 export default function TestIndicationsTable() {
 
@@ -919,7 +892,7 @@ export default function TestIndicationsTable() {
             </div>
 
             {/* Main Content - 3/4 màn hình */}
-            <div className="flex-1 overflow-y-auto p-6 bg-white">{/* ...existing code... */}
+            <div className="flex-1 overflow-y-auto p-6 pt-2 bg-white">{/* ...existing code... */}
                 {/* {!tabRoomId && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                         <div className="text-sm font-medium text-yellow-900">
@@ -1129,56 +1102,57 @@ export default function TestIndicationsTable() {
                     )}
                 </div>
 
-                <h3 className="mb-2 text-base font-semibold text-foreground">Thông tin bệnh nhân</h3>
-                <div className="patient-info mb-4 rounded-md border border-gray-300 bg-muted/30 px-3 py-2.5 dark:border-gray-700 dark:bg-muted/20">
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Bệnh nhân
-                    </p>
-                    <div className="grid grid-cols-1 gap-x-5 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
-                        <div className="min-w-0 lg:col-span-2">
-                            <PatientInfoReadRow label="Họ và tên" multiline>
-                                {patient?.name ?? ''}
-                            </PatientInfoReadRow>
-                        </div>
-                        <PatientInfoReadRow label="Mã bệnh nhân (PID)">{patient?.code ?? ''}</PatientInfoReadRow>
-                        <PatientInfoReadRow label="Ngày sinh">
-                            {patient?.dob ? formatDobFromHis(patient.dob) : ''}
+                <PatientInfoPanel>
+                    <h3 className="mb-2 border-b border-border pb-1.5 text-base font-semibold leading-tight text-foreground">
+                        Thông tin bệnh nhân
+                    </h3>
+                    <PatientInfoSectionLabel>Bệnh nhân</PatientInfoSectionLabel>
+                    <div className="ml-2 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+                        <PatientInfoReadRow label="Họ và tên" multiline emphasize className="min-w-0">
+                            {patient?.name ?? ''}
                         </PatientInfoReadRow>
-                        <PatientInfoReadRow label="Giới tính">{patient?.genderName ?? ''}</PatientInfoReadRow>
-                        <PatientInfoReadRow label="Số điện thoại">{patient?.mobile ?? ''}</PatientInfoReadRow>
-                        <PatientInfoReadRow label="CMND/CCCD">{patient?.cmndNumber ?? ''}</PatientInfoReadRow>
-                        <div className="min-w-0 sm:col-span-2 lg:col-span-3">
-                            <PatientInfoReadRow label="Địa chỉ" multiline>
-                                {patient?.address ?? ''}
-                            </PatientInfoReadRow>
-                        </div>
+                        <PatientInfoReadRow label="Ngày sinh" className="min-w-0">
+                            {patient?.dob ? formatDobDisplay(patient.dob) : ''}
+                        </PatientInfoReadRow>
+                        <PatientInfoReadRow label="Giới tính" className="min-w-0">
+                            {patient?.genderName ?? ''}
+                        </PatientInfoReadRow>
+                        <PatientInfoReadRow label="Số điện thoại" className="min-w-0">
+                            {patient?.mobile ?? patient?.phone ?? ''}
+                        </PatientInfoReadRow>
+                        <div className="col-span-full border-t border-border/50" aria-hidden />
+                        <PatientInfoReadRow label="Mã bệnh nhân (PID)" className="min-w-0 pb-0">
+                            {patient?.code ?? ''}
+                        </PatientInfoReadRow>
+                        <PatientInfoReadRow label="CMND/CCCD" className="min-w-0">
+                            {patient?.cmndNumber ?? ''}
+                        </PatientInfoReadRow>
+                        <PatientInfoReadRow
+                            label="Địa chỉ"
+                            multiline
+                            className="min-w-0 sm:col-span-2 lg:col-span-2"
+                        >
+                            {patient?.address ?? ''}
+                        </PatientInfoReadRow>
                     </div>
-                    <p className="mb-1.5 mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Chỉ định
-                    </p>
-                    <div className="grid grid-cols-1 gap-x-5 gap-y-1.5 sm:grid-cols-2">
-                        <div className="min-w-0 sm:col-span-2">
-                            <PatientInfoReadRow label="Bác sĩ chỉ định" multiline>
-                                {requestDoctorDisplay}
-                            </PatientInfoReadRow>
-                        </div>
-                        <div className="min-w-0 sm:col-span-2">
-                            <PatientInfoReadRow label="Nơi chỉ định" multiline>
-                                {requestLocationDisplay}
-                            </PatientInfoReadRow>
-                        </div>
-                        <div className="min-w-0 sm:col-span-2">
-                            <PatientInfoReadRow label="Chẩn đoán" multiline>
-                                {serviceRequest?.icdName ?? ''}
-                            </PatientInfoReadRow>
-                        </div>
-                        <div className="min-w-0 sm:col-span-2">
-                            <PatientInfoReadRow label="Chẩn đoán phụ" multiline>
-                                {storedIcdTextDisplay}
-                            </PatientInfoReadRow>
-                        </div>
+                    <div className="mt-2">
+                        <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
                     </div>
-                </div>
+                    <div className="flex flex-col divide-y divide-border/50  [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+                        <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
+                            {requestDoctorDisplay}
+                        </PatientInfoReadRow>
+                        <PatientInfoReadRow label="Nơi chỉ định" multiline twoColumnGrid className="px-2">
+                            {requestLocationDisplay}
+                        </PatientInfoReadRow>
+                        <PatientInfoReadRow label="Chẩn đoán" multiline twoColumnGrid className="px-2">
+                            {serviceRequest?.icdName ?? ''}
+                        </PatientInfoReadRow>
+                        <PatientInfoReadRow label="Chẩn đoán phụ" multiline twoColumnGrid className="px-2">
+                            {storedIcdTextDisplay}
+                        </PatientInfoReadRow>
+                    </div>
+                </PatientInfoPanel>
 
                 {/* Test Indications */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mt-6">

@@ -18,6 +18,12 @@ import timezone from 'dayjs/plugin/timezone'
 import { Textarea } from "@/components/ui/textarea";
 import { QRCodeSVG } from 'qrcode.react';
 import { printQrCode } from '@/lib/utils/print-qr-code';
+import { formatDobDisplay } from "@/lib/utils";
+import {
+    PatientInfoReadRow,
+    PatientInfoSectionLabel,
+    PatientInfoPanel,
+} from "@/components/patient-info/patient-info-read-row";
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -268,6 +274,24 @@ export default function SampleDeliveryTable() {
         if (!d) return ''
         const raw = d.icdText ?? (d as { icd_text?: string | null }).icd_text
         return typeof raw === 'string' ? raw.trim() : ''
+    }, [storedServiceRequestData])
+
+    const storedRequestDoctorDisplay = useMemo(() => {
+        const d = storedServiceRequestData?.data
+        if (!d) return ''
+        if (d.requestUsername && d.requestLoginname) {
+            return `${d.requestUsername} (${d.requestLoginname})`
+        }
+        return d.requestUsername ?? d.requestLoginname ?? ''
+    }, [storedServiceRequestData])
+
+    const storedRequestLocationDisplay = useMemo(() => {
+        const d = storedServiceRequestData?.data
+        if (!d) return ''
+        const dept = d.requestDepartmentName ?? ''
+        const room = d.requestRoomName ?? ''
+        if (dept && room) return `${room} - ${dept}`
+        return dept || room
     }, [storedServiceRequestData])
 
     // Ref cho phần barcode để in
@@ -666,95 +690,65 @@ export default function SampleDeliveryTable() {
 
                         {/* Thông tin bệnh nhân */}
                         {storedServiceRequestData?.data && (
-                            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                                <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
+                            <PatientInfoPanel>
+                                <h3 className="mb-2 border-b border-border pb-1.5 text-base font-semibold leading-tight text-foreground">
                                     Thông tin bệnh nhân
                                 </h3>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div>
-                                        <Label className="text-sm text-gray-600">Mã bệnh nhân</Label>
-                                        <Input
-                                            value={storedServiceRequestData.data.patientCode || ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm text-gray-600">Họ và tên bệnh nhân</Label>
-                                        <Input
-                                            value={storedServiceRequestData.data.patientName || ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm text-gray-600">Ngày sinh</Label>
-                                        <Input
-                                            value={storedServiceRequestData.data.patientDob
-                                                ? `${String(storedServiceRequestData.data.patientDob).substring(6, 8)}/${String(storedServiceRequestData.data.patientDob).substring(4, 6)}/${String(storedServiceRequestData.data.patientDob).substring(0, 4)}`
-                                                : ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm text-gray-600">Giới tính</Label>
-                                        <Input
-                                            value={storedServiceRequestData.data.patientGenderName || ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm text-gray-600">Số điện thoại</Label>
-                                        <Input
-                                            value={storedServiceRequestData.data.patientMobile || storedServiceRequestData.data.patientPhone || ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm text-gray-600">CMND/CCCD</Label>
-                                        <Input
-                                            value={storedServiceRequestData.data.patientCmndNumber || ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Label className="text-sm text-gray-600">Địa chỉ</Label>
-                                        <Input
-                                            value={storedServiceRequestData.data.patientAddress || ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Label className="text-sm text-gray-600">Chẩn đoán</Label>
-                                        <Input
-                                            value={storedServiceRequestData.data.icdName || ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Label className="text-sm text-gray-600">Chẩn đoán phụ</Label>
-                                        <Input
-                                            value={storedIcdTextDisplay}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Label className="text-sm text-gray-600">Bác sĩ chỉ định</Label>
-                                        <Input
-                                            value={`${storedServiceRequestData.data.requestUsername} (${storedServiceRequestData.data.requestLoginname})` || ''}
-                                            disabled
-                                            className="mt-1 font-semibold"
-                                        />
-                                    </div>
+                                <PatientInfoSectionLabel>Bệnh nhân</PatientInfoSectionLabel>
+                                <div className="ml-2 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+                                    <PatientInfoReadRow label="Họ và tên" multiline emphasize className="min-w-0">
+                                        {storedServiceRequestData.data.patientName ?? ''}
+                                    </PatientInfoReadRow>
+                                    <PatientInfoReadRow label="Ngày sinh" className="min-w-0">
+                                        {storedServiceRequestData.data.patientDob
+                                            ? formatDobDisplay(storedServiceRequestData.data.patientDob)
+                                            : ''}
+                                    </PatientInfoReadRow>
+                                    <PatientInfoReadRow label="Giới tính" className="min-w-0">
+                                        {storedServiceRequestData.data.patientGenderName ?? ''}
+                                    </PatientInfoReadRow>
+                                    <PatientInfoReadRow label="Số điện thoại" className="min-w-0">
+                                        {storedServiceRequestData.data.patientMobile
+                                            || storedServiceRequestData.data.patientPhone
+                                            || ''}
+                                    </PatientInfoReadRow>
+                                    <div className="col-span-full border-t border-border/50" aria-hidden />
+                                    <PatientInfoReadRow label="Mã bệnh nhân (PID)" className="min-w-0 pb-0">
+                                        {storedServiceRequestData.data.patientCode ?? ''}
+                                    </PatientInfoReadRow>
+                                    <PatientInfoReadRow label="CMND/CCCD" className="min-w-0">
+                                        {storedServiceRequestData.data.patientCmndNumber ?? ''}
+                                    </PatientInfoReadRow>
+
+                                    <PatientInfoReadRow
+                                        label="Địa chỉ"
+                                        multiline
+                                        className="min-w-0 sm:col-span-2 lg:col-span-2"
+                                    >
+                                        {storedServiceRequestData.data.patientAddress ?? ''}
+                                    </PatientInfoReadRow>
                                 </div>
-                            </div>
+                                <div className="mt-2">
+                                    <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
+                                </div>
+                                <div className="flex flex-col divide-y divide-border/50 rounded-md border border-border/50 bg-muted/20 dark:bg-muted/10 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+                                    <PatientInfoReadRow label="Mã y lệnh" twoColumnGrid className="px-2">
+                                        {storedServiceRequestData.data.serviceReqCode ?? ''}
+                                    </PatientInfoReadRow>
+                                    <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
+                                        {storedRequestDoctorDisplay}
+                                    </PatientInfoReadRow>
+                                    <PatientInfoReadRow label="Nơi chỉ định" multiline twoColumnGrid className="px-2">
+                                        {storedRequestLocationDisplay}
+                                    </PatientInfoReadRow>
+                                    <PatientInfoReadRow label="Chẩn đoán" multiline twoColumnGrid className="px-2">
+                                        {storedServiceRequestData.data.icdName ?? ''}
+                                    </PatientInfoReadRow>
+                                    <PatientInfoReadRow label="Chẩn đoán phụ" multiline twoColumnGrid className="px-2">
+                                        {storedIcdTextDisplay}
+                                    </PatientInfoReadRow>
+                                </div>
+                            </PatientInfoPanel>
                         )}
 
                         {/* Phần 2: Đơn vị nhận mẫu */}

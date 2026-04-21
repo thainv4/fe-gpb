@@ -6,7 +6,13 @@ import { usePathname } from "next/navigation";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
+import { apiClient, type ServiceRequestDetail, type PatientInfo } from "@/lib/api/client";
+import { formatDobDisplay } from "@/lib/utils";
+import {
+    PatientInfoReadRow,
+    PatientInfoSectionLabel,
+    PatientInfoPanel,
+} from "@/components/patient-info/patient-info-read-row";
 import { useCurrentRoomStore } from "@/lib/stores/current-room";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -87,67 +93,80 @@ const PatientInfoCard = React.memo(function PatientInfoCard({
     patient,
     secondaryDiagnosis,
 }: {
-    serviceRequest: { serviceReqCode?: string | null; icdName?: string | null; requestUsername?: string | null; requestLoginname?: string | null };
-    patient?: { code?: string | null; name?: string | null; dob?: number | null; genderName?: string | null; address?: string | null };
+    serviceRequest: ServiceRequestDetail;
+    patient?: PatientInfo;
     /** Chẩn đoán phụ từ GET stored/{id} (icdText / icd_text). */
     secondaryDiagnosis?: string | null;
 }) {
+    const requestDoctorDisplay = useMemo(() => {
+        if (serviceRequest.requestUsername && serviceRequest.requestLoginname) {
+            return `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`;
+        }
+        return serviceRequest.requestUsername ?? serviceRequest.requestLoginname ?? "";
+    }, [serviceRequest]);
+
+    const requestLocationDisplay = useMemo(() => {
+        const dept = serviceRequest.requestDepartment?.name ?? "";
+        const room = serviceRequest.requestRoom?.name ?? "";
+        if (dept && room) return `${room} - ${dept}`;
+        return dept || room;
+    }, [serviceRequest]);
+
     return (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4 pb-3 border-b border-gray-200">
+        <PatientInfoPanel>
+            <h3 className="mb-2 border-b border-border pb-1.5 text-base font-semibold leading-tight text-foreground">
                 Thông tin bệnh nhân
             </h3>
-            <div className="grid grid-cols-3 gap-4">
-                <div>
-                    <Label className="text-sm text-gray-600">Mã Y lệnh</Label>
-                    <Input value={serviceRequest.serviceReqCode || ""} disabled className="mt-1 font-semibold" />
-                </div>
-                <div>
-                    <Label className="text-sm text-gray-600">Mã bệnh nhân</Label>
-                    <Input value={patient?.code || ""} disabled className="mt-1 font-semibold" />
-                </div>
-                <div>
-                    <Label className="text-sm text-gray-600">Họ và tên bệnh nhân</Label>
-                    <Input value={patient?.name || ""} disabled className="mt-1 font-semibold" />
-                </div>
-                <div>
-                    <Label className="text-sm text-gray-600">Ngày sinh</Label>
-                    <Input
-                        value={patient?.dob ? `${String(patient.dob).substring(6, 8)}/${String(patient.dob).substring(4, 6)}/${String(patient.dob).substring(0, 4)}` : ""}
-                        disabled
-                        className="mt-1 font-semibold"
-                    />
-                </div>
-                <div>
-                    <Label className="text-sm text-gray-600">Giới tính</Label>
-                    <Input value={patient?.genderName || ""} disabled className="mt-1 font-semibold" />
-                </div>
-                <div>
-                    <Label className="text-sm text-gray-600">Địa chỉ</Label>
-                    <Input value={patient?.address || ""} disabled className="mt-1 font-semibold" />
-                </div>
-                <div className="col-span-3">
-                    <Label className="text-sm text-gray-600">Chẩn đoán</Label>
-                    <Input value={serviceRequest.icdName || ""} disabled className="mt-1 font-semibold" />
-                </div>
-                <div className="col-span-3">
-                    <Label className="text-sm text-gray-600">Chẩn đoán phụ</Label>
-                    <Input value={secondaryDiagnosis ?? ""} disabled className="mt-1 font-semibold" />
-                </div>
-                <div>
-                    <Label className="text-sm text-gray-600">Bác sĩ chỉ định</Label>
-                    <Input
-                        value={
-                            serviceRequest?.requestUsername && serviceRequest?.requestLoginname
-                                ? `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`
-                                : (serviceRequest?.requestUsername ?? serviceRequest?.requestLoginname ?? "")
-                        }
-                        disabled
-                        className="mt-1 font-semibold"
-                    />
-                </div>
+            <PatientInfoSectionLabel>Bệnh nhân</PatientInfoSectionLabel>
+            <div className="ml-2 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+                <PatientInfoReadRow label="Họ và tên" multiline emphasize className="min-w-0">
+                    {patient?.name ?? ""}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow label="Ngày sinh" className="min-w-0">
+                    {patient?.dob ? formatDobDisplay(patient.dob) : ""}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow label="Giới tính" className="min-w-0">
+                    {patient?.genderName ?? ""}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow label="Số điện thoại" className="min-w-0">
+                    {patient?.mobile ?? patient?.phone ?? ""}
+                </PatientInfoReadRow>
+                <div className="col-span-full border-t border-border/50 " aria-hidden />
+                <PatientInfoReadRow label="Mã bệnh nhân (PID)" className="min-w-0 pb-0">
+                    {patient?.code ?? ""}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow label="CMND/CCCD" className="min-w-0">
+                    {patient?.cmndNumber ?? ""}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow
+                    label="Địa chỉ"
+                    multiline
+                    className="min-w-0 sm:col-span-2 lg:col-span-2"
+                >
+                    {patient?.address ?? ""}
+                </PatientInfoReadRow>
             </div>
-        </div>
+            <div className="mt-2">
+                <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
+            </div>
+            <div className="flex flex-col divide-y divide-border/50 rounded-md border border-border/50 bg-muted/20 dark:bg-muted/10 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+                <PatientInfoReadRow label="Mã y lệnh" twoColumnGrid className="px-2">
+                    {serviceRequest.serviceReqCode ?? ""}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
+                    {requestDoctorDisplay}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow label="Nơi chỉ định" multiline twoColumnGrid className="px-2">
+                    {requestLocationDisplay}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow label="Chẩn đoán" multiline twoColumnGrid className="px-2">
+                    {serviceRequest.icdName ?? ""}
+                </PatientInfoReadRow>
+                <PatientInfoReadRow label="Chẩn đoán phụ" multiline twoColumnGrid className="px-2">
+                    {secondaryDiagnosis ?? ""}
+                </PatientInfoReadRow>
+            </div>
+        </PatientInfoPanel>
     );
 });
 
