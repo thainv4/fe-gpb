@@ -1129,91 +1129,53 @@ export default function TestIndicationsTable() {
                     )}
                 </div>
 
-                <h3 className="text-lg font-semibold my-2">Thông tin bệnh nhân</h3>
-                <div className="patient-info grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 pt-3 pb-4 border-b border-gray-300">
-
-                    <div className="space-y-6">
-                        <div className="flex flex-col gap-2">
-                            <Label>Họ và tên</Label>
-                            <Input type="text" value={patient?.name ?? ''} disabled />
+                <h3 className="mb-2 text-base font-semibold text-foreground">Thông tin bệnh nhân</h3>
+                <div className="patient-info mb-4 rounded-md border border-gray-300 bg-muted/30 px-3 py-2.5 dark:border-gray-700 dark:bg-muted/20">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Bệnh nhân
+                    </p>
+                    <div className="grid grid-cols-1 gap-x-5 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="min-w-0 lg:col-span-2">
+                            <PatientInfoReadRow label="Họ và tên" multiline>
+                                {patient?.name ?? ''}
+                            </PatientInfoReadRow>
                         </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label>Số điện thoại</Label>
-                            <Input type="text" value={patient?.mobile ?? ''} disabled />
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label>CMND/CCCD</Label>
-                            <Input type='text' value={patient?.cmndNumber ?? ''} disabled />
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label>Bác sĩ chỉ định</Label>
-                            <Input
-                                type="text"
-                                value={
-                                    serviceRequest?.requestUsername && serviceRequest?.requestLoginname
-                                        ? `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`
-                                        : (serviceRequest?.requestUsername ?? serviceRequest?.requestLoginname ?? '')
-                                }
-                                disabled
-                            />
+                        <PatientInfoReadRow label="Mã bệnh nhân (PID)">{patient?.code ?? ''}</PatientInfoReadRow>
+                        <PatientInfoReadRow label="Ngày sinh">
+                            {patient?.dob ? formatDobFromHis(patient.dob) : ''}
+                        </PatientInfoReadRow>
+                        <PatientInfoReadRow label="Giới tính">{patient?.genderName ?? ''}</PatientInfoReadRow>
+                        <PatientInfoReadRow label="Số điện thoại">{patient?.mobile ?? ''}</PatientInfoReadRow>
+                        <PatientInfoReadRow label="CMND/CCCD">{patient?.cmndNumber ?? ''}</PatientInfoReadRow>
+                        <div className="min-w-0 sm:col-span-2 lg:col-span-3">
+                            <PatientInfoReadRow label="Địa chỉ" multiline>
+                                {patient?.address ?? ''}
+                            </PatientInfoReadRow>
                         </div>
                     </div>
-
-                    <div className="space-y-6">
-                        <div className="flex flex-col gap-2">
-                            <Label>Mã bệnh nhân (PID)</Label>
-                            <Input type='text' value={patient?.code ?? ''} disabled />
+                    <p className="mb-1.5 mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Chỉ định
+                    </p>
+                    <div className="grid grid-cols-1 gap-x-5 gap-y-1.5 sm:grid-cols-2">
+                        <div className="min-w-0 sm:col-span-2">
+                            <PatientInfoReadRow label="Bác sĩ chỉ định" multiline>
+                                {requestDoctorDisplay}
+                            </PatientInfoReadRow>
                         </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label>Ngày sinh</Label>
-                            <Input type='date' value={patient?.dob ? formatDobFromHis(patient.dob) : ''} disabled />
+                        <div className="min-w-0 sm:col-span-2">
+                            <PatientInfoReadRow label="Nơi chỉ định" multiline>
+                                {requestLocationDisplay}
+                            </PatientInfoReadRow>
                         </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label>Nơi chỉ định</Label>
-                            {/* Safely combine department and room names. If both exist show "Department - Room", otherwise show whichever is available. */}
-                            <Textarea
-                                value={
-                                    (() => {
-                                        const dept = serviceRequest?.requestDepartment?.name ?? '';
-                                        const room = serviceRequest?.requestRoom?.name ?? '';
-                                        if (dept && room) return `${room} - ${dept}`;
-                                        return dept || room || '';
-                                    })()
-                                }
-                                disabled
-                            />
+                        <div className="min-w-0 sm:col-span-2">
+                            <PatientInfoReadRow label="Chẩn đoán" multiline>
+                                {serviceRequest?.icdName ?? ''}
+                            </PatientInfoReadRow>
                         </div>
-
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="flex flex-col gap-2">
-                            <Label>Giới tính</Label>
-                            <Input
-                                type="text"
-                                value={patient?.genderName ?? ''}
-                                disabled
-                            />
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label>Địa chỉ</Label>
-                            <Input type='text' value={patient?.address ?? ''} disabled />
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label>Chẩn đoán</Label>
-                            <Textarea value={serviceRequest?.icdName ?? ''} disabled />
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label>Chẩn đoán phụ</Label>
-                            <Textarea value={storedIcdTextDisplay} disabled />
+                        <div className="min-w-0 sm:col-span-2">
+                            <PatientInfoReadRow label="Chẩn đoán phụ" multiline>
+                                {storedIcdTextDisplay}
+                            </PatientInfoReadRow>
                         </div>
                     </div>
                 </div>
