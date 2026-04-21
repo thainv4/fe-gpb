@@ -1138,7 +1138,7 @@ export default function TestIndicationsTable() {
                     <div className="mt-2">
                         <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
                     </div>
-                    <div className="flex flex-col divide-y divide-border/50  [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+                    <div className="flex flex-col divide-y divide-border/50 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
                         <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
                             {requestDoctorDisplay}
                         </PatientInfoReadRow>

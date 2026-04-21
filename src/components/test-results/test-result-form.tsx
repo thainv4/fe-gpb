@@ -149,10 +149,7 @@ const PatientInfoCard = React.memo(function PatientInfoCard({
             <div className="mt-2">
                 <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
             </div>
-            <div className="flex flex-col divide-y divide-border/50 rounded-md border border-border/50 bg-muted/20 dark:bg-muted/10 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
-                <PatientInfoReadRow label="Mã y lệnh" twoColumnGrid className="px-2">
-                    {serviceRequest.serviceReqCode ?? ""}
-                </PatientInfoReadRow>
+            <div className="flex flex-col divide-y [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
                 <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
                     {requestDoctorDisplay}
                 </PatientInfoReadRow>
