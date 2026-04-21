@@ -733,7 +733,9 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                 <tr>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200 w-12">
                                     </th>
-                            
+                                    <th className="text-center text-xs font-semibold text-gray-700 p-2 border-r border-gray-200 w-10">
+                                        STT
+                                    </th>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200">Barcode</th>
                                     <th className="text-left text-xs font-semibold text-gray-700 p-2 border-r border-gray-200 min-w-[130px]">
                                         Tên bệnh nhân
@@ -773,7 +775,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                         userName?: string;
                                         fullName?: string;
                                     };
-                                }) => {
+                                }, rowIndex: number) => {
                                     const serviceReq = item.serviceRequest
                                     const serviceReqCode = serviceReq?.hisServiceReqCode || serviceReq?.serviceReqCode || ''
                                     const receptionCode = serviceReq?.receptionCode || ''
@@ -813,7 +815,9 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                                             >
                                                 <RadioGroupItem value={item.id} />
                                             </td>
-                                            
+                                            <td className="p-2 text-xs text-center text-gray-700 border-r border-gray-100 tabular-nums w-10">
+                                                {(filters.offset || 0) + rowIndex + 1}
+                                            </td>
                                             <td className="p-2 text-xs font-medium border-r border-gray-100">
                                                 {receptionCode || <span className="text-gray-400">-</span>}
                                             </td>
