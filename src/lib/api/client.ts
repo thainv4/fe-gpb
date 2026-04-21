@@ -3467,7 +3467,7 @@ class ApiClient {
         offset?: number;
         order?: 'ASC' | 'DESC';
         orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
-        code?: string; // Gộp receptionCode và hisServiceReqCode thành một trường
+        code?: string; // HIS Service Request Code, Reception Code hoặc patientCode (PATIENT_CODE)
         flag?: string;
         patientName?: string;
         // Deprecated: sử dụng code thay thế

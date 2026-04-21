@@ -46,7 +46,7 @@ interface FilterParams {
     offset: number
     order: 'ASC' | 'DESC'
     orderBy: 'actionTimestamp' | 'createdAt' | 'startedAt'
-    code?: string // Gộp receptionCode và hisServiceReqCode thành một trường
+    code?: string // Gộp hisServiceReqCode, receptionCode, patientCode (cùng tham số API `code`)
     flag?: string
     patientName?: string
     // Deprecated: sử dụng code thay thế
@@ -646,7 +646,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             onKeyDown={handleSearchKeyDown}
-                            placeholder="Mã Y lệnh hoặc Barcode"
+                            placeholder="Mã Y lệnh, Barcode hoặc mã BN"
                             className="text-sm"
                         />
                         <Input
