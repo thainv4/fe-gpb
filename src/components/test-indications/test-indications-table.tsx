@@ -411,6 +411,14 @@ export default function TestIndicationsTable() {
         return storedServiceRequestData.data.services[0]?.receptionCode || ''
     }, [storedServiceReqId, storedServiceRequestData])
 
+    /** Chẩn đoán phụ từ GET /service-requests/stored/{id} (icdText hoặc icd_text). */
+    const storedIcdTextDisplay = useMemo(() => {
+        const d = storedServiceRequestData?.data
+        if (!d) return ''
+        const raw = d.icdText ?? (d as { icd_text?: string | null }).icd_text
+        return typeof raw === 'string' ? raw.trim() : ''
+    }, [storedServiceRequestData])
+
     // Tự động set selectedSampleType từ sampleTypeId khi có storedServiceRequestData
     useEffect(() => {
         if (storedServiceRequestData?.data?.services && storedServiceRequestData.data.services.length > 0) {
@@ -1153,6 +1161,11 @@ export default function TestIndicationsTable() {
                         <div className="flex flex-col gap-2">
                             <Label>Chẩn đoán</Label>
                             <Textarea value={serviceRequest?.icdName ?? ''} disabled />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <Label>Chẩn đoán phụ</Label>
+                            <Textarea value={storedIcdTextDisplay} disabled />
                         </div>
                     </div>
                 </div>

@@ -85,9 +85,12 @@ function formatWorkflowActionDateTime(iso?: string | null): string {
 const PatientInfoCard = React.memo(function PatientInfoCard({
     serviceRequest,
     patient,
+    secondaryDiagnosis,
 }: {
     serviceRequest: { serviceReqCode?: string | null; icdName?: string | null; requestUsername?: string | null; requestLoginname?: string | null };
     patient?: { code?: string | null; name?: string | null; dob?: number | null; genderName?: string | null; address?: string | null };
+    /** Chẩn đoán phụ từ GET stored/{id} (icdText / icd_text). */
+    secondaryDiagnosis?: string | null;
 }) {
     return (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
@@ -126,6 +129,10 @@ const PatientInfoCard = React.memo(function PatientInfoCard({
                 <div className="col-span-3">
                     <Label className="text-sm text-gray-600">Chẩn đoán</Label>
                     <Input value={serviceRequest.icdName || ""} disabled className="mt-1 font-semibold" />
+                </div>
+                <div className="col-span-3">
+                    <Label className="text-sm text-gray-600">Chẩn đoán phụ</Label>
+                    <Input value={secondaryDiagnosis ?? ""} disabled className="mt-1 font-semibold" />
                 </div>
                 <div>
                     <Label className="text-sm text-gray-600">Bác sĩ chỉ định</Label>
@@ -459,6 +466,13 @@ export default function TestResultForm() {
     const patient = serviceRequest?.patient
     const storedServiceRequest = storedServiceRequestData?.data
     const services = storedServiceRequest?.services || []
+
+    const storedIcdTextDisplay = useMemo(() => {
+        if (!storedServiceRequest) return ''
+        const raw =
+            storedServiceRequest.icdText ?? (storedServiceRequest as { icd_text?: string | null }).icd_text
+        return typeof raw === 'string' ? raw.trim() : ''
+    }, [storedServiceRequest])
 
     const workflowActions = workflowActionInfoData?.data
     const sampleCollectorAction = useMemo(
@@ -1985,9 +1999,9 @@ export default function TestResultForm() {
     return (
         <>
             <Card>
-                <CardHeader className={'border-b border-gray-200'}>
+                {/* <CardHeader className={'border-b border-gray-200'}>
                     <CardTitle className="text-2xl font-bold">Trả kết quả xét nghiệm</CardTitle>
-                </CardHeader>
+                </CardHeader> */}
                 <CardContent>
                     <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>} className="flex h-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                         {/* Sidebar - 1/4 màn hình */}
@@ -2016,7 +2030,11 @@ export default function TestResultForm() {
 
                             {selectedServiceReqCode && !isLoading && serviceRequest && (
                                 <div className="space-y-6">
-                                    <PatientInfoCard serviceRequest={serviceRequest} patient={patient} />
+                                    <PatientInfoCard
+                                        serviceRequest={serviceRequest}
+                                        patient={patient}
+                                        secondaryDiagnosis={storedIcdTextDisplay}
+                                    />
 
                                     {/* Số block, Phương pháp nhuộm và Vị trí bệnh phẩm */}
                                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">

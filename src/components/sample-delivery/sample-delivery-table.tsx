@@ -262,6 +262,14 @@ export default function SampleDeliveryTable() {
         return storedServiceRequestData.data.services[0]?.sampleTypeName || ''
     }, [storedServiceRequestData])
 
+    /** Chẩn đoán phụ từ GET /service-requests/stored/{id} (icdText hoặc icd_text). */
+    const storedIcdTextDisplay = useMemo(() => {
+        const d = storedServiceRequestData?.data
+        if (!d) return ''
+        const raw = d.icdText ?? (d as { icd_text?: string | null }).icd_text
+        return typeof raw === 'string' ? raw.trim() : ''
+    }, [storedServiceRequestData])
+
     // Ref cho phần barcode để in
     const barcodeRef = useRef<HTMLDivElement>(null)
 
@@ -725,6 +733,14 @@ export default function SampleDeliveryTable() {
                                         <Label className="text-sm text-gray-600">Chẩn đoán</Label>
                                         <Input
                                             value={storedServiceRequestData.data.icdName || ''}
+                                            disabled
+                                            className="mt-1 font-semibold"
+                                        />
+                                    </div>
+                                    <div className="col-span-3">
+                                        <Label className="text-sm text-gray-600">Chẩn đoán phụ</Label>
+                                        <Input
+                                            value={storedIcdTextDisplay}
                                             disabled
                                             className="mt-1 font-semibold"
                                         />
