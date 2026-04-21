@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest, type UserRoom } from "@/lib/api/client";
-import { formatDobFromHis } from "@/lib/utils";
+import { cn, formatDobFromHis } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -32,6 +32,38 @@ import { logFrontendApiStatus } from "@/lib/logging/frontend-api-logger";
 
 /** Các giá trị tiền tố có trong dropdown chọn tiền tố */
 const PREFIX_OPTIONS = ['T', 'C', 'F', 'S'];
+
+interface PatientInfoReadRowProps {
+    label: string
+    children: React.ReactNode
+    multiline?: boolean
+}
+
+function PatientInfoReadRow({ label, children, multiline }: PatientInfoReadRowProps) {
+    const isEmpty =
+        children == null ||
+        children === '' ||
+        (typeof children === 'string' && !children.trim())
+    const display = isEmpty ? '—' : children
+    return (
+        <div
+            className={cn(
+                'grid min-w-0 gap-x-2 gap-y-0.5 text-sm sm:grid-cols-[minmax(7rem,auto)_1fr]',
+                multiline ? 'items-start' : 'items-baseline',
+            )}
+        >
+            <span className="text-muted-foreground shrink-0 leading-snug">{label}</span>
+            <div
+                className={cn(
+                    'min-w-0 break-words font-medium leading-snug text-foreground',
+                    multiline && 'whitespace-pre-wrap',
+                )}
+            >
+                {display}
+            </div>
+        </div>
+    )
+}
 
 export default function TestIndicationsTable() {
 
@@ -418,6 +450,22 @@ export default function TestIndicationsTable() {
         const raw = d.icdText ?? (d as { icd_text?: string | null }).icd_text
         return typeof raw === 'string' ? raw.trim() : ''
     }, [storedServiceRequestData])
+
+    const requestDoctorDisplay = useMemo(() => {
+        if (!serviceRequest) return ''
+        if (serviceRequest.requestUsername && serviceRequest.requestLoginname) {
+            return `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`
+        }
+        return serviceRequest.requestUsername ?? serviceRequest.requestLoginname ?? ''
+    }, [serviceRequest])
+
+    const requestLocationDisplay = useMemo(() => {
+        if (!serviceRequest) return ''
+        const dept = serviceRequest.requestDepartment?.name ?? ''
+        const room = serviceRequest.requestRoom?.name ?? ''
+        if (dept && room) return `${room} - ${dept}`
+        return dept || room
+    }, [serviceRequest])
 
     // Tự động set selectedSampleType từ sampleTypeId khi có storedServiceRequestData
     useEffect(() => {
