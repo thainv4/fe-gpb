@@ -902,7 +902,7 @@ export default function TestIndicationsTable() {
                 )} */}
 
                 {/* Controls area: keep SID and specimen select isolated from patient inputs */}
-                <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-end gap-3 md:gap-6 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">
+                <div className="controls sticky top-0 z-20 flex flex-col md:flex-row md:items-end gap-3 md:gap-8 mb-4 pt-4 pb-4 bg-white border-b border-gray-300">
                     <div className="w-full md:w-1/3 flex flex-col gap-1.5">
                         <Label className="text-sm font-medium">Nhập mã y lệnh</Label>
                         <div className="flex gap-2">
@@ -1073,19 +1073,7 @@ export default function TestIndicationsTable() {
                     </div>
 
                     {storedServiceReqId && currentReceptionCode && (
-                        <div className="w-full md:w-1/3 flex flex-col gap-1.5">
-                            <div className="flex items-center gap-6 mb-2">
-                                <Label className="text-sm font-medium text-blue-600">Mã bệnh phẩm</Label>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handlePrintBarcode}
-                                    className="h-7"
-                                >
-                                    <Printer className="h-4 w-4 mr-1" />
-                                    In mã QR
-                                </Button>
-                            </div>
+                        <div className="w-full md:w-1/3 flex gap-1.5">
                             <div ref={barcodeRef} className="flex flex-col items-start">
                                 <QRCodeSVG
                                     key={currentReceptionCode} // Force re-render khi currentReceptionCode thay đổi
@@ -1097,6 +1085,17 @@ export default function TestIndicationsTable() {
                                 <div className="mt-1 text-base font-medium text-gray-700 print-text-xs">
                                     {currentReceptionCode}
                                 </div>
+                            </div>
+                            <div className="flex items-center gap-6 mb-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handlePrintBarcode}
+                                    className="h-7"
+                                >
+                                    <Printer className="h-4 w-4 mr-1" />
+                                    In mã QR
+                                </Button>
                             </div>
                         </div>
                     )}

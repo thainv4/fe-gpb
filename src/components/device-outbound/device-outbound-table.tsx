@@ -91,7 +91,7 @@ export default function DeviceOutboundTable() {
         mutationFn: (body: DeviceOutboundBatchBody) => apiClient.createDeviceOutboundBatch(body),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['device-outbound'] })
-            toast({ title: 'Thành công', description: 'Đã tạo bản ghi xuất thiết bị.' })
+            toast({ title: 'Thành công', description: 'Đã tạo order.' })
             resetForm()
             setIsFormOpen(false)
         },
@@ -104,7 +104,7 @@ export default function DeviceOutboundTable() {
         mutationFn: (body: CreateDeviceOutboundBody) => apiClient.createDeviceOutbound(body),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['device-outbound'] })
-            toast({ title: 'Thành công', description: 'Đã tạo bản ghi xuất thiết bị.' })
+            toast({ title: 'Thành công', description: 'Đã tạo order.' })
             resetForm()
             setIsFormOpen(false)
         },
@@ -319,12 +319,12 @@ export default function DeviceOutboundTable() {
                 <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) setEditingItem(null); }}>
                     <DialogTrigger asChild>
                         <Button onClick={openCreate} className="medical-gradient">
-                            <Plus className="mr-2 h-4 w-4" /> Thêm bản ghi
+                            <Plus className="mr-2 h-4 w-4" /> Tạo order
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[640px] max-w-[95vw]">
                         <DialogHeader>
-                            <DialogTitle>{editingItem ? 'Cập nhật bản ghi xuất thiết bị' : 'Tạo bản ghi xuất thiết bị'}</DialogTitle>
+                            <DialogTitle>{editingItem ? 'Cập nhật bản ghi xuất thiết bị' : 'Tạo order'}</DialogTitle>
                             <DialogDescription>
                                 {editingItem ? 'Chỉnh sửa thông tin. Backend sẽ tính lại blockId/slideId nếu đổi receptionCode/blockNumber/slideNumber.' : 'Nhập mã Barcode để load danh sách dịch vụ, sau đó điền block, slide và phương pháp.'}
                             </DialogDescription>

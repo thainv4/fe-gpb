@@ -213,7 +213,7 @@ export function DashboardHome() {
                         <div className="flex items-center gap-2">
                             <GitBranch className="h-5 w-5 text-emerald-700" />
                             <div>
-                                <CardTitle>Phân bổ ca theo trạng thái</CardTitle>
+                                <CardTitle>Số lượng y lệnh theo trạng thái</CardTitle>
                                 <CardDescription className='mt-1'>
                                     Tổng:{' '}
                                     {stateQuery.isSuccess ? stateQuery.data.totalCases : '—'}
@@ -311,7 +311,7 @@ export function DashboardHome() {
                         <div className="flex items-center gap-2">
                             <BarChart3 className="h-5 w-5 text-emerald-700" />
                             <div>
-                                <CardTitle>Khối lượng ca theo thời gian</CardTitle>
+                                <CardTitle>Số lượng y lệnh theo thời gian</CardTitle>
                                 <CardDescription className='mt-1'>
                                     {volumeQuery.isSuccess
                                         ? `Tổng ${volumeQuery.data.total} (kỳ: ${volumeQuery.data.granularity})`
