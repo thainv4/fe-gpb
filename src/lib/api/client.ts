@@ -3543,6 +3543,102 @@ class ApiClient {
         );
     }
 
+    /**
+     * Tải xuống báo cáo Excel (backend stream .xlsx trực tiếp).
+     * GET /workflow-history/report-export → file .xlsx
+     *
+     * Trả về `{ blob, fileName, total }`, trong đó:
+     *  - `total` lấy từ header `X-Total-Count` (số dòng thực tế có trong file).
+     *  - `fileName` ưu tiên `Content-Disposition` của server; fallback `lis-report-YYYY-MM-DD.xlsx`.
+     * Caller tự quyết định lưu file (ví dụ dùng `URL.createObjectURL(blob)` + `<a>` để download).
+     */
+    async downloadWorkflowHistoryReportExport(params: {
+        roomId: string;
+        stateId?: string;
+        roomType?: 'actionRoomId' | 'currentRoomId' | 'transitionedByRoomId';
+        stateType?: 'toStateId' | 'fromStateId';
+        isCurrent?: number;
+        fromDate?: string;
+        toDate?: string;
+        maxRows?: number;
+        order?: 'ASC' | 'DESC';
+        orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
+        code?: string;
+        flag?: string;
+        patientName?: string;
+    }): Promise<{ blob: Blob; fileName: string; total: number }> {
+        const queryParams = new URLSearchParams();
+        queryParams.append('roomId', params.roomId);
+        if (params.stateId) queryParams.append('stateId', params.stateId);
+        if (params.roomType) queryParams.append('roomType', params.roomType);
+        if (params.stateType) queryParams.append('stateType', params.stateType);
+        if (params.isCurrent !== undefined) queryParams.append('isCurrent', params.isCurrent.toString());
+        if (params.fromDate) queryParams.append('fromDate', params.fromDate);
+        if (params.toDate) queryParams.append('toDate', params.toDate);
+        if (params.maxRows !== undefined) queryParams.append('maxRows', String(params.maxRows));
+        if (params.order) queryParams.append('order', params.order);
+        if (params.orderBy) queryParams.append('orderBy', params.orderBy);
+        if (params.code) queryParams.append('code', params.code);
+        if (params.flag) queryParams.append('flag', params.flag);
+        if (params.patientName) queryParams.append('patientName', params.patientName);
+
+        this.refreshTokenFromStorage();
+        const isValid = await this.ensureValidToken();
+        if (!isValid && this.token) {
+            throw new Error('Session expired. Please login again.');
+        }
+
+        const url = `${this.baseURL}/workflow-history/report-export?${queryParams.toString()}`;
+        const headers: Record<string, string> = {};
+        if (this.token) headers.Authorization = `Bearer ${this.token}`;
+
+        const response = await fetch(url, { method: 'GET', headers });
+        if (!response.ok) {
+            let message = `Không tải được báo cáo (HTTP ${response.status})`;
+            try {
+                const ct = response.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    const data = (await response.json()) as { error?: { message?: string } | string };
+                    const errObj = data?.error;
+                    if (typeof errObj === 'string') message = errObj;
+                    else if (errObj?.message) message = errObj.message;
+                } else {
+                    const text = await response.text();
+                    if (text) message = text.slice(0, 500);
+                }
+            } catch {
+            }
+            throw new Error(message);
+        }
+
+        const blob = await response.blob();
+
+        const totalHeader = response.headers.get('X-Total-Count');
+        const total = totalHeader ? Number(totalHeader) : 0;
+
+        let fileName = '';
+        const disposition = response.headers.get('Content-Disposition');
+        if (disposition) {
+            const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+            if (match && match[1]) {
+                try {
+                    fileName = decodeURIComponent(match[1]);
+                } catch {
+                    fileName = match[1];
+                }
+            }
+        }
+        if (!fileName) {
+            const d = new Date();
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            fileName = `lis-report-${yyyy}-${mm}-${dd}.xlsx`;
+        }
+
+        return { blob, fileName, total: Number.isFinite(total) ? total : 0 };
+    }
+
     async transitionWorkflow(body: {
         storedServiceReqId: string;
         toStateId: string;
