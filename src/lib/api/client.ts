@@ -918,6 +918,8 @@ export interface StoreServiceRequestBody {
     currentDepartmentId: string;
     receptionCode: string;
     sampleTypeName?: string;
+    /** ID BML_SAMPLE_TYPES — bắt buộc cùng với lưu chỉ định (test-indications) */
+    sampleTypeId: string;
     sampleCollectionTime: string;
     collectedByUserId: string;
     saveRawJson: boolean;
@@ -3196,14 +3198,22 @@ class ApiClient {
     async updateServiceReceptionCode(
         serviceId: string,
         receptionCode?: string,
-        sampleTypeName?: string
+        sampleTypeName?: string,
+        sampleTypeId?: string
     ): Promise<ApiResponse<StoredService>> {
-        const body: { receptionCode?: string; sampleTypeName?: string } = {};
+        const body: {
+            receptionCode?: string;
+            sampleTypeName?: string;
+            sampleTypeId?: string;
+        } = {};
         if (receptionCode) {
             body.receptionCode = receptionCode;
         }
         if (sampleTypeName) {
             body.sampleTypeName = sampleTypeName;
+        }
+        if (sampleTypeId) {
+            body.sampleTypeId = sampleTypeId;
         }
         return this.request<StoredService>(
             `/service-requests/stored/services/${serviceId}/reception-code`,

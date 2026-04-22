@@ -493,6 +493,7 @@ export default function TestIndicationsTable() {
             currentDepartmentId: string;
             receptionCode: string;
             sampleTypeName?: string;
+            sampleTypeId: string;
             sampleCollectionTime: string;
             collectedByUserId: string;
             saveRawJson: boolean;
@@ -508,12 +509,13 @@ export default function TestIndicationsTable() {
 
     // Mutation để update receptionCode
     const updateReceptionCodeMutation = useMutation({
-        mutationFn: ({ serviceId, receptionCode, sampleTypeName }: {
+        mutationFn: ({ serviceId, receptionCode, sampleTypeName, sampleTypeId }: {
             serviceId: string;
             receptionCode?: string;
             sampleTypeName?: string;
+            sampleTypeId?: string;
         }) =>
-            apiClient.updateServiceReceptionCode(serviceId, receptionCode, sampleTypeName),
+            apiClient.updateServiceReceptionCode(serviceId, receptionCode, sampleTypeName, sampleTypeId),
         onError: (error) => {
             toast({
                 title: "Lỗi",
@@ -668,7 +670,8 @@ export default function TestIndicationsTable() {
                     updateReceptionCodeMutation.mutateAsync({
                         serviceId: service.id,
                         receptionCode: receptionCode,
-                        sampleTypeName: selectedType?.typeName
+                        sampleTypeName: selectedType?.typeName,
+                        sampleTypeId: selectedSampleType
                     })
                 )
                 await Promise.all(updatePromises)
@@ -752,6 +755,7 @@ export default function TestIndicationsTable() {
                 currentDepartmentId: tabDepartmentId,
                 receptionCode: receptionCode,
                 sampleTypeName: selectedType?.typeName,
+                sampleTypeId: selectedSampleType,
                 sampleCollectionTime: new Date().toISOString(),
                 collectedByUserId: currentUserId,
                 saveRawJson: false,
