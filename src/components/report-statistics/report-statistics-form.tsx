@@ -46,7 +46,6 @@ export default function ReportStatisticsForm() {
     const [selectedStateId, setSelectedStateId] = useState<string>('all')
     const [codeInput, setCodeInput] = useState('')
     const [patientNameInput, setPatientNameInput] = useState('')
-    const [flagInput, setFlagInput] = useState('')
     const [isExporting, setIsExporting] = useState(false)
     const [lastExportInfo, setLastExportInfo] = useState<{ total: number; exported: number } | null>(null)
 
@@ -78,7 +77,6 @@ export default function ReportStatisticsForm() {
         setSelectedStateId('all')
         setCodeInput('')
         setPatientNameInput('')
-        setFlagInput('')
     }
 
     async function handleExportReport() {
@@ -108,13 +106,6 @@ export default function ReportStatisticsForm() {
         try {
             const roomId = selectedRoomId === 'all' ? '' : selectedRoomId
             const stateId = selectedStateId === 'all' ? undefined : selectedStateId
-            const flagTrim = flagInput.trim()
-            let flagParam: string | undefined
-            if (flagTrim.toLowerCase() === 'null') {
-                flagParam = 'null'
-            } else if (flagTrim !== '') {
-                flagParam = flagTrim
-            }
 
             const { blob, fileName, total } = await apiClient.downloadWorkflowHistoryReportExport({
                 roomId,
@@ -128,7 +119,6 @@ export default function ReportStatisticsForm() {
                 orderBy: 'actionTimestamp',
                 code: codeInput.trim() || undefined,
                 patientName: patientNameInput.trim() || undefined,
-                flag: flagParam,
             })
 
             if (total === 0) {
@@ -180,10 +170,10 @@ export default function ReportStatisticsForm() {
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Báo cáo & Thống kê</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    {/* <p className="mt-1 text-sm text-muted-foreground">
                         Xuất Excel theo lịch sử trạng thái (một dòng = một bản ghi workflow), lọc theo thời điểm
                         chuyển trạng thái.
-                    </p>
+                    </p> */}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -296,15 +286,6 @@ export default function ReportStatisticsForm() {
                                 value={patientNameInput}
                                 onChange={(e) => setPatientNameInput(e.target.value)}
                                 placeholder="Tùy chọn"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label>Flag</Label>
-                            <Input
-                                value={flagInput}
-                                onChange={(e) => setFlagInput(e.target.value)}
-                                placeholder="Để trống = tất cả; gõ null = không có flag"
                             />
                         </div>
                     </div>
