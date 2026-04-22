@@ -6,8 +6,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useCurrentRoomStore } from '@/lib/stores/current-room'
 import { apiClient } from '@/lib/api/client'
 
-/** Khi departmentType (hoặc resultFormType) của phòng hiện tại === 3, chỉ cho phép vào dashboard, test-indications và change-password */
-const ALLOWED_WHEN_TYPE_3 = ['/dashboard', '/test-indications', '/change-password', '/']
+/** Khi departmentType (hoặc resultFormType) của phòng hiện tại === 3, chỉ cho phép một số route (cùng hướng với user thường) */
+const ALLOWED_WHEN_TYPE_3 = ['/dashboard', '/reports', '/test-indications', '/change-password', '/']
 
 /** Route public (login, register, ...) không bị chặn bởi departmentType */
 const PUBLIC_ROUTES = ['/auth/login', '/auth/register', '/']

@@ -23,6 +23,7 @@ const adminOnlyRoutes = [
 // Routes user có thể truy cập
 const userAllowedRoutes = [
     '/dashboard',
+    '/reports',
     '/test-indications',
     '/sample-delivery',
     '/test-results',

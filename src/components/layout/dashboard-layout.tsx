@@ -15,6 +15,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import type { LucideIcon } from 'lucide-react'
 import {
     LayoutDashboard,
     BarChart3,
@@ -50,26 +51,51 @@ interface DashboardLayoutProps {
     children: React.ReactNode
 }
 
-const PIVKA_RESULTS_NAV = {
+/** Một mục menu lá (có href) — dùng cho link top-level hoặc con trong group */
+interface NavLeaf {
+    name: string
+    href: string
+    icon: LucideIcon
+    description: string
+}
+
+interface NavGroupItem {
+    name: string
+    icon: LucideIcon
+    description: string
+    children: NavLeaf[]
+}
+
+type NavItem = NavLeaf | NavGroupItem
+
+function isNavGroupItem(item: NavItem): item is NavGroupItem {
+    return 'children' in item && item.children !== undefined
+}
+
+const PIVKA_RESULTS_NAV: NavLeaf = {
     name: 'Kết quả PIVKA',
     href: '/pivka-results',
     icon: Barcode,
     description: 'Phiếu kết quả AFP, AFP-L3, PIVKA-II',
 }
 
-function injectPivkaNavItem<T extends { name: string; children?: Array<{ href: string }> }>(
-    items: T[],
-    show: boolean
-): T[] {
+const REPORTS_NAV: NavLeaf = {
+    name: 'Báo cáo & Thống kê',
+    href: '/reports',
+    icon: BarChart3,
+    description: 'Tạo báo cáo linh hoạt và xuất Excel',
+}
+
+function injectPivkaNavItem(items: NavItem[], show: boolean): NavItem[] {
     if (!show) return items
     return items.map((item) => {
-        if (item.name !== 'Xét nghiệm' || !item.children) return item
+        if (item.name !== 'Xét nghiệm' || !isNavGroupItem(item)) return item
         if (item.children.some((c) => c.href === '/pivka-results')) return item
         const idx = item.children.findIndex((c) => c.href === '/test-results')
-        const nextChildren =
+        const nextChildren: NavLeaf[] =
             idx >= 0
-                ? [...item.children.slice(0, idx + 1), PIVKA_RESULTS_NAV as (typeof item.children)[0], ...item.children.slice(idx + 1)]
-                : [...item.children, PIVKA_RESULTS_NAV as (typeof item.children)[0]]
+                ? [...item.children.slice(0, idx + 1), PIVKA_RESULTS_NAV, ...item.children.slice(idx + 1)]
+                : [...item.children, PIVKA_RESULTS_NAV]
         return { ...item, children: nextChildren }
     })
 }
@@ -110,19 +136,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
 
     // Navigation config
-    const navigation = [
+    const navigation: NavItem[] = [
         {
             name: 'Trang chủ',
             href: '/dashboard',
             icon: LayoutDashboard,
             description: 'Tổng quan hệ thống và thống kê'
         },
-        {
-            name: 'Báo cáo & Thống kê',
-            href: '/reports',
-            icon: BarChart3,
-            description: 'Tạo báo cáo linh hoạt và xuất Excel'
-        },
+        REPORTS_NAV,
         {
             name: 'Xét nghiệm',
             icon: TestTube,
@@ -272,8 +293,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         // }
     ] 
 
-    // Filter navigation based on role và departmentType (3 = chỉ test-indications + change-password)
-    const filteredNavigation = useMemo(() => {
+    // Filter navigation based on role và departmentType (3 = dashboard, báo cáo, test-indications + change-password)
+    const filteredNavigation = useMemo((): NavItem[] => {
         if (!user) return []
         
         const userRole = user.role?.toLowerCase()
@@ -285,15 +306,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     name: 'Trang chủ',
                     href: '/dashboard',
                     icon: LayoutDashboard,
-                    description: 'Tổng quan hệ thống và thống kê'
+                    description: 'Tổng quan hệ thống và thống kê',
                 },
+                REPORTS_NAV,
                 {
                     name: 'Tiếp nhận bệnh phẩm',
                     href: '/test-indications',
                     icon: Stethoscope,
-                    description: 'Tiếp nhận bệnh phẩm'
-                }
-            ]
+                    description: 'Tiếp nhận bệnh phẩm',
+                },
+            ] satisfies NavItem[]
         }
         
         // User chỉ thấy tab "Xét nghiệm"
@@ -303,41 +325,41 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     name: 'Dashboard',
                     href: '/dashboard',
                     icon: LayoutDashboard,
-                    description: 'Tổng quan hệ thống và thống kê'
+                    description: 'Tổng quan hệ thống và thống kê',
                 },
-               
-                        {
-                            name: 'Tiếp nhận bệnh phẩm',
-                            href: '/test-indications',
-                            icon: Stethoscope,
-                            description: 'Tiếp nhận bệnh phẩm'
-                        },
-                        {
-                            name: 'Bàn giao mẫu',
-                            href: '/sample-delivery',
-                            icon: Package,
-                            description: 'Quản lý trạng thái và bàn giao mẫu'
-                        },
-                        // {
-                        //     name: 'Tủ lưu mẫu',
-                        //     href: '/sample-cabinets',
-                        //     icon: Archive,
-                        //     description: 'Quản lý vị trí lưu mẫu'
-                        // },
-                        {
-                            name: 'Kết quả xét nghiệm',
-                            href: '/test-results',
-                            icon: NewspaperIcon,
-                            description: 'Nhập và quản lý kết quả xét nghiệm'
-                        },
-                        ...(departmentType === 2 ? [PIVKA_RESULTS_NAV] : []),
-                        {
-                            name: 'Kết nối máy',
-                            href: '/device-outbound',
-                            icon: Cable,
-                            description: 'Xuất dữ liệu ra thiết bị' 
-                        }
-            ]
+                REPORTS_NAV,
+                {
+                    name: 'Tiếp nhận bệnh phẩm',
+                    href: '/test-indications',
+                    icon: Stethoscope,
+                    description: 'Tiếp nhận bệnh phẩm',
+                },
+                {
+                    name: 'Bàn giao mẫu',
+                    href: '/sample-delivery',
+                    icon: Package,
+                    description: 'Quản lý trạng thái và bàn giao mẫu',
+                },
+                // {
+                //     name: 'Tủ lưu mẫu',
+                //     href: '/sample-cabinets',
+                //     icon: Archive,
+                //     description: 'Quản lý vị trí lưu mẫu'
+                // },
+                {
+                    name: 'Kết quả xét nghiệm',
+                    href: '/test-results',
+                    icon: NewspaperIcon,
+                    description: 'Nhập và quản lý kết quả xét nghiệm',
+                },
+                ...(departmentType === 2 ? [PIVKA_RESULTS_NAV] : []),
+                {
+                    name: 'Kết nối máy',
+                    href: '/device-outbound',
+                    icon: Cable,
+                    description: 'Xuất dữ liệu ra thiết bị',
+                },
+            ] satisfies NavItem[]
         }
         
         // Admin thấy tất cả
@@ -347,9 +369,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     // Build a map path -> label for tab naming
     const pathLabelMap = useMemo(() => {
         const map = new Map<string, string>()
-        const addItem = (item: any) => {
-            if (item.href) map.set(item.href, item.name)
-            if (item.children) item.children.forEach(addItem)
+        const addItem = (item: NavItem) => {
+            if (isNavGroupItem(item)) {
+                item.children.forEach((child) => {
+                    map.set(child.href, child.name)
+                })
+            } else {
+                map.set(item.href, item.name)
+            }
         }
         filteredNavigation.forEach(addItem)
         return map
@@ -490,7 +517,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         {filteredNavigation.map((item) => {
                             const Icon = item.icon
 
-                            if (item.children) {
+                            if (isNavGroupItem(item)) {
                                 return (
                                     <DropdownMenu key={item.name}>
                                         <DropdownMenuTrigger asChild>
@@ -505,7 +532,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="start" className="w-[850px] p-4">
                                             <div className="grid grid-cols-3 gap-2">
-                                                {item.children.map((child) => {
+                                                {item.children.map((child: NavLeaf) => {
                                                     const ChildIcon = child.icon
                                                     return (
                                                         <DropdownMenuItem
@@ -709,7 +736,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                             {filteredNavigation.map((item) => {
                                 const Icon = item.icon
 
-                                if (item.children) {
+                                if (isNavGroupItem(item)) {
                                     return (
                                         <div key={item.name} className="space-y-1">
                                             <div className="px-3 py-2">
@@ -723,7 +750,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                                     </p>
                                                 )}
                                             </div>
-                                            {item.children.map((child) => {
+                                            {item.children.map((child: NavLeaf) => {
                                                 const ChildIcon = child.icon
                                                 return (
                                                     <div key={child.name} className="ml-6">
