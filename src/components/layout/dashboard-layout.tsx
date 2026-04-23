@@ -143,7 +143,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: LayoutDashboard,
             description: 'Tổng quan hệ thống và thống kê'
         },
-        REPORTS_NAV,
+        
         {
             name: 'Xét nghiệm',
             icon: TestTube,
@@ -266,6 +266,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 }
             ]
         },
+        REPORTS_NAV,
         {
             name: 'Người dùng',
             icon: UserCheck,
@@ -308,13 +309,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: LayoutDashboard,
                     description: 'Tổng quan hệ thống và thống kê',
                 },
-                REPORTS_NAV,
                 {
                     name: 'Tiếp nhận bệnh phẩm',
                     href: '/test-indications',
                     icon: Stethoscope,
                     description: 'Tiếp nhận bệnh phẩm',
                 },
+                REPORTS_NAV
             ] satisfies NavItem[]
         }
         
@@ -327,7 +328,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: LayoutDashboard,
                     description: 'Tổng quan hệ thống và thống kê',
                 },
-                REPORTS_NAV,
                 {
                     name: 'Tiếp nhận bệnh phẩm',
                     href: '/test-indications',
@@ -359,6 +359,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: Cable,
                     description: 'Xuất dữ liệu ra thiết bị',
                 },
+                REPORTS_NAV
             ] satisfies NavItem[]
         }
         
