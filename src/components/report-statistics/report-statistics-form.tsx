@@ -527,7 +527,7 @@ export default function ReportStatisticsForm() {
                                                 }}
                                                 disabled={isPreviewFetching}
                                             >
-                                                <SelectTrigger className="h-8 w-32" id="report-preview-page-select">
+                                                <SelectTrigger className="h-8 w-24" id="report-preview-page-select">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>

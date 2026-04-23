@@ -8,7 +8,7 @@ import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
 import {Label} from '@/components/ui/label'
-import {Loader2, Trash2} from 'lucide-react'
+import {ChevronLeft, ChevronRight, Loader2, Trash2} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getWorkflowStateBadgeClasses} from '@/lib/workflow-state-colors'
 import {useToast} from '@/hooks/use-toast'
@@ -22,6 +22,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+
+/** Giới hạn số mục trong dropdown chọn trang; vượt quá thì dùng ô số. */
+const SIDEBAR_PAGINATION_MAX_SELECT = 200
 
 interface ServiceRequestsSidebarProps {
     readonly onSelect: (
@@ -74,6 +77,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const [selectedId, setSelectedId] = useState<string | null>(null)
     // State để quản lý dialog xác nhận xóa
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [pageJumpDraft, setPageJumpDraft] = useState('1')
     // State để quản lý filter flag
     const [selectedFlag, setSelectedFlag] = useState<string>('all')
     // State để quản lý trạng thái xuất Excel
@@ -214,6 +218,7 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         refetchOnReconnect: false,
         refetchOnMount: false,
         staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+        placeholderData: (previousData) => previousData,
     })
 
     const serviceRequests = data?.data?.items ?? []
@@ -233,6 +238,19 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const goToPage = (page: number) => {
         const p = Math.max(1, Math.min(page, totalPages))
         setFilters(prev => ({...prev, offset: (p - 1) * prev.limit}))
+    }
+
+    useEffect(() => {
+        setPageJumpDraft(String(currentPage))
+    }, [currentPage, totalPages])
+
+    const commitPageJump = () => {
+        const n = Math.floor(Number(pageJumpDraft))
+        if (!Number.isFinite(n)) {
+            setPageJumpDraft(String(currentPage))
+            return
+        }
+        goToPage(n)
     }
 
     const updateFilter = <K extends keyof FilterParams>(key: K, value: FilterParams[K]) => {
@@ -700,7 +718,14 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
 
                 {selectedRoomId && selectedStateId && !isLoading && serviceRequests.length === 0 && (
                     <div className="p-4 text-center text-sm text-gray-500">
-                        Không tìm thấy kết quả
+                        <p>Không tìm thấy kết quả</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Tổng{' '}
+                            <span className="font-medium text-gray-700">
+                                {total.toLocaleString('vi-VN')}
+                            </span>{' '}
+                            bản ghi
+                        </p>
                     </div>
                 )}
 
@@ -838,18 +863,88 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
             </div>
 
             {/* Pagination controls: Fixed at bottom, outside scroll area */}
-            {selectedRoomId && selectedStateId && serviceRequests.length > 0 && (
-                <div className="p-3 text-center border-t bg-white">
-                    <div className="flex items-center justify-between gap-2">
-                        <Button size="sm" variant="outline" onClick={() => goToPage(currentPage - 1)} disabled={isLoading || currentPage <= 1}>
-                            Trước
-                        </Button>
-
-                        <div className="text-sm text-gray-700">Trang {currentPage} / {totalPages}</div>
-
-                        <Button size="sm" variant="outline" onClick={() => goToPage(currentPage + 1)} disabled={isLoading || currentPage >= totalPages}>
-                            Sau
-                        </Button>
+            {selectedRoomId && selectedStateId && total > 0 && (
+                <div className="border-t bg-white p-3">
+                    <div className="flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center sm:gap-3">
+                        <div className="text-center text-xs text-gray-600 sm:text-left">
+                            Tổng{' '}
+                            <span className="font-medium text-gray-900">
+                                {total.toLocaleString('vi-VN')}
+                            </span>{' '}
+                            bản ghi
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
+                            
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                                <span>Trang</span>
+                                {totalPages <= SIDEBAR_PAGINATION_MAX_SELECT ? (
+                                    <Select
+                                        value={String(currentPage)}
+                                        onValueChange={(v) => {
+                                            const p = Number(v)
+                                            if (Number.isFinite(p)) {
+                                                goToPage(p)
+                                            }
+                                        }}
+                                        disabled={isLoading}
+                                    >
+                                        <SelectTrigger className="h-8 w-24" aria-label="Chọn số trang">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                                                <SelectItem key={p} value={String(p)}>
+                                                    {p} / {totalPages}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            max={totalPages}
+                                            className="h-8 w-16 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                            name="sidebar-page-jump"
+                                            value={pageJumpDraft}
+                                            onChange={(e) => setPageJumpDraft(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.currentTarget.blur()
+                                                }
+                                            }}
+                                            onBlur={commitPageJump}
+                                            disabled={isLoading}
+                                            aria-label="Số trang"
+                                        />
+                                        <span>/ {totalPages}</span>
+                                    </>
+                                )}
+                            </div>
+                            <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => goToPage(currentPage - 1)}
+                                disabled={isLoading || currentPage <= 1}
+                                aria-label="Trang trước"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => goToPage(currentPage + 1)}
+                                disabled={isLoading || currentPage >= totalPages}
+                                aria-label="Trang sau"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
                 </div>
             )}
