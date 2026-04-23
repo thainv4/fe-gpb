@@ -457,8 +457,8 @@ export default function ReportStatisticsForm() {
                                             <TableHead className="w-12">STT</TableHead>
                                             <TableHead>Barcode</TableHead>
                                             <TableHead>Mã Y lệnh</TableHead>
-                                            <TableHead>Tên bệnh nhân</TableHead>
                                             <TableHead>Mã bệnh nhân</TableHead>
+                                            <TableHead>Tên bệnh nhân</TableHead>
                                             <TableHead>Trạng thái</TableHead>
                                             <TableHead>Phòng</TableHead>
                                             <TableHead className="whitespace-nowrap">Thời gian (ghi nhận)</TableHead>
@@ -479,10 +479,10 @@ export default function ReportStatisticsForm() {
                                                     </TableCell>
                                                     <TableCell className="font-mono">{barcode}</TableCell>
                                                     <TableCell className="font-mono">{yLenh}</TableCell>
-                                                    <TableCell>{sr?.patientName || '—'}</TableCell>
                                                     <TableCell className="font-mono">
                                                         {sr?.patientCode || '—'}
                                                     </TableCell>
+                                                    <TableCell>{sr?.patientName || '—'}</TableCell>
                                                     <TableCell>
                                                         {stateName ? (
                                                             <span
