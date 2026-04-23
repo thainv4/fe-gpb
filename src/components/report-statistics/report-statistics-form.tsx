@@ -18,9 +18,12 @@ import { CalendarDays, ChevronLeft, ChevronRight, Download, Loader2, RotateCcw }
 import { apiClient } from '@/lib/api/client'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { getWorkflowStateBadgeClasses } from '@/lib/workflow-state-colors'
 
 const EXPORT_ROW_CAP = 200_000
 const PREVIEW_LIMIT = 20
+/** Chọn trang bằng dropdown; nhiều hơn sẽ dùng ô số (tránh hàng nghìn mục trong DOM). */
+const PREVIEW_MAX_SELECT_PAGES = 200
 const SEARCH_DEBOUNCE_MS = 400
 
 function formatDateInput(date: Date) {
@@ -63,7 +66,7 @@ type PreviewRow = {
         patientName?: string
         receptionCode?: string
     }
-    toState?: { stateName?: string }
+    toState?: { stateName?: string; stateCode?: string }
 }
 
 export default function ReportStatisticsForm() {
@@ -80,6 +83,7 @@ export default function ReportStatisticsForm() {
     const [debouncedCode, setDebouncedCode] = useState('')
     const [debouncedPatientName, setDebouncedPatientName] = useState('')
     const [previewOffset, setPreviewOffset] = useState(0)
+    const [pageJumpDraft, setPageJumpDraft] = useState('1')
 
     useEffect(() => {
         const id = window.setTimeout(() => setDebouncedCode(codeInput.trim()), SEARCH_DEBOUNCE_MS)
@@ -163,6 +167,24 @@ export default function ReportStatisticsForm() {
     const previewTotal = previewResponse?.data?.pagination?.total ?? 0
     const previewPage = Math.floor(previewOffset / PREVIEW_LIMIT) + 1
     const previewTotalPages = Math.max(1, Math.ceil(previewTotal / PREVIEW_LIMIT))
+
+    useEffect(() => {
+        setPageJumpDraft(String(previewPage))
+    }, [previewPage, previewTotalPages])
+
+    function goToPage(page: number) {
+        const p = Math.min(previewTotalPages, Math.max(1, Math.floor(page)))
+        setPreviewOffset((p - 1) * PREVIEW_LIMIT)
+    }
+
+    function commitPageJump() {
+        const n = Math.floor(Number(pageJumpDraft))
+        if (!Number.isFinite(n)) {
+            setPageJumpDraft(String(previewPage))
+            return
+        }
+        goToPage(n)
+    }
 
     function handleReset() {
         setFromDate(formatDateInput(new Date()))
@@ -400,11 +422,6 @@ export default function ReportStatisticsForm() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <div className="text-sm font-semibold text-gray-900">Xem trước kết quả</div>
-                            <p className="text-xs text-muted-foreground">
-                                Cùng bộ lọc với xuất Excel (phòng hiện tại, trạng thái đích, thời gian theo{' '}
-                                <span className="font-medium">actionTimestamp</span>). Tối đa {PREVIEW_LIMIT} dòng mỗi
-                                trang.
-                            </p>
                         </div>
                         {!dateRangeValid && (
                             <span className="text-xs font-medium text-destructive">Từ ngày không được sau Đến ngày</span>
@@ -452,6 +469,7 @@ export default function ReportStatisticsForm() {
                                                 sr?.hisServiceReqCode || sr?.serviceReqCode || '—'
                                             const barcode = sr?.receptionCode || '—'
                                             const ts = item.actionTimestamp ?? item.createdAt
+                                            const stateName = item.toState?.stateName
                                             return (
                                                 <TableRow key={item.id}>
                                                     <TableCell className="text-muted-foreground">
@@ -460,7 +478,22 @@ export default function ReportStatisticsForm() {
                                                     <TableCell className="font-mono">{barcode}</TableCell>
                                                     <TableCell>{sr?.patientName || '—'}</TableCell>
                                                     <TableCell className="font-mono">{yLenh}</TableCell>
-                                                    <TableCell>{item.toState?.stateName || '—'}</TableCell>
+                                                    <TableCell>
+                                                        {stateName ? (
+                                                            <span
+                                                                className={cn(
+                                                                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                                                                    getWorkflowStateBadgeClasses(
+                                                                        item.toState?.stateCode,
+                                                                    ),
+                                                                )}
+                                                            >
+                                                                {stateName}
+                                                            </span>
+                                                        ) : (
+                                                            '—'
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell>{item.roomName || '—'}</TableCell>
                                                     <TableCell className="whitespace-nowrap">
                                                         {formatDateTimeVi(ts)}
@@ -480,30 +513,80 @@ export default function ReportStatisticsForm() {
                                     </span>{' '}
                                     bản ghi
                                 </span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground">
-                                        Trang {previewPage} / {previewTotalPages}
-                                    </span>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={previewOffset === 0 || isPreviewFetching}
-                                        onClick={() => setPreviewOffset((o) => Math.max(0, o - PREVIEW_LIMIT))}
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={
-                                            previewOffset + PREVIEW_LIMIT >= previewTotal || isPreviewFetching
-                                        }
-                                        onClick={() => setPreviewOffset((o) => o + PREVIEW_LIMIT)}
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <span>Trang</span>
+                                        {previewTotalPages <= PREVIEW_MAX_SELECT_PAGES ? (
+                                            <Select
+                                                value={String(previewPage)}
+                                                onValueChange={(v) => {
+                                                    const p = Number(v)
+                                                    if (Number.isFinite(p)) {
+                                                        goToPage(p)
+                                                    }
+                                                }}
+                                                disabled={isPreviewFetching}
+                                            >
+                                                <SelectTrigger className="h-8 w-32" id="report-preview-page-select">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {Array.from(
+                                                        { length: previewTotalPages },
+                                                        (_, i) => i + 1,
+                                                    ).map((p) => (
+                                                        <SelectItem key={p} value={String(p)}>
+                                                            {p} / {previewTotalPages}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <>
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={previewTotalPages}
+                                                    className="h-8 w-16 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                    name="report-preview-page-jump"
+                                                    value={pageJumpDraft}
+                                                    onChange={(e) => setPageJumpDraft(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.currentTarget.blur()
+                                                        }
+                                                    }}
+                                                    onBlur={commitPageJump}
+                                                    disabled={isPreviewFetching}
+                                                />
+                                                <span>/ {previewTotalPages}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={previewOffset === 0 || isPreviewFetching}
+                                            onClick={() => setPreviewOffset((o) => Math.max(0, o - PREVIEW_LIMIT))}
+                                            aria-label="Trang trước"
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={
+                                                previewOffset + PREVIEW_LIMIT >= previewTotal || isPreviewFetching
+                                            }
+                                            onClick={() => setPreviewOffset((o) => o + PREVIEW_LIMIT)}
+                                            aria-label="Trang sau"
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </>
