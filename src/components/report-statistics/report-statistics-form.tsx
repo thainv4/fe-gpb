@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,11 +13,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { CalendarDays, Download, Loader2, RotateCcw } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Loader2, RotateCcw } from 'lucide-react'
 import { apiClient } from '@/lib/api/client'
 import { useToast } from '@/hooks/use-toast'
+import { cn } from '@/lib/utils'
 
 const EXPORT_ROW_CAP = 200_000
+const PREVIEW_LIMIT = 20
+const SEARCH_DEBOUNCE_MS = 400
 
 function formatDateInput(date: Date) {
     const year = date.getFullYear()
@@ -37,6 +41,31 @@ function localDateStrToUtcEndIso(dateStr: string): string {
     return new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999)).toISOString()
 }
 
+function formatDateTimeVi(iso?: string) {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+
+type PreviewRow = {
+    id: string
+    createdAt?: string
+    actionTimestamp?: string
+    roomName?: string
+    serviceRequest?: {
+        hisServiceReqCode?: string
+        serviceReqCode?: string
+        patientName?: string
+        receptionCode?: string
+    }
+    toState?: { stateName?: string }
+}
+
 export default function ReportStatisticsForm() {
     const { toast } = useToast()
     const today = formatDateInput(new Date())
@@ -48,6 +77,30 @@ export default function ReportStatisticsForm() {
     const [patientNameInput, setPatientNameInput] = useState('')
     const [isExporting, setIsExporting] = useState(false)
     const [lastExportInfo, setLastExportInfo] = useState<{ total: number; exported: number } | null>(null)
+    const [debouncedCode, setDebouncedCode] = useState('')
+    const [debouncedPatientName, setDebouncedPatientName] = useState('')
+    const [previewOffset, setPreviewOffset] = useState(0)
+
+    useEffect(() => {
+        const id = window.setTimeout(() => setDebouncedCode(codeInput.trim()), SEARCH_DEBOUNCE_MS)
+        return () => window.clearTimeout(id)
+    }, [codeInput])
+
+    useEffect(() => {
+        const id = window.setTimeout(() => setDebouncedPatientName(patientNameInput.trim()), SEARCH_DEBOUNCE_MS)
+        return () => window.clearTimeout(id)
+    }, [patientNameInput])
+
+    const dateRangeValid = fromDate <= toDate
+
+    useEffect(() => {
+        setPreviewOffset(0)
+    }, [fromDate, toDate, selectedRoomId, selectedStateId, debouncedCode, debouncedPatientName])
+
+    const previewFromIso = localDateStrToUtcStartIso(fromDate)
+    const previewToIso = localDateStrToUtcEndIso(toDate)
+    const previewRoomId = selectedRoomId === 'all' ? '' : selectedRoomId
+    const previewStateId = selectedStateId === 'all' ? undefined : selectedStateId
 
     const { data: statesData, isLoading: isLoadingStates } = useQuery({
         queryKey: ['workflow-states'],
@@ -70,6 +123,47 @@ export default function ReportStatisticsForm() {
     const workflowStates = useMemo(() => statesData?.data?.items ?? [], [statesData?.data?.items])
     const userRooms = useMemo(() => userRoomsData?.data?.rooms ?? [], [userRoomsData?.data?.rooms])
 
+    const {
+        data: previewResponse,
+        isLoading: isPreviewLoading,
+        isFetching: isPreviewFetching,
+    } = useQuery({
+        queryKey: [
+            'report-workflow-preview',
+            previewRoomId,
+            previewStateId,
+            previewFromIso,
+            previewToIso,
+            debouncedCode,
+            debouncedPatientName,
+            previewOffset,
+        ],
+        queryFn: () =>
+            apiClient.getWorkflowHistory({
+                roomId: previewRoomId,
+                stateId: previewStateId,
+                roomType: 'currentRoomId',
+                stateType: 'toStateId',
+                timeType: 'actionTimestamp',
+                fromDate: previewFromIso,
+                toDate: previewToIso,
+                limit: PREVIEW_LIMIT,
+                offset: previewOffset,
+                order: 'DESC',
+                orderBy: 'actionTimestamp',
+                code: debouncedCode || undefined,
+                patientName: debouncedPatientName || undefined,
+            }),
+        enabled: dateRangeValid,
+        refetchOnWindowFocus: false,
+        placeholderData: (previousData) => previousData,
+    })
+
+    const previewItems = (previewResponse?.data?.items ?? []) as PreviewRow[]
+    const previewTotal = previewResponse?.data?.pagination?.total ?? 0
+    const previewPage = Math.floor(previewOffset / PREVIEW_LIMIT) + 1
+    const previewTotalPages = Math.max(1, Math.ceil(previewTotal / PREVIEW_LIMIT))
+
     function handleReset() {
         setFromDate(formatDateInput(new Date()))
         setToDate(formatDateInput(new Date()))
@@ -77,6 +171,7 @@ export default function ReportStatisticsForm() {
         setSelectedStateId('all')
         setCodeInput('')
         setPatientNameInput('')
+        setPreviewOffset(0)
     }
 
     async function handleExportReport() {
@@ -296,6 +391,122 @@ export default function ReportStatisticsForm() {
                             {lastExportInfo.total >= EXPORT_ROW_CAP &&
                                 ` (đã chạm giới hạn an toàn ${EXPORT_ROW_CAP.toLocaleString('vi-VN')} dòng)`}
                         </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardContent className="space-y-3 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <div className="text-sm font-semibold text-gray-900">Xem trước kết quả</div>
+                            <p className="text-xs text-muted-foreground">
+                                Cùng bộ lọc với xuất Excel (phòng hiện tại, trạng thái đích, thời gian theo{' '}
+                                <span className="font-medium">actionTimestamp</span>). Tối đa {PREVIEW_LIMIT} dòng mỗi
+                                trang.
+                            </p>
+                        </div>
+                        {!dateRangeValid && (
+                            <span className="text-xs font-medium text-destructive">Từ ngày không được sau Đến ngày</span>
+                        )}
+                    </div>
+
+                    {!dateRangeValid ? null : isPreviewLoading && !previewResponse ? (
+                        <div className="flex min-h-[160px] items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            Đang tải danh sách…
+                        </div>
+                    ) : previewTotal === 0 ? (
+                        <div className="rounded-md border border-dashed py-10 text-center text-sm text-muted-foreground">
+                            Không có bản ghi trong khoảng lọc đã chọn
+                        </div>
+                    ) : (
+                        <>
+                            <div
+                                className={cn(
+                                    'relative rounded-md border',
+                                    isPreviewFetching && !isPreviewLoading && 'opacity-80',
+                                )}
+                            >
+                                {isPreviewFetching && !isPreviewLoading ? (
+                                    <div className="absolute inset-0 z-[1] flex items-center justify-center rounded-md bg-background/40">
+                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    </div>
+                                ) : null}
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-12">STT</TableHead>
+                                            <TableHead>Barcode</TableHead>
+                                            <TableHead>Tên BN</TableHead>
+                                            <TableHead>Mã Y lệnh</TableHead>
+                                            <TableHead>Trạng thái</TableHead>
+                                            <TableHead>Phòng</TableHead>
+                                            <TableHead className="whitespace-nowrap">Thời gian (ghi nhận)</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {previewItems.map((item, idx) => {
+                                            const sr = item.serviceRequest
+                                            const yLenh =
+                                                sr?.hisServiceReqCode || sr?.serviceReqCode || '—'
+                                            const barcode = sr?.receptionCode || '—'
+                                            const ts = item.actionTimestamp ?? item.createdAt
+                                            return (
+                                                <TableRow key={item.id}>
+                                                    <TableCell className="text-muted-foreground">
+                                                        {previewOffset + idx + 1}
+                                                    </TableCell>
+                                                    <TableCell className="font-mono">{barcode}</TableCell>
+                                                    <TableCell>{sr?.patientName || '—'}</TableCell>
+                                                    <TableCell className="font-mono">{yLenh}</TableCell>
+                                                    <TableCell>{item.toState?.stateName || '—'}</TableCell>
+                                                    <TableCell>{item.roomName || '—'}</TableCell>
+                                                    <TableCell className="whitespace-nowrap">
+                                                        {formatDateTimeVi(ts)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                <span className="text-muted-foreground">
+                                    Tổng{' '}
+                                    <span className="font-medium text-foreground">
+                                        {previewTotal.toLocaleString('vi-VN')}
+                                    </span>{' '}
+                                    bản ghi
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">
+                                        Trang {previewPage} / {previewTotalPages}
+                                    </span>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={previewOffset === 0 || isPreviewFetching}
+                                        onClick={() => setPreviewOffset((o) => Math.max(0, o - PREVIEW_LIMIT))}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={
+                                            previewOffset + PREVIEW_LIMIT >= previewTotal || isPreviewFetching
+                                        }
+                                        onClick={() => setPreviewOffset((o) => o + PREVIEW_LIMIT)}
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>
