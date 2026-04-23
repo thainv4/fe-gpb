@@ -3508,6 +3508,8 @@ class ApiClient {
             /** Trạng thái đích (dùng kiểm tra sortOrder === 5 để xóa workflow khi lưu kết quả) */
             toState?: { id: string; stateCode?: string; stateName?: string; sortOrder: number };
             fromState?: { id: string; stateCode?: string; stateName?: string; sortOrder: number };
+            /** User ghi nhận bước workflow (người thực hiện chuyển trạng thái) */
+            creator?: { id?: string; userName?: string; fullName?: string };
         }>;
         pagination: {
             total: number;

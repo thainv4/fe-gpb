@@ -68,6 +68,7 @@ type PreviewRow = {
         receptionCode?: string
     }
     toState?: { stateName?: string; stateCode?: string }
+    creator?: { id?: string; userName?: string; fullName?: string }
 }
 
 export default function ReportStatisticsForm() {
@@ -461,6 +462,7 @@ export default function ReportStatisticsForm() {
                                             <TableHead>Tên bệnh nhân</TableHead>
                                             <TableHead>Trạng thái</TableHead>
                                             <TableHead>Phòng</TableHead>
+                                            <TableHead className="min-w-[100px]">Người thực hiện</TableHead>
                                             <TableHead className="whitespace-nowrap">Thời gian (ghi nhận)</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -500,6 +502,20 @@ export default function ReportStatisticsForm() {
                                                         )}
                                                     </TableCell>
                                                     <TableCell>{item.roomName || '—'}</TableCell>
+                                                    <TableCell className="text-xs">
+                                                        {item.creator ? (
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="font-medium text-foreground">
+                                                                    {item.creator.fullName || '—'}
+                                                                </span>
+                                                                <span className="text-muted-foreground">
+                                                                    {item.creator.userName || '—'}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            '—'
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell className="whitespace-nowrap">
                                                         {formatDateTimeVi(ts)}
                                                     </TableCell>
