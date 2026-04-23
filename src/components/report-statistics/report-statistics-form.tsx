@@ -212,7 +212,7 @@ export default function ReportStatisticsForm() {
             Math.round(
                 (new Date(`${toDate}T00:00:00`).getTime() -
                     new Date(`${fromDate}T00:00:00`).getTime()) /
-                    86_400_000,
+                86_400_000,
             ) + 1
         if (days > 31) {
             const ok = window.confirm(
@@ -344,27 +344,6 @@ export default function ReportStatisticsForm() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Trạng thái</Label>
-                            <Select
-                                value={selectedStateId}
-                                onValueChange={setSelectedStateId}
-                                disabled={isLoadingStates}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder={isLoadingStates ? 'Đang tải...' : 'Chọn trạng thái'} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                                    {workflowStates.map((s: { id: string; stateName: string }) => (
-                                        <SelectItem key={s.id} value={s.id}>
-                                            {s.stateName}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-2">
                             <Label>Từ ngày</Label>
                             <div className="relative">
                                 <Input
@@ -388,6 +367,27 @@ export default function ReportStatisticsForm() {
                                 />
                                 <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Trạng thái</Label>
+                            <Select
+                                value={selectedStateId}
+                                onValueChange={setSelectedStateId}
+                                disabled={isLoadingStates}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={isLoadingStates ? 'Đang tải...' : 'Chọn trạng thái'} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                                    {workflowStates.map((s: { id: string; stateName: string }) => (
+                                        <SelectItem key={s.id} value={s.id}>
+                                            {s.stateName}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="space-y-2">
