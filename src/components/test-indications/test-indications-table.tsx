@@ -271,18 +271,6 @@ export default function TestIndicationsTable() {
         setSampleCode('')
     }
 
-    const clearAll = () => {
-        setServiceReqCode('')
-        setSearchCode('')
-        setSelectedSampleType('')
-        setSelectedPrefix('')
-        setManualBarcode('')
-        setIsManualInput(false)
-        setSampleCode('')
-        setStoredServiceReqId(undefined) // Reset storedServiceReqId
-        sidInputRef.current?.focus()
-    }
-
     const errorMessage = error ? error.message : ''
 
     const normalizedSampleTypeSearch = sampleTypeSearch.trim()
@@ -519,8 +507,65 @@ export default function TestIndicationsTable() {
         }
     })
 
+    const updateOrderStatusMutation = useMutation({
+        mutationFn: ({ serviceReqCode, tokenCode }: { serviceReqCode: string; tokenCode: string }) =>
+            apiClient.startHisPacs(serviceReqCode, tokenCode),
+    })
+
     const handleConfirmSave = () => {
         setConfirmDialogOpen(true)
+    }
+
+    const handleUpdateOrderStatus = async () => {
+        const serviceCodeToUpdate = (searchCode || serviceReqCode || '').trim()
+        if (!serviceCodeToUpdate) {
+            toast({
+                title: "Lỗi",
+                description: "❌ Chưa có mã y lệnh",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const tokenCode = getHisTokenCode()
+        if (!tokenCode) {
+            toast({
+                title: "Lỗi",
+                description: "❌ Thiếu TokenCode HIS (localStorage). Vui lòng đăng nhập lại.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        try {
+            const response = await updateOrderStatusMutation.mutateAsync({
+                serviceReqCode: serviceCodeToUpdate,
+                tokenCode,
+            })
+
+            if (!response.success) {
+                toast({
+                    title: "Lỗi",
+                    description: response.message || "Không thể cập nhật trạng thái y lệnh",
+                    variant: "destructive",
+                })
+                return
+            }
+
+            await queryClient.invalidateQueries({ queryKey: ['service-request', serviceCodeToUpdate] })
+            setRefreshTrigger(prev => prev + 1)
+
+            toast({
+                title: "Thành công",
+                description: "Đã cập nhật trạng thái y lệnh thành công!",
+            })
+        } catch (error) {
+            toast({
+                title: "Lỗi",
+                description: `Có lỗi xảy ra khi cập nhật trạng thái: ${error instanceof Error ? error.message : 'Không xác định'}`,
+                variant: "destructive",
+            })
+        }
     }
 
     async function handleSave() {
@@ -770,6 +815,9 @@ export default function TestIndicationsTable() {
         }
     }
 
+
+    const isAcceptedOnThisSoftware = Boolean(storedServiceReqId)
+    const canShowUpdateOrderStatusButton = serviceRequest?.serviceReqSttId === 1 && isAcceptedOnThisSoftware
 
     return (
         <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>} className="flex h-screen overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
@@ -1067,6 +1115,7 @@ export default function TestIndicationsTable() {
 
                 <div className={'flex flex-col items-center gap-3 mt-6'}>
                     <div className="flex gap-3">
+
                         <Button
                             onClick={handleConfirmSave}
                             disabled={
@@ -1094,7 +1143,21 @@ export default function TestIndicationsTable() {
                                 'Lưu'
                             )}
                         </Button>
-                        <Button variant={'destructive'} onClick={clearAll}>Hủy</Button>
+                        {canShowUpdateOrderStatusButton && (
+                            <Button
+                                className="bg-slate-500 text-white hover:bg-slate-600"
+                                onClick={handleUpdateOrderStatus}
+                                disabled={!hasHisTokenCode || updateOrderStatusMutation.isPending}
+                            >
+                                {updateOrderStatusMutation.isPending ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    </>
+                                ) : (
+                                    'Cập nhật trạng thái y lệnh'
+                                )}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>
