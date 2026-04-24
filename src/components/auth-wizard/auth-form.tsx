@@ -25,6 +25,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useHisIntegration } from "@/hooks/use-his";
+import { useHisStore } from "@/lib/stores/his";
+import type { HisTokenResponse, LoginResponse } from "@/lib/api/client";
 import {
   Loader2,
   Shield,
@@ -50,6 +52,35 @@ const hisLoginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 type HisLoginFormData = z.infer<typeof hisLoginSchema>;
 
+function getMinutesUntilExpire(expireTime?: string): number | undefined {
+  if (!expireTime) return undefined;
+  const expireAt = new Date(expireTime).getTime();
+  if (Number.isNaN(expireAt)) return undefined;
+  return Math.max(0, Math.ceil((expireAt - Date.now()) / 60000));
+}
+
+function buildHisTokenFromLoginResponse(data: LoginResponse): HisTokenResponse | null {
+  if (!data.hisTokenCode) return null;
+
+  return {
+    tokenCode: data.hisTokenCode,
+    renewCode: data.hisRenewCode,
+    userLoginName: data.hisUserInfo?.loginName ?? data.user.username,
+    userName: data.hisUserInfo?.userName ?? data.user.fullName,
+    userEmail: data.hisUserInfo?.email ?? data.user.email ?? "",
+    userMobile: data.hisUserInfo?.mobile ?? "",
+    userGCode: data.hisUserInfo?.gCode ?? data.user.id,
+    applicationCode: data.hisUserInfo?.applicationCode ?? "",
+    loginTime: data.hisSessionInfo?.loginTime ?? new Date().toISOString(),
+    expireTime: data.hisSessionInfo?.expireTime ?? new Date().toISOString(),
+    minutesUntilExpire: getMinutesUntilExpire(data.hisSessionInfo?.expireTime),
+    roles: data.hisRoles?.map((role) => ({
+      RoleCode: role.RoleCode,
+      RoleName: role.RoleName,
+    })),
+  };
+}
+
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("jwt");
@@ -57,6 +88,7 @@ export function AuthForm() {
   const [showHisPassword, setShowHisPassword] = useState(false);
   const { toast } = useToast();
   const { login } = useAuthStore();
+  const { setToken: setHisStoreToken } = useHisStore();
   const {
     hisLoginWithCredentials,
     isLoggingInWithCredentials: isHisLoggingInWithCredentials,
@@ -110,9 +142,10 @@ export function AuthForm() {
           isActive: typeof result.data.user.isActive === 'boolean' ? (result.data.user.isActive ? 1 : 0) : result.data.user.isActive,
         });
 
-        // Save hisTokenCode to sessionStorage if available
-        if (result.data.hisTokenCode && typeof window !== "undefined") {
-          sessionStorage.setItem("hisTokenCode", result.data.hisTokenCode);
+        // Đồng bộ luôn HIS store để his-storage có dữ liệu ngay sau login GPB.
+        const hisToken = buildHisTokenFromLoginResponse(result.data);
+        if (hisToken) {
+          setHisStoreToken(hisToken);
         }
 
         toast({

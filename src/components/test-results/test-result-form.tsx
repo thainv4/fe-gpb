@@ -35,7 +35,7 @@ import { ResultForm, RESULT_FORM_TYPE_GPB } from "@/components/test-results/form
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useHisStore } from "@/lib/stores/his";
+import { getHisTokenCode } from "@/lib/his-token-code-storage";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
 
@@ -238,7 +238,6 @@ export default function TestResultForm() {
     const pathname = usePathname()
     const { setTabData, getTabData, activeKey, tabs } = useTabsStore()
     const { toast } = useToast()
-    const { token: hisToken } = useHisStore()
     const queryClient = useQueryClient()
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
     const [storedServiceReqId, setStoredServiceReqId] = useState<string>('')
@@ -1147,22 +1146,7 @@ export default function TestResultForm() {
 
     // Handler ký số trực tiếp - lấy thông tin signer từ API rồi ký luôn
     const handleSignDocument = async () => {
-        // Lấy HIS token code
-        let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
-        if (!tokenCode) {
-            tokenCode = hisToken?.tokenCode || null;
-        }
-        if (!tokenCode) {
-            const hisStorage = localStorage.getItem('his-storage');
-            if (hisStorage) {
-                try {
-                    const parsed = JSON.parse(hisStorage);
-                    tokenCode = parsed.state?.token?.tokenCode || null;
-                } catch (e) {
-                    console.error('Error parsing HIS storage:', e);
-                }
-            }
-        }
+        const tokenCode = getHisTokenCode()
 
         if (!tokenCode) {
             toast({
@@ -1259,26 +1243,7 @@ export default function TestResultForm() {
 
         setIsSigning(true)
         try {
-            // Get HIS token code from sessionStorage (saved during login)
-            let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
-
-            // Fallback to HIS store
-            if (!tokenCode) {
-                tokenCode = hisToken?.tokenCode || null;
-            }
-
-            // Fallback to localStorage if not in store
-            if (!tokenCode) {
-                const hisStorage = localStorage.getItem('his-storage');
-                if (hisStorage) {
-                    try {
-                        const parsed = JSON.parse(hisStorage);
-                        tokenCode = parsed.state?.token?.tokenCode || null;
-                    } catch (e) {
-                        console.error('Error parsing HIS storage:', e);
-                    }
-                }
-            }
+            const tokenCode = getHisTokenCode()
 
             // Check if we have a valid token
             if (!tokenCode) {
@@ -1586,22 +1551,7 @@ export default function TestResultForm() {
             return
         }
 
-        // Lấy HIS token code
-        let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
-        if (!tokenCode) {
-            tokenCode = hisToken?.tokenCode || null;
-        }
-        if (!tokenCode) {
-            const hisStorage = localStorage.getItem('his-storage');
-            if (hisStorage) {
-                try {
-                    const parsed = JSON.parse(hisStorage);
-                    tokenCode = parsed.state?.token?.tokenCode || null;
-                } catch (e) {
-                    console.error('Error parsing HIS storage:', e);
-                }
-            }
-        }
+        const tokenCode = getHisTokenCode()
 
         if (!tokenCode) {
             toast({

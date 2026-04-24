@@ -12,6 +12,7 @@ export function clearAllSessionData() {
         'auth-refresh-token',
         'auth-user',
         'auth-token-expires-at',
+        'his-storage',
         'tab-storage',
         'current-room-storage',
     ]

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest, type UserRoom } from "@/lib/api/client";
-import { formatDobDisplay } from "@/lib/utils";
+import { cn, formatDobDisplay } from "@/lib/utils";
 import {
     PatientInfoReadRow,
     PatientInfoSectionLabel,
@@ -29,7 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { QRCodeSVG } from 'qrcode.react';
-import { useHisStore } from "@/lib/stores/his";
+import { getHisTokenCode } from "@/lib/his-token-code-storage";
 import { printQrCode } from '@/lib/utils/print-qr-code';
 import { SampleTypeForm } from "@/components/sample-type-management/sample-type-form";
 import { SampleTypeRequest } from "@/lib/api/client";
@@ -37,6 +37,33 @@ import { logFrontendApiStatus } from "@/lib/logging/frontend-api-logger";
 
 /** Các giá trị tiền tố có trong dropdown chọn tiền tố */
 const PREFIX_OPTIONS = ['T', 'C', 'F', 'S'];
+
+/** Mapping SERVICE_REQ_STT_ID (HIS) → nhãn hiển thị */
+const SERVICE_REQ_STT_LABEL: Record<number, string> = {
+    1: 'Chưa xử lý',
+    2: 'Đang xử lý',
+    3: 'Kết thúc',
+}
+
+function getServiceReqSttLabel(id: number | undefined | null): string {
+    if (id == null) return '—'
+    return SERVICE_REQ_STT_LABEL[id] ?? `Mã: ${id}`
+}
+
+/** Màu badge theo `SERVICE_REQ_STT_ID` (HIS): 1 trắng · 2 vàng · 3 đỏ */
+function getServiceReqSttBadgeClasses(id: number | undefined | null): string {
+    if (id == null) return 'bg-muted text-muted-foreground'
+    switch (id) {
+        case 1: // Chưa xử lý — nền trắng, viền để tách khỏi nền panel
+            return 'bg-white text-foreground ring-1 ring-border'
+        case 2: // Đang xử lý — vàng
+            return 'bg-yellow-100 text-yellow-950 ring-1 ring-yellow-300/90'
+        case 3: // Kết thúc — đỏ
+            return 'bg-red-100 text-red-900 ring-1 ring-red-200/90'
+        default:
+            return 'bg-gray-100 text-gray-800 ring-1 ring-gray-200/80'
+    }
+}
 
 export default function TestIndicationsTable() {
 
@@ -46,7 +73,7 @@ export default function TestIndicationsTable() {
     const pathname = usePathname()
     const tabKey = activeKey ?? pathname ?? 'default' // Use pathname as fallback
     const { setTabData, getTabData } = useTabsStore()
-    const { token: hisToken } = useHisStore()
+    const hasHisTokenCode = getHisTokenCode() != null
     const { currentRoomId } = useCurrentRoomStore()
 
     // Get current tab's room info
@@ -104,7 +131,7 @@ export default function TestIndicationsTable() {
         }
     )
 
-    const { data: serviceRequestData, isLoading, isError, error } = useQuery({
+    const { data: serviceRequestData, isLoading, isError, error, isFetching: isServiceRequestFetching } = useQuery({
         queryKey: ['service-request', searchCode],
         queryFn: () => apiClient.getServiceRequestByCode(searchCode),
         enabled: !!searchCode, // Chỉ gọi API khi có searchCode
@@ -440,6 +467,43 @@ export default function TestIndicationsTable() {
         return dept || room
     }, [serviceRequest])
 
+    const serviceReqSttContent = useMemo((): React.ReactNode => {
+        if (!searchCode) {
+            return <span className="text-muted-foreground">—</span>
+        }
+        if (isError) {
+            return <span className="text-destructive">Không tải được trạng thái</span>
+        }
+        if (isLoading && !serviceRequest) {
+            return <span className="text-muted-foreground">Đang tải…</span>
+        }
+        const id = serviceRequest?.serviceReqSttId
+        const label = getServiceReqSttLabel(id)
+        const code = serviceRequest?.serviceReqSttCode?.trim()
+        const updating = Boolean(isServiceRequestFetching && serviceRequest)
+
+        if (label === '—' && id == null) {
+            return <span className="text-muted-foreground">—</span>
+        }
+
+        return (
+            <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span
+                    className={cn(
+                        'inline-flex items-center rounded-md px-2 py-0.5 text-sm font-medium',
+                        getServiceReqSttBadgeClasses(id),
+                    )}
+                >
+                    {label}
+                </span>
+    
+                {updating ? (
+                    <span className="text-xs text-muted-foreground">(đang cập nhật…)</span>
+                ) : null}
+            </span>
+        )
+    }, [searchCode, isError, isLoading, isServiceRequestFetching, serviceRequest])
+
     // Tự động set selectedSampleType từ sampleTypeId khi có storedServiceRequestData
     useEffect(() => {
         if (storedServiceRequestData?.data?.services && storedServiceRequestData.data.services.length > 0) {
@@ -579,6 +643,16 @@ export default function TestIndicationsTable() {
             return;
         }
 
+        const hisTokenCodeForSave = getHisTokenCode()
+        if (!hisTokenCodeForSave) {
+            toast({
+                title: "Lỗi",
+                description: "❌ Thiếu TokenCode HIS (localStorage). Vui lòng đăng nhập lại.",
+                variant: "destructive",
+            })
+            return;
+        }
+
         try {
             const commonLogPayload = {
                 serviceReqCode: serviceCodeToSave,
@@ -687,6 +761,7 @@ export default function TestIndicationsTable() {
                 // Refetch lại nội dung của yêu cầu để cập nhật barcode
                 await queryClient.invalidateQueries({ queryKey: ['stored-service-request', storedServiceReqId] })
                 await refetchStoredServiceRequest() // Refetch ngay lập tức để cập nhật barcode
+                await queryClient.invalidateQueries({ queryKey: ['service-request', serviceCodeToSave] })
                 toast({
                     title: "Thành công",
                     description: `✅ Đã cập nhật mã tiếp nhận và bệnh phẩm cho ${services.length} dịch vụ!`,
@@ -801,58 +876,38 @@ export default function TestIndicationsTable() {
                 await queryClient.invalidateQueries({ queryKey: ['stored-service-request', newStoredServiceReqId] });
             }
 
-            // Sau khi store thành công, gọi API HIS-PACS start
+            // Sau khi store thành công, gọi API HIS-PACS start (token đã kiểm tra đầu handleSave)
             try {
-                // Lấy HIS token code
-                let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
-                if (!tokenCode) {
-                    tokenCode = hisToken?.tokenCode || null;
-                }
-                if (!tokenCode) {
-                    const hisStorage = localStorage.getItem('his-storage');
-                    if (hisStorage) {
-                        try {
-                            const parsed = JSON.parse(hisStorage);
-                            tokenCode = parsed.state?.token?.tokenCode || null;
-                        } catch (e) {
-                            console.error('Error parsing HIS storage:', e);
-                        }
-                    }
-                }
+                void logFrontendApiStatus({
+                    ...commonLogPayload,
+                    step: 'start-his-pacs',
+                    status: 'start',
+                    method: 'POST',
+                    endpoint: '/his-pacs/start',
+                })
+                const startHisPacsResponse = await apiClient.startHisPacs(
+                    serviceCodeToSave,
+                    hisTokenCodeForSave
+                );
+                void logFrontendApiStatus({
+                    ...commonLogPayload,
+                    step: 'start-his-pacs',
+                    status: startHisPacsResponse.success ? 'success' : 'error',
+                    statusCode: startHisPacsResponse.status,
+                    method: 'POST',
+                    endpoint: '/his-pacs/start',
+                    error: startHisPacsResponse.success ? undefined : (startHisPacsResponse.error || startHisPacsResponse.message),
+                })
 
-                if (tokenCode) {
-                    void logFrontendApiStatus({
-                        ...commonLogPayload,
-                        step: 'start-his-pacs',
-                        status: 'start',
-                        method: 'POST',
-                        endpoint: '/his-pacs/start',
-                    })
-                    const startHisPacsResponse = await apiClient.startHisPacs(
-                        serviceCodeToSave,
-                        tokenCode
-                    );
-                    void logFrontendApiStatus({
-                        ...commonLogPayload,
-                        step: 'start-his-pacs',
-                        status: startHisPacsResponse.success ? 'success' : 'error',
-                        statusCode: startHisPacsResponse.status,
-                        method: 'POST',
-                        endpoint: '/his-pacs/start',
-                        error: startHisPacsResponse.success ? undefined : (startHisPacsResponse.error || startHisPacsResponse.message),
-                    })
-
-                    if (!startHisPacsResponse.success) {
-                        console.error('❌ Lỗi gọi API HIS-PACS start:', startHisPacsResponse);
-                        // Không hiển thị toast vì đây không phải lỗi nghiêm trọng
-                    }
-                } else {
-                    console.warn('⚠️ Không có TokenCode để gọi API HIS-PACS start');
+                if (!startHisPacsResponse.success) {
+                    console.error('❌ Lỗi gọi API HIS-PACS start:', startHisPacsResponse);
                 }
-            } catch (startError: any) {
+            } catch (startError: unknown) {
                 console.error('❌ Lỗi gọi API HIS-PACS start:', startError);
-                // Không hiển thị toast vì đây không phải lỗi nghiêm trọng
             }
+
+            // Làm mới y lệnh từ HIS (V_HIS_SERVICE_REQ) — trạng thái có thể đổi sau store / his-pacs start
+            await queryClient.invalidateQueries({ queryKey: ['service-request', serviceCodeToSave] })
 
             // Hiển thị thông báo thành công
             toast({
@@ -1142,6 +1197,9 @@ export default function TestIndicationsTable() {
                         <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
                     </div>
                     <div className="flex flex-col divide-y divide-border/50 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+                        <PatientInfoReadRow label="Trạng thái y lệnh" multiline twoColumnGrid className="px-2">
+                            {serviceReqSttContent}
+                        </PatientInfoReadRow>
                         <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
                             {requestDoctorDisplay}
                         </PatientInfoReadRow>
@@ -1224,6 +1282,7 @@ export default function TestIndicationsTable() {
                             onClick={handleConfirmSave}
                             disabled={
                                 // Cần cả bệnh phẩm và (prefix hoặc barcode thủ công) (cho cả update và tạo mới)
+                                !hasHisTokenCode ||
                                 !selectedSampleType ||
                                 (!isManualInput && !selectedPrefix) ||
                                 (isManualInput && !manualBarcode.trim()) ||
@@ -1273,6 +1332,7 @@ export default function TestIndicationsTable() {
                                 handleSave()
                             }}
                             disabled={
+                                !hasHisTokenCode ||
                                 createSampleReceptionMutation.isPending ||
                                 storeServiceRequestMutation.isPending ||
                                 updateReceptionCodeMutation.isPending

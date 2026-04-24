@@ -3,7 +3,7 @@ import {useState, useMemo, useEffect} from 'react'
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {apiClient} from '@/lib/api/client'
 import {useCurrentRoomStore} from '@/lib/stores/current-room'
-import {useHisStore} from '@/lib/stores/his'
+import { getHisTokenCode } from '@/lib/his-token-code-storage'
 import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
@@ -62,7 +62,6 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
     const {currentRoomId} = useCurrentRoomStore()
     const { toast } = useToast()
     const queryClient = useQueryClient()
-    const { token: hisToken } = useHisStore()
     // selectedStateId: 'all' means show all states (no state filter)
     // Default to 'all' to show all states, or use defaultStateId if provided
     const [selectedStateId, setSelectedStateId] = useState<string | undefined>(defaultStateId ?? 'all')
@@ -306,23 +305,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                 
                 if (tdlServiceReqCode) {
                     try {
-                        // Lấy HIS token code
-                        let tokenCode: string | null = typeof globalThis.window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null
-                        if (!tokenCode) {
-                            tokenCode = hisToken?.tokenCode || null
-                        }
-                        if (!tokenCode) {
-                            const hisStorage = localStorage.getItem('his-storage')
-                            if (hisStorage) {
-                                try {
-                                    const parsed = JSON.parse(hisStorage)
-                                    tokenCode = parsed.state?.token?.tokenCode || null
-                                } catch (e) {
-                                    console.error('Error parsing HIS storage:', e)
-                                }
-                            }
-                        }
-                        
+                        const tokenCode = getHisTokenCode()
+
                         if (tokenCode) {
                             console.log('✅ Calling unstartHisPacs with tdlServiceReqCode:', tdlServiceReqCode, 'tokenCode:', tokenCode?.substring(0, 10) + '...')
                             const unstartResponse = await apiClient.unstartHisPacs(

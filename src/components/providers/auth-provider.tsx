@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useAuthStore } from '@/lib/stores/auth'
+import { getHisTokenCode } from '@/lib/his-token-code-storage'
 
 interface AuthProviderProps {
     children: React.ReactNode
@@ -23,15 +24,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 const storedUser = localStorage.getItem('auth-user')
 
                 if (storedToken && storedUser) {
-                    // Kiểm tra hisTokenCode trong sessionStorage
-                    // Nếu không có (tức là đã đóng trình duyệt), yêu cầu đăng nhập lại
-                    const hisTokenCode = typeof window !== 'undefined' 
-                        ? sessionStorage.getItem('hisTokenCode') 
-                        : null
+                    // Kiểm tra TokenCode HIS (localStorage key chuẩn, có thể vừa migrate từ bản cũ)
+                    const hisTokenCode = getHisTokenCode()
 
                     if (!hisTokenCode) {
-                        // Không có hisTokenCode trong sessionStorage, yêu cầu đăng nhập lại
-                        console.log('⚠️ Không có hisTokenCode trong sessionStorage, yêu cầu đăng nhập lại')
+                        console.log('⚠️ Không có hisTokenCode (localStorage), yêu cầu đăng nhập lại')
                         useAuthStore.getState().logout()
                         return
                     }

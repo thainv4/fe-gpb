@@ -10,7 +10,7 @@ import { apiClient, type StoredService, type StoredServiceRequestResponse } from
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/lib/stores/auth';
-import { useHisStore } from '@/lib/stores/his';
+import { getHisTokenCode } from '@/lib/his-token-code-storage';
 import { useCurrentRoomStore } from '@/lib/stores/current-room';
 import { pdfBase64FromContainerWithPuppeteer } from '@/lib/utils/pdf-export';
 import { useServerTime } from '@/hooks/use-server-time';
@@ -111,7 +111,6 @@ export function PivkaResultSheet({
 }: PivkaResultSheetProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const [isSigning, setIsSigning] = useState(false);
-  const { token: hisToken } = useHisStore();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { currentRoomId: storeCurrentRoomId, currentDepartmentId: storeCurrentDepartmentId } =
@@ -272,23 +271,6 @@ export function PivkaResultSheet({
     };
   }
 
-  async function getHisTokenCode(): Promise<string | null> {
-    let tokenCode: string | null = typeof window !== 'undefined' ? sessionStorage.getItem('hisTokenCode') : null;
-    if (!tokenCode) tokenCode = hisToken?.tokenCode || null;
-    if (!tokenCode) {
-      const hisStorage = localStorage.getItem('his-storage');
-      if (hisStorage) {
-        try {
-          const parsed = JSON.parse(hisStorage);
-          tokenCode = parsed.state?.token?.tokenCode || null;
-        } catch (e) {
-          console.error('Error parsing HIS storage:', e);
-        }
-      }
-    }
-    return tokenCode;
-  }
-
   async function handleSignDocument() {
     if (!printRef.current) {
       toast({
@@ -302,7 +284,7 @@ export function PivkaResultSheet({
     const pivkaPayload = validateAndBuildPayload();
     if (!pivkaPayload) return;
 
-    const tokenCode = await getHisTokenCode();
+    const tokenCode = getHisTokenCode();
     if (!tokenCode) {
       toast({
         title: 'Lỗi',
@@ -498,7 +480,7 @@ export function PivkaResultSheet({
       return;
     }
 
-    const tokenCode = await getHisTokenCode();
+    const tokenCode = getHisTokenCode();
     if (!tokenCode) {
       toast({
         title: 'Lỗi',

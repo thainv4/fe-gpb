@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useHisStore } from '@/lib/stores/his'
 
 export interface User {
     id: string
@@ -67,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
                     localStorage.removeItem('auth-user')
                     localStorage.removeItem('auth-storage')
                     localStorage.removeItem('current-room-storage')
+                    useHisStore.getState().clearHisData()
                     sessionStorage.clear()
                 }
             },
