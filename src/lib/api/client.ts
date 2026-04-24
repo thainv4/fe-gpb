@@ -10,23 +10,6 @@ export interface ApiResponse<T = unknown> {
     status?: number;
 }
 
-export interface FrontendApiLogRequest {
-    traceId: string;
-    screen: string;
-    action: string;
-    step: 'create-reception' | 'store-service-request' | 'update-reception-code' | 'start-his-pacs';
-    status: 'start' | 'success' | 'error';
-    statusCode?: number;
-    method?: string;
-    endpoint?: string;
-    serviceReqCode?: string;
-    storedServiceReqId?: string;
-    receptionCode?: string;
-    serviceId?: string;
-    error?: string;
-    timestamp: string;
-}
-
 export interface LoginRequest {
     username: string;
     password: string;
@@ -3165,13 +3148,6 @@ class ApiClient {
     ): Promise<ApiResponse<unknown>> {
         return this.request<unknown>("/service-requests/store", {
             method: "POST",
-            body: JSON.stringify(body),
-        });
-    }
-
-    async sendFrontendApiLog(body: FrontendApiLogRequest): Promise<ApiResponse<{ accepted: boolean }>> {
-        return this.request<{ accepted: boolean }>('/frontend-api-logs', {
-            method: 'POST',
             body: JSON.stringify(body),
         });
     }

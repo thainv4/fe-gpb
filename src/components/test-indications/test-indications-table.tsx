@@ -28,7 +28,6 @@ import { getHisTokenCode } from "@/lib/his-token-code-storage";
 import { printQrCode } from '@/lib/utils/print-qr-code';
 import { SampleTypeForm } from "@/components/sample-type-management/sample-type-form";
 import { SampleTypeRequest } from "@/lib/api/client";
-import { logFrontendApiStatus } from "@/lib/logging/frontend-api-logger";
 
 /** Các giá trị tiền tố có trong dropdown chọn tiền tố */
 const PREFIX_OPTIONS = ['T', 'C', 'F', 'S'];
@@ -585,11 +584,6 @@ export default function TestIndicationsTable() {
         }
 
         try {
-            const commonLogPayload = {
-                serviceReqCode: serviceCodeToSave,
-                storedServiceReqId,
-            }
-
             // Bước 1: Kiểm tra xem đã có stored service request chưa
             if (storedServiceReqId && storedServiceRequestData?.data) {
                 const services = storedServiceRequestData.data.services || []
@@ -623,27 +617,10 @@ export default function TestIndicationsTable() {
                     receptionCode = manualBarcode.trim();
                 } else if (selectedSampleType && selectedPrefix) {
                     // Tạo receptionCode mới từ prefix - GỌI API
-                    void logFrontendApiStatus({
-                        ...commonLogPayload,
-                        step: 'create-reception',
-                        status: 'start',
-                        method: 'POST',
-                        endpoint: '/sample-receptions/by-prefix',
-                    })
                     const receptionResponse = await createSampleReceptionMutation.mutateAsync({
                         prefix: selectedPrefix,
                         sampleTypeId: selectedSampleType
                     });
-                    void logFrontendApiStatus({
-                        ...commonLogPayload,
-                        step: 'create-reception',
-                        status: receptionResponse.success ? 'success' : 'error',
-                        statusCode: receptionResponse.status,
-                        method: 'POST',
-                        endpoint: '/sample-receptions/by-prefix',
-                        receptionCode: receptionResponse.data?.receptionCode,
-                        error: receptionResponse.success ? undefined : (receptionResponse.error || receptionResponse.message),
-                    })
                     if (!receptionResponse.success || !receptionResponse.data?.receptionCode) {
                         toast({
                             title: "Lỗi",
@@ -663,14 +640,6 @@ export default function TestIndicationsTable() {
                 }
 
                 // Update cả receptionCode và sampleTypeName
-                void logFrontendApiStatus({
-                    ...commonLogPayload,
-                    step: 'update-reception-code',
-                    status: 'start',
-                    method: 'PATCH',
-                    endpoint: '/service-requests/stored/services/{serviceId}/reception-code',
-                    receptionCode,
-                })
                 const updatePromises = services.map(service =>
                     updateReceptionCodeMutation.mutateAsync({
                         serviceId: service.id,
@@ -680,15 +649,6 @@ export default function TestIndicationsTable() {
                     })
                 )
                 await Promise.all(updatePromises)
-                void logFrontendApiStatus({
-                    ...commonLogPayload,
-                    step: 'update-reception-code',
-                    status: 'success',
-                    statusCode: 200,
-                    method: 'PATCH',
-                    endpoint: '/service-requests/stored/services/{serviceId}/reception-code',
-                    receptionCode,
-                })
                 // Refetch lại nội dung của yêu cầu để cập nhật barcode
                 await queryClient.invalidateQueries({ queryKey: ['stored-service-request', storedServiceReqId] })
                 await refetchStoredServiceRequest() // Refetch ngay lập tức để cập nhật barcode
@@ -721,27 +681,10 @@ export default function TestIndicationsTable() {
                 receptionCode = manualBarcode.trim();
             } else {
                 // Tạo mã tiếp nhận mới từ prefix - GỌI API
-                void logFrontendApiStatus({
-                    ...commonLogPayload,
-                    step: 'create-reception',
-                    status: 'start',
-                    method: 'POST',
-                    endpoint: '/sample-receptions/by-prefix',
-                })
                 const receptionResponse = await createSampleReceptionMutation.mutateAsync({
                     prefix: selectedPrefix,
                     sampleTypeId: selectedSampleType || undefined
                 });
-                void logFrontendApiStatus({
-                    ...commonLogPayload,
-                    step: 'create-reception',
-                    status: receptionResponse.success ? 'success' : 'error',
-                    statusCode: receptionResponse.status,
-                    method: 'POST',
-                    endpoint: '/sample-receptions/by-prefix',
-                    receptionCode: receptionResponse.data?.receptionCode,
-                    error: receptionResponse.success ? undefined : (receptionResponse.error || receptionResponse.message),
-                })
 
                 if (!receptionResponse.success || !receptionResponse.data?.receptionCode) {
                     toast({
@@ -767,25 +710,7 @@ export default function TestIndicationsTable() {
                 saveRawJson: false,
             };
 
-            void logFrontendApiStatus({
-                ...commonLogPayload,
-                step: 'store-service-request',
-                status: 'start',
-                method: 'POST',
-                endpoint: '/service-requests/store',
-                receptionCode,
-            })
             const storeResponse = await storeServiceRequestMutation.mutateAsync(body);
-            void logFrontendApiStatus({
-                ...commonLogPayload,
-                step: 'store-service-request',
-                status: storeResponse.success ? 'success' : 'error',
-                statusCode: storeResponse.status,
-                method: 'POST',
-                endpoint: '/service-requests/store',
-                receptionCode,
-                error: storeResponse.success ? undefined : (storeResponse.error || storeResponse.message),
-            })
 
             // Kiểm tra response từ API
             if (!storeResponse.success) {
@@ -809,26 +734,10 @@ export default function TestIndicationsTable() {
 
             // Sau khi store thành công, gọi API HIS-PACS start (token đã kiểm tra đầu handleSave)
             try {
-                void logFrontendApiStatus({
-                    ...commonLogPayload,
-                    step: 'start-his-pacs',
-                    status: 'start',
-                    method: 'POST',
-                    endpoint: '/his-pacs/start',
-                })
                 const startHisPacsResponse = await apiClient.startHisPacs(
                     serviceCodeToSave,
                     hisTokenCodeForSave
                 );
-                void logFrontendApiStatus({
-                    ...commonLogPayload,
-                    step: 'start-his-pacs',
-                    status: startHisPacsResponse.success ? 'success' : 'error',
-                    statusCode: startHisPacsResponse.status,
-                    method: 'POST',
-                    endpoint: '/his-pacs/start',
-                    error: startHisPacsResponse.success ? undefined : (startHisPacsResponse.error || startHisPacsResponse.message),
-                })
 
                 if (!startHisPacsResponse.success) {
                     console.error('❌ Lỗi gọi API HIS-PACS start:', startHisPacsResponse);
@@ -852,14 +761,6 @@ export default function TestIndicationsTable() {
             // Bước 4: Reset các trường liên quan đến bệnh phẩm
             clearSampleFields();
         } catch (error) {
-            void logFrontendApiStatus({
-                serviceReqCode: serviceCodeToSave,
-                storedServiceReqId,
-                step: storedServiceReqId ? 'update-reception-code' : 'store-service-request',
-                status: 'error',
-                statusCode: 500,
-                error: error instanceof Error ? error.message : 'Không xác định',
-            })
             console.error("Lỗi:", error);
             toast({
                 title: "Lỗi",
