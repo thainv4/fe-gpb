@@ -47,7 +47,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
 
     // Nếu là public route và đã đăng nhập, redirect đến dashboard
-    if (isPublicRoute && isAuthenticated && pathname === '/') {
+    if (isPublicRoute && isAuthenticated) {
         router.push('/dashboard')
         return null
     }
