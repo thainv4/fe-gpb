@@ -18,12 +18,7 @@ import timezone from 'dayjs/plugin/timezone'
 import { Textarea } from "@/components/ui/textarea";
 import { QRCodeSVG } from 'qrcode.react';
 import { printQrCode } from '@/lib/utils/print-qr-code';
-import { formatDobDisplay } from "@/lib/utils";
-import {
-    PatientInfoReadRow,
-    PatientInfoSectionLabel,
-    PatientInfoPanel,
-} from "@/components/patient-info/patient-info-read-row";
+import PatientInfoCard from "@/components/patient-info/patient-info-card";
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -213,6 +208,14 @@ export default function SampleDeliveryTable() {
         queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId!),
         enabled: !!storedServiceReqId,
         staleTime: 5 * 60 * 1000,
+    })
+
+    // Lấy trạng thái y lệnh mới nhất theo mã y lệnh (HIS)
+    const { data: serviceRequestByCodeData } = useQuery({
+        queryKey: ['service-request-by-code', selectedServiceReqCode],
+        queryFn: () => apiClient.getServiceRequestByCode(selectedServiceReqCode),
+        enabled: !!selectedServiceReqCode.trim(),
+        staleTime: 60 * 1000,
     })
 
     // Query staining methods - danh sách đầy đủ
@@ -690,62 +693,28 @@ export default function SampleDeliveryTable() {
 
                         {/* Thông tin bệnh nhân */}
                         {storedServiceRequestData?.data && (
-                            <PatientInfoPanel>
-                                <h3 className="mb-2 border-b border-border pb-1.5 text-base font-semibold leading-tight text-foreground">
-                                    Thông tin bệnh nhân
-                                </h3>
-                                <PatientInfoSectionLabel>Bệnh nhân</PatientInfoSectionLabel>
-                                <div className="ml-2 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
-                                    <PatientInfoReadRow label="Họ và tên" multiline emphasize className="min-w-0">
-                                        {storedServiceRequestData.data.patientName ?? ''}
-                                    </PatientInfoReadRow>
-                                    <PatientInfoReadRow label="Ngày sinh" className="min-w-0">
-                                        {storedServiceRequestData.data.patientDob
-                                            ? formatDobDisplay(storedServiceRequestData.data.patientDob)
-                                            : ''}
-                                    </PatientInfoReadRow>
-                                    <PatientInfoReadRow label="Giới tính" className="min-w-0">
-                                        {storedServiceRequestData.data.patientGenderName ?? ''}
-                                    </PatientInfoReadRow>
-                                    <PatientInfoReadRow label="Số điện thoại" className="min-w-0">
-                                        {storedServiceRequestData.data.patientMobile
-                                            || storedServiceRequestData.data.patientPhone
-                                            || ''}
-                                    </PatientInfoReadRow>
-                                    <div className="col-span-full border-t border-border/50" aria-hidden />
-                                    <PatientInfoReadRow label="Mã bệnh nhân (PID)" className="min-w-0 pb-0">
-                                        {storedServiceRequestData.data.patientCode ?? ''}
-                                    </PatientInfoReadRow>
-                                    <PatientInfoReadRow label="CMND/CCCD" className="min-w-0">
-                                        {storedServiceRequestData.data.patientCmndNumber ?? ''}
-                                    </PatientInfoReadRow>
-
-                                    <PatientInfoReadRow
-                                        label="Địa chỉ"
-                                        multiline
-                                        className="min-w-0 sm:col-span-2 lg:col-span-2"
-                                    >
-                                        {storedServiceRequestData.data.patientAddress ?? ''}
-                                    </PatientInfoReadRow>
-                                </div>
-                                <div className="mt-2">
-                                    <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
-                                </div>
-                                <div className="flex flex-col divide-y divide-border/50 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
-                                    <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
-                                        {storedRequestDoctorDisplay}
-                                    </PatientInfoReadRow>
-                                    <PatientInfoReadRow label="Nơi chỉ định" multiline twoColumnGrid className="px-2">
-                                        {storedRequestLocationDisplay}
-                                    </PatientInfoReadRow>
-                                    <PatientInfoReadRow label="Chẩn đoán" multiline twoColumnGrid className="px-2">
-                                        {storedServiceRequestData.data.icdName ?? ''}
-                                    </PatientInfoReadRow>
-                                    <PatientInfoReadRow label="Chẩn đoán phụ" multiline twoColumnGrid className="px-2">
-                                        {storedIcdTextDisplay}
-                                    </PatientInfoReadRow>
-                                </div>
-                            </PatientInfoPanel>
+                            <PatientInfoCard
+                                patient={{
+                                    name: storedServiceRequestData.data.patientName,
+                                    dob: storedServiceRequestData.data.patientDob,
+                                    genderName: storedServiceRequestData.data.patientGenderName,
+                                    mobile: storedServiceRequestData.data.patientMobile,
+                                    phone: storedServiceRequestData.data.patientPhone,
+                                    code: storedServiceRequestData.data.patientCode,
+                                    cmndNumber: storedServiceRequestData.data.patientCmndNumber,
+                                    address: storedServiceRequestData.data.patientAddress,
+                                }}
+                                orderStatus={{
+                                    id: serviceRequestByCodeData?.data?.serviceReqSttId
+                                        ?? storedServiceRequestData.data.serviceReqSttId,
+                                    code: serviceRequestByCodeData?.data?.serviceReqSttCode
+                                        ?? storedServiceRequestData.data.serviceReqSttCode,
+                                }}
+                                requestDoctor={storedRequestDoctorDisplay}
+                                requestLocation={storedRequestLocationDisplay}
+                                diagnosis={storedServiceRequestData.data.icdName ?? ''}
+                                secondaryDiagnosis={storedIcdTextDisplay}
+                            />
                         )}
 
                         {/* Phần 2: Đơn vị nhận mẫu */}

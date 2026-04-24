@@ -6,13 +6,8 @@ import { usePathname } from "next/navigation";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient, type ServiceRequestDetail, type PatientInfo } from "@/lib/api/client";
-import { formatDobDisplay } from "@/lib/utils";
-import {
-    PatientInfoReadRow,
-    PatientInfoSectionLabel,
-    PatientInfoPanel,
-} from "@/components/patient-info/patient-info-read-row";
+import { apiClient } from "@/lib/api/client";
+import PatientInfoCard from "@/components/patient-info/patient-info-card";
 import { useCurrentRoomStore } from "@/lib/stores/current-room";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -86,86 +81,6 @@ function formatWorkflowActionDateTime(iso?: string | null): string {
         return "—";
     }
 }
-
-/** Khối thông tin bệnh nhân (memo để tránh re-render khi state khác đổi). */
-const PatientInfoCard = React.memo(function PatientInfoCard({
-    serviceRequest,
-    patient,
-    secondaryDiagnosis,
-}: {
-    serviceRequest: ServiceRequestDetail;
-    patient?: PatientInfo;
-    /** Chẩn đoán phụ từ GET stored/{id} (icdText / icd_text). */
-    secondaryDiagnosis?: string | null;
-}) {
-    const requestDoctorDisplay = useMemo(() => {
-        if (serviceRequest.requestUsername && serviceRequest.requestLoginname) {
-            return `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`;
-        }
-        return serviceRequest.requestUsername ?? serviceRequest.requestLoginname ?? "";
-    }, [serviceRequest]);
-
-    const requestLocationDisplay = useMemo(() => {
-        const dept = serviceRequest.requestDepartment?.name ?? "";
-        const room = serviceRequest.requestRoom?.name ?? "";
-        if (dept && room) return `${room} - ${dept}`;
-        return dept || room;
-    }, [serviceRequest]);
-
-    return (
-        <PatientInfoPanel>
-            <h3 className="mb-2 border-b border-border pb-1.5 text-base font-semibold leading-tight text-foreground">
-                Thông tin bệnh nhân
-            </h3>
-            <PatientInfoSectionLabel>Bệnh nhân</PatientInfoSectionLabel>
-            <div className="ml-2 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
-                <PatientInfoReadRow label="Họ và tên" multiline emphasize className="min-w-0">
-                    {patient?.name ?? ""}
-                </PatientInfoReadRow>
-                <PatientInfoReadRow label="Ngày sinh" className="min-w-0">
-                    {patient?.dob ? formatDobDisplay(patient.dob) : ""}
-                </PatientInfoReadRow>
-                <PatientInfoReadRow label="Giới tính" className="min-w-0">
-                    {patient?.genderName ?? ""}
-                </PatientInfoReadRow>
-                <PatientInfoReadRow label="Số điện thoại" className="min-w-0">
-                    {patient?.mobile ?? patient?.phone ?? ""}
-                </PatientInfoReadRow>
-                <div className="col-span-full border-t border-border/50 " aria-hidden />
-                <PatientInfoReadRow label="Mã bệnh nhân (PID)" className="min-w-0 pb-0">
-                    {patient?.code ?? ""}
-                </PatientInfoReadRow>
-                <PatientInfoReadRow label="CMND/CCCD" className="min-w-0">
-                    {patient?.cmndNumber ?? ""}
-                </PatientInfoReadRow>
-                <PatientInfoReadRow
-                    label="Địa chỉ"
-                    multiline
-                    className="min-w-0 sm:col-span-2 lg:col-span-2"
-                >
-                    {patient?.address ?? ""}
-                </PatientInfoReadRow>
-            </div>
-            <div className="mt-2">
-                <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
-            </div>
-            <div className="flex flex-col divide-y [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
-                <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
-                    {requestDoctorDisplay}
-                </PatientInfoReadRow>
-                <PatientInfoReadRow label="Nơi chỉ định" multiline twoColumnGrid className="px-2">
-                    {requestLocationDisplay}
-                </PatientInfoReadRow>
-                <PatientInfoReadRow label="Chẩn đoán" multiline twoColumnGrid className="px-2">
-                    {serviceRequest.icdName ?? ""}
-                </PatientInfoReadRow>
-                <PatientInfoReadRow label="Chẩn đoán phụ" multiline twoColumnGrid className="px-2">
-                    {secondaryDiagnosis ?? ""}
-                </PatientInfoReadRow>
-            </div>
-        </PatientInfoPanel>
-    );
-});
 
 /** Bảng danh sách dịch vụ (memo + callback ổn định để giảm re-render). */
 const ServicesTable = React.memo(function ServicesTable({
@@ -488,6 +403,22 @@ export default function TestResultForm() {
             storedServiceRequest.icdText ?? (storedServiceRequest as { icd_text?: string | null }).icd_text
         return typeof raw === 'string' ? raw.trim() : ''
     }, [storedServiceRequest])
+
+    const requestDoctorDisplay = useMemo(() => {
+        if (!serviceRequest) return "";
+        if (serviceRequest.requestUsername && serviceRequest.requestLoginname) {
+            return `${serviceRequest.requestUsername} (${serviceRequest.requestLoginname})`;
+        }
+        return serviceRequest.requestUsername ?? serviceRequest.requestLoginname ?? "";
+    }, [serviceRequest]);
+
+    const requestLocationDisplay = useMemo(() => {
+        if (!serviceRequest) return "";
+        const dept = serviceRequest.requestDepartment?.name ?? "";
+        const room = serviceRequest.requestRoom?.name ?? "";
+        if (dept && room) return `${room} - ${dept}`;
+        return dept || room;
+    }, [serviceRequest]);
 
     const workflowActions = workflowActionInfoData?.data
     const sampleCollectorAction = useMemo(
@@ -1997,8 +1928,14 @@ export default function TestResultForm() {
                             {selectedServiceReqCode && !isLoading && serviceRequest && (
                                 <div className="space-y-6">
                                     <PatientInfoCard
-                                        serviceRequest={serviceRequest}
                                         patient={patient}
+                                        orderStatus={{
+                                            id: serviceRequest?.serviceReqSttId,
+                                            code: serviceRequest?.serviceReqSttCode,
+                                        }}
+                                        requestDoctor={requestDoctorDisplay}
+                                        requestLocation={requestLocationDisplay}
+                                        diagnosis={serviceRequest?.icdName ?? ""}
                                         secondaryDiagnosis={storedIcdTextDisplay}
                                     />
 

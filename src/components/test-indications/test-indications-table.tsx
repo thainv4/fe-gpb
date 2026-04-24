@@ -6,12 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, ServiceRequestService, SampleType, CreateSampleReceptionByPrefixRequest, type UserRoom } from "@/lib/api/client";
-import { cn, formatDobDisplay } from "@/lib/utils";
-import {
-    PatientInfoReadRow,
-    PatientInfoSectionLabel,
-    PatientInfoPanel,
-} from "@/components/patient-info/patient-info-read-row";
+import PatientInfoCard from "@/components/patient-info/patient-info-card";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -37,33 +32,6 @@ import { logFrontendApiStatus } from "@/lib/logging/frontend-api-logger";
 
 /** Các giá trị tiền tố có trong dropdown chọn tiền tố */
 const PREFIX_OPTIONS = ['T', 'C', 'F', 'S'];
-
-/** Mapping SERVICE_REQ_STT_ID (HIS) → nhãn hiển thị */
-const SERVICE_REQ_STT_LABEL: Record<number, string> = {
-    1: 'Chưa xử lý',
-    2: 'Đang xử lý',
-    3: 'Kết thúc',
-}
-
-function getServiceReqSttLabel(id: number | undefined | null): string {
-    if (id == null) return '—'
-    return SERVICE_REQ_STT_LABEL[id] ?? `Mã: ${id}`
-}
-
-/** Màu badge theo `SERVICE_REQ_STT_ID` (HIS): 1 trắng · 2 vàng · 3 đỏ */
-function getServiceReqSttBadgeClasses(id: number | undefined | null): string {
-    if (id == null) return 'bg-muted text-muted-foreground'
-    switch (id) {
-        case 1: // Chưa xử lý — nền trắng, viền để tách khỏi nền panel
-            return 'bg-white text-foreground ring-1 ring-border'
-        case 2: // Đang xử lý — vàng
-            return 'bg-yellow-100 text-yellow-950 ring-1 ring-yellow-300/90'
-        case 3: // Kết thúc — đỏ
-            return 'bg-red-100 text-red-900 ring-1 ring-red-200/90'
-        default:
-            return 'bg-gray-100 text-gray-800 ring-1 ring-gray-200/80'
-    }
-}
 
 export default function TestIndicationsTable() {
 
@@ -131,7 +99,7 @@ export default function TestIndicationsTable() {
         }
     )
 
-    const { data: serviceRequestData, isLoading, isError, error, isFetching: isServiceRequestFetching } = useQuery({
+    const { data: serviceRequestData, isLoading, isError, error } = useQuery({
         queryKey: ['service-request', searchCode],
         queryFn: () => apiClient.getServiceRequestByCode(searchCode),
         enabled: !!searchCode, // Chỉ gọi API khi có searchCode
@@ -466,43 +434,6 @@ export default function TestIndicationsTable() {
         if (dept && room) return `${room} - ${dept}`
         return dept || room
     }, [serviceRequest])
-
-    const serviceReqSttContent = useMemo((): React.ReactNode => {
-        if (!searchCode) {
-            return <span className="text-muted-foreground">—</span>
-        }
-        if (isError) {
-            return <span className="text-destructive">Không tải được trạng thái</span>
-        }
-        if (isLoading && !serviceRequest) {
-            return <span className="text-muted-foreground">Đang tải…</span>
-        }
-        const id = serviceRequest?.serviceReqSttId
-        const label = getServiceReqSttLabel(id)
-        const code = serviceRequest?.serviceReqSttCode?.trim()
-        const updating = Boolean(isServiceRequestFetching && serviceRequest)
-
-        if (label === '—' && id == null) {
-            return <span className="text-muted-foreground">—</span>
-        }
-
-        return (
-            <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span
-                    className={cn(
-                        'inline-flex items-center rounded-md px-2 py-0.5 text-sm font-medium',
-                        getServiceReqSttBadgeClasses(id),
-                    )}
-                >
-                    {label}
-                </span>
-    
-                {updating ? (
-                    <span className="text-xs text-muted-foreground">(đang cập nhật…)</span>
-                ) : null}
-            </span>
-        )
-    }, [searchCode, isError, isLoading, isServiceRequestFetching, serviceRequest])
 
     // Tự động set selectedSampleType từ sampleTypeId khi có storedServiceRequestData
     useEffect(() => {
@@ -1160,60 +1091,17 @@ export default function TestIndicationsTable() {
                     )}
                 </div>
 
-                <PatientInfoPanel>
-                    <h3 className="mb-2 border-b border-border pb-1.5 text-base font-semibold leading-tight text-foreground">
-                        Thông tin bệnh nhân
-                    </h3>
-                    <PatientInfoSectionLabel>Bệnh nhân</PatientInfoSectionLabel>
-                    <div className="ml-2 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
-                        <PatientInfoReadRow label="Họ và tên" multiline emphasize className="min-w-0">
-                            {patient?.name ?? ''}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow label="Ngày sinh" className="min-w-0">
-                            {patient?.dob ? formatDobDisplay(patient.dob) : ''}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow label="Giới tính" className="min-w-0">
-                            {patient?.genderName ?? ''}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow label="Số điện thoại" className="min-w-0">
-                            {patient?.mobile ?? patient?.phone ?? ''}
-                        </PatientInfoReadRow>
-                        <div className="col-span-full border-t border-border/50" aria-hidden />
-                        <PatientInfoReadRow label="Mã bệnh nhân (PID)" className="min-w-0 pb-0">
-                            {patient?.code ?? ''}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow label="CMND/CCCD" className="min-w-0">
-                            {patient?.cmndNumber ?? ''}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow
-                            label="Địa chỉ"
-                            multiline
-                            className="min-w-0 sm:col-span-2 lg:col-span-2"
-                        >
-                            {patient?.address ?? ''}
-                        </PatientInfoReadRow>
-                    </div>
-                    <div className="mt-2">
-                        <PatientInfoSectionLabel>Chỉ định</PatientInfoSectionLabel>
-                    </div>
-                    <div className="flex flex-col divide-y divide-border/50 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
-                        <PatientInfoReadRow label="Trạng thái y lệnh" multiline twoColumnGrid className="px-2">
-                            {serviceReqSttContent}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow label="Bác sĩ chỉ định" multiline twoColumnGrid className="px-2">
-                            {requestDoctorDisplay}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow label="Nơi chỉ định" multiline twoColumnGrid className="px-2">
-                            {requestLocationDisplay}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow label="Chẩn đoán" multiline twoColumnGrid className="px-2">
-                            {serviceRequest?.icdName ?? ''}
-                        </PatientInfoReadRow>
-                        <PatientInfoReadRow label="Chẩn đoán phụ" multiline twoColumnGrid className="px-2">
-                            {storedIcdTextDisplay}
-                        </PatientInfoReadRow>
-                    </div>
-                </PatientInfoPanel>
+                <PatientInfoCard
+                    patient={patient}
+                    orderStatus={{
+                        id: serviceRequest?.serviceReqSttId,
+                        code: serviceRequest?.serviceReqSttCode,
+                    }}
+                    requestDoctor={requestDoctorDisplay}
+                    requestLocation={requestLocationDisplay}
+                    diagnosis={serviceRequest?.icdName ?? ''}
+                    secondaryDiagnosis={storedIcdTextDisplay}
+                />
 
                 {/* Test Indications */}
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mt-6">
