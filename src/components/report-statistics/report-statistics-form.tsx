@@ -391,7 +391,7 @@ export default function ReportStatisticsForm() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Mã (y lệnh / barcode / mã BN)</Label>
+                            <Label>Mã y lệnh / Barcode / Mã bệnh nhân</Label>
                             <Input
                                 value={codeInput}
                                 onChange={(e) => setCodeInput(e.target.value)}
