@@ -50,8 +50,8 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
             <title>In mã QR - ${safeTitle}</title>
             <style>
                 @page {
-                    size: 90mm 44mm;
-                    margin: 1mm;
+                    size: 96mm 44mm;
+                    margin: 0mm;
                     padding: 0;
                 }
                 * {
@@ -97,7 +97,7 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
                 .birth-year {
                     writing-mode: vertical-rl;
                     transform: rotate(180deg);
-                    font-size: 4.2mm;
+                    font-size: 4.6mm;
                     font-weight: 700;
                     line-height: 1;
                     white-space: nowrap;
@@ -113,7 +113,7 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
                     display: block;
                 }
                 .print-text-xs {
-                    font-size: 5mm;
+                    font-size: 6.6mm;
                     font-weight: 700;
                     line-height: 1.3;
                     margin-top: 0.5mm;

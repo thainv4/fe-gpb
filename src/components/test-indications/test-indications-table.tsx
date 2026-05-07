@@ -1017,7 +1017,7 @@ export default function TestIndicationsTable() {
                                 <QRCodeSVG
                                     key={currentReceptionCode} // Force re-render khi currentReceptionCode thay đổi
                                     value={currentReceptionCode}
-                                    size={50}
+                                    size={70}
                                     level="M"
                                     includeMargin={false}
                                 />
