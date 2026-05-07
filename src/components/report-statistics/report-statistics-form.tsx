@@ -66,6 +66,7 @@ type PreviewRow = {
         patientName?: string
         patientCode?: string
         receptionCode?: string
+        flag?: string | null
     }
     toState?: { stateName?: string; stateCode?: string }
     creator?: { id?: string; userName?: string; fullName?: string }
@@ -80,6 +81,7 @@ export default function ReportStatisticsForm() {
     const [selectedStateId, setSelectedStateId] = useState<string>('all')
     const [codeInput, setCodeInput] = useState('')
     const [patientNameInput, setPatientNameInput] = useState('')
+    const [selectedFlag, setSelectedFlag] = useState<string>('all')
     const [isExporting, setIsExporting] = useState(false)
     const [lastExportInfo, setLastExportInfo] = useState<{ total: number; exported: number } | null>(null)
     const [debouncedCode, setDebouncedCode] = useState('')
@@ -101,7 +103,7 @@ export default function ReportStatisticsForm() {
 
     useEffect(() => {
         setPreviewOffset(0)
-    }, [fromDate, toDate, selectedRoomId, selectedStateId, debouncedCode, debouncedPatientName])
+    }, [fromDate, toDate, selectedRoomId, selectedStateId, debouncedCode, debouncedPatientName, selectedFlag])
 
     const previewFromIso = localDateStrToUtcStartIso(fromDate)
     const previewToIso = localDateStrToUtcEndIso(toDate)
@@ -142,6 +144,7 @@ export default function ReportStatisticsForm() {
             previewToIso,
             debouncedCode,
             debouncedPatientName,
+            selectedFlag,
             previewOffset,
         ],
         queryFn: () =>
@@ -159,6 +162,7 @@ export default function ReportStatisticsForm() {
                 orderBy: 'actionTimestamp',
                 code: debouncedCode || undefined,
                 patientName: debouncedPatientName || undefined,
+                flag: selectedFlag !== 'all' ? selectedFlag : undefined,
             }),
         enabled: dateRangeValid,
         refetchOnWindowFocus: false,
@@ -195,6 +199,7 @@ export default function ReportStatisticsForm() {
         setSelectedStateId('all')
         setCodeInput('')
         setPatientNameInput('')
+        setSelectedFlag('all')
         setPreviewOffset(0)
     }
 
@@ -238,6 +243,7 @@ export default function ReportStatisticsForm() {
                 orderBy: 'actionTimestamp',
                 code: codeInput.trim() || undefined,
                 patientName: patientNameInput.trim() || undefined,
+                flag: selectedFlag !== 'all' ? selectedFlag : undefined,
             })
 
             if (total === 0) {
@@ -407,6 +413,25 @@ export default function ReportStatisticsForm() {
                                 placeholder="Tùy chọn"
                             />
                         </div>
+
+                        <div className="space-y-2">
+                            <Label>Phân loại bệnh phẩm</Label>
+                            <Select value={selectedFlag} onValueChange={setSelectedFlag}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Tất cả phân loại" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tất cả phân loại</SelectItem>
+                                    <SelectItem value="ST">ST</SelectItem>
+                                    <SelectItem value="PT">PT</SelectItem>
+                                    <SelectItem value="HMMD">HMMD</SelectItem>
+                                    <SelectItem value="CL">CL</SelectItem>
+                                    <SelectItem value="HC">HC</SelectItem>
+                                    <SelectItem value="DB">DB</SelectItem>
+                                    <SelectItem value="HQMD">HQMD</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     {lastExportInfo && (
@@ -423,7 +448,7 @@ export default function ReportStatisticsForm() {
                 <CardContent className="space-y-3 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                            <div className="text-sm font-semibold text-gray-900">Xem trước kết quả</div>
+                            <div className="text-sm font-semibold text-gray-900">Xem trước danh sách</div>
                         </div>
                         {!dateRangeValid && (
                             <span className="text-xs font-medium text-destructive">Từ ngày không được sau Đến ngày</span>
@@ -460,6 +485,7 @@ export default function ReportStatisticsForm() {
                                             <TableHead>Mã Y lệnh</TableHead>
                                             <TableHead>Mã bệnh nhân</TableHead>
                                             <TableHead>Tên bệnh nhân</TableHead>
+                                            <TableHead>Phân loại BP</TableHead>
                                             <TableHead>Trạng thái</TableHead>
                                             <TableHead>Phòng</TableHead>
                                             <TableHead className="min-w-[100px]">Người thực hiện</TableHead>
@@ -485,6 +511,7 @@ export default function ReportStatisticsForm() {
                                                         {sr?.patientCode || '—'}
                                                     </TableCell>
                                                     <TableCell>{sr?.patientName || '—'}</TableCell>
+                                                    <TableCell>{item.serviceRequest?.flag || '—'}</TableCell>
                                                     <TableCell>
                                                         {stateName ? (
                                                             <span

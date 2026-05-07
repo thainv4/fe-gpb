@@ -3553,6 +3553,7 @@ class ApiClient {
         orderBy?: 'actionTimestamp' | 'createdAt' | 'startedAt';
         code?: string;
         patientName?: string;
+        flag?: string;
     }): Promise<{ blob: Blob; fileName: string; total: number }> {
         const queryParams = new URLSearchParams();
         queryParams.append('roomId', params.roomId);
@@ -3567,6 +3568,7 @@ class ApiClient {
         if (params.orderBy) queryParams.append('orderBy', params.orderBy);
         if (params.code) queryParams.append('code', params.code);
         if (params.patientName) queryParams.append('patientName', params.patientName);
+        if (params.flag) queryParams.append('flag', params.flag);
 
         this.refreshTokenFromStorage();
         const isValid = await this.ensureValidToken();
