@@ -67,3 +67,18 @@ export function formatDobDisplay(dob: string | number): string {
     return `${day}/${month}/${year}`
 }
 
+/**
+ * HIS instruction / sample time: yyyyMMddHHmmss (e.g. 20260512074400 → 07:44 12/05/2026).
+ */
+export function formatHisInstructionTime(n?: number | null): string {
+    if (n === undefined || n === null || n === 0) return ""
+    const s = String(n)
+    if (s.length < 14) return s
+    const y = s.slice(0, 4)
+    const mo = s.slice(4, 6)
+    const d = s.slice(6, 8)
+    const h = s.slice(8, 10)
+    const mi = s.slice(10, 12)
+    return `${h}:${mi} ${d}/${mo}/${y}`
+}
+

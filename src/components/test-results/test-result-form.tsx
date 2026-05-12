@@ -8,6 +8,7 @@ import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/se
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import PatientInfoCard from "@/components/patient-info/patient-info-card";
+import { formatHisInstructionTime } from "@/lib/utils";
 import { useCurrentRoomStore } from "@/lib/stores/current-room";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -420,11 +421,19 @@ export default function TestResultForm() {
         return dept || room;
     }, [serviceRequest]);
 
+    /** Người lấy mẫu / thời gian lấy mẫu: GET service-requests/code (HIS), không dùng workflow state 1 */
+    const hisSampleCollectorName = useMemo(() => {
+        const name = serviceRequest?.requestUsername?.trim();
+        if (name) return name;
+        return "—";
+    }, [serviceRequest?.requestUsername]);
+
+    const hisSampleCollectionTime = useMemo(() => {
+        const formatted = formatHisInstructionTime(serviceRequest?.instructionTime);
+        return formatted || "—";
+    }, [serviceRequest?.instructionTime]);
+
     const workflowActions = workflowActionInfoData?.data
-    const sampleCollectorAction = useMemo(
-        () => workflowActions?.find((a) => a.stateOrder === 1),
-        [workflowActions]
-    )
     const sampleReceiverAction = useMemo(
         () => workflowActions?.find((a) => a.stateOrder === 2),
         [workflowActions]
@@ -2006,7 +2015,7 @@ export default function TestResultForm() {
                                                     <Label className="text-sm font-medium mb-2 block">Người lấy mẫu</Label>
                                                     <Input
                                                         type="text"
-                                                        value={sampleCollectorAction?.actionUserFullName ?? "—"}
+                                                        value={hisSampleCollectorName}
                                                         disabled
                                                         className="max-w-xs"
                                                         readOnly
@@ -2016,7 +2025,7 @@ export default function TestResultForm() {
                                                     <Label className="text-sm font-medium mb-2 block">Thời gian lấy mẫu</Label>
                                                     <Input
                                                         type="text"
-                                                        value={formatWorkflowActionDateTime(sampleCollectorAction?.createdAt)}
+                                                        value={hisSampleCollectionTime}
                                                         disabled
                                                         className="max-w-xs"
                                                         readOnly
