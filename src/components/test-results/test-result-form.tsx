@@ -36,8 +36,10 @@ import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContai
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
 import {
     GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE,
+    canPerformGenDigitalSign,
     getGenDigitalSignBlockMessage,
 } from "@/lib/gen-digital-sign-policy";
+import { useAuthStore } from "@/lib/stores/auth";
 
 /** Vai trò mặc định trong kíp thực hiện xét nghiệm (dropdown). */
 const TESTING_EXECUTION_TEAM_ROLE_OPTIONS = [
@@ -158,6 +160,7 @@ export default function TestResultForm() {
     const pathname = usePathname()
     const { setTabData, getTabData, activeKey, tabs } = useTabsStore()
     const { toast } = useToast()
+    const { user: authUser } = useAuthStore()
     const queryClient = useQueryClient()
     const [selectedServiceReqCode, setSelectedServiceReqCode] = useState<string>('')
     const [storedServiceReqId, setStoredServiceReqId] = useState<string>('')
@@ -465,10 +468,20 @@ export default function TestResultForm() {
     }, [myRoomsData])
     const isGenForm = resultFormType === 2
 
+    const currentUsername =
+        profileData?.data?.username ?? authUser?.username ?? undefined
+
+    const canGenDigitalSign = useMemo(
+        () => canPerformGenDigitalSign(resultFormType, currentUsername),
+        [resultFormType, currentUsername],
+    )
+
+    const isGenSignButtonDisabled = isGenForm && !canGenDigitalSign
+
     const notifyIfGenSignBlocked = useCallback((): boolean => {
         const blockMessage = getGenDigitalSignBlockMessage(
             resultFormType,
-            profileData?.data?.username,
+            currentUsername,
         )
         if (!blockMessage) return false
         toast({
@@ -477,7 +490,7 @@ export default function TestResultForm() {
             description: blockMessage,
         })
         return true
-    }, [resultFormType, profileData?.data?.username, toast])
+    }, [resultFormType, currentUsername, toast])
 
     // testing-methods-gen: danh sách phương pháp thực hiện xét nghiệm
     const { data: samplingMethodsGenData } = useQuery({
@@ -2569,8 +2582,18 @@ export default function TestResultForm() {
                                     variant="default"
                                     size="sm"
                                     onClick={() => setConfirmSignDialogOpen(true)}
-                                    disabled={!storedServiceRequestData?.data || !previewServiceData?.data || isSigning}
-                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                                    disabled={
+                                        !storedServiceRequestData?.data ||
+                                        !previewServiceData?.data ||
+                                        isSigning ||
+                                        isGenSignButtonDisabled
+                                    }
+                                    title={
+                                        isGenSignButtonDisabled
+                                            ? GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE
+                                            : undefined
+                                    }
+                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
                                 >
                                     {isSigning ? (
                                         <>
@@ -2642,8 +2665,13 @@ export default function TestResultForm() {
                                 setConfirmSignDialogOpen(false)
                                 handleSignDocument()
                             }}
-                            disabled={isSigning}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            disabled={isSigning || isGenSignButtonDisabled}
+                            title={
+                                isGenSignButtonDisabled
+                                    ? GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE
+                                    : undefined
+                            }
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                         >
                             {isSigning ? (
                                 <>

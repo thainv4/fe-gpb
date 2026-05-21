@@ -32,3 +32,11 @@ export function getGenDigitalSignBlockMessage(
     if (u && ALLOWED_USERNAMES.has(u)) return null;
     return GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE;
 }
+
+/** true = được phép ký số (GPB luôn true; Gen chỉ khi username trong whitelist). */
+export function canPerformGenDigitalSign(
+    resultFormType: number,
+    username: string | undefined,
+): boolean {
+    return getGenDigitalSignBlockMessage(resultFormType, username) === null;
+}
