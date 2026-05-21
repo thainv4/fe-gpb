@@ -34,6 +34,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getHisTokenCode } from "@/lib/his-token-code-storage";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
 import { ResultTemplateSelector } from "@/components/result-template/result-template-selector";
+import {
+    GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE,
+    getGenDigitalSignBlockMessage,
+} from "@/lib/gen-digital-sign-policy";
 
 /** Vai trò mặc định trong kíp thực hiện xét nghiệm (dropdown). */
 const TESTING_EXECUTION_TEAM_ROLE_OPTIONS = [
@@ -460,6 +464,20 @@ export default function TestResultForm() {
         return raw !== undefined && raw !== null && Number(raw) === 2 ? 2 : RESULT_FORM_TYPE_GPB
     }, [myRoomsData])
     const isGenForm = resultFormType === 2
+
+    const notifyIfGenSignBlocked = useCallback((): boolean => {
+        const blockMessage = getGenDigitalSignBlockMessage(
+            resultFormType,
+            profileData?.data?.username,
+        )
+        if (!blockMessage) return false
+        toast({
+            variant: "destructive",
+            title: "Không có quyền",
+            description: blockMessage,
+        })
+        return true
+    }, [resultFormType, profileData?.data?.username, toast])
 
     // testing-methods-gen: danh sách phương pháp thực hiện xét nghiệm
     const { data: samplingMethodsGenData } = useQuery({
@@ -1086,6 +1104,11 @@ export default function TestResultForm() {
 
     // Handler ký số trực tiếp - lấy thông tin signer từ API rồi ký luôn
     const handleSignDocument = async () => {
+        if (notifyIfGenSignBlocked()) {
+            setConfirmSignDialogOpen(false)
+            return
+        }
+
         const tokenCode = getHisTokenCode()
 
         if (!tokenCode) {
@@ -1135,6 +1158,11 @@ export default function TestResultForm() {
 
     // Handler ký số - nhận signerId như parameter
     const handleDigitalSign = async (signerIdParam?: string) => {
+        if (notifyIfGenSignBlocked()) {
+            setConfirmSignDialogOpen(false)
+            return
+        }
+
         // Sử dụng parameter nếu có, nếu không thì dùng state
         const signerIdToUse = signerIdParam || signerInfo.signerId
 
@@ -1443,10 +1471,13 @@ export default function TestResultForm() {
             } else {
                 // Xử lý lỗi từ EMR API
                 const emrParam = emrResponse?.Param as any;
-                const errorMessage = emrParam?.Messages?.join(', ') ||
-                    emrParam?.BugCodes?.join(', ') ||
-                    emrParam?.MessageCodes?.join(', ') ||
-                    getErrorMessage(response, "Có lỗi xảy ra khi ký số");
+                const errorMessage =
+                    response.status === 403
+                        ? (response.error || GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE)
+                        : emrParam?.Messages?.join(', ') ||
+                          emrParam?.BugCodes?.join(', ') ||
+                          emrParam?.MessageCodes?.join(', ') ||
+                          getErrorMessage(response, "Có lỗi xảy ra khi ký số");
 
                 console.error('❌ API createAndSignHsm failed:', {
                     success: response.success,
@@ -1477,6 +1508,11 @@ export default function TestResultForm() {
 
     // Handler hủy chữ ký số
     const handleCancelDigitalSign = async () => {
+        if (notifyIfGenSignBlocked()) {
+            setConfirmCancelSignDialogOpen(false)
+            return
+        }
+
         // Lấy tất cả dịch vụ đã ký số
         const servicesWithDocumentId = services.filter(
             (service: any) => service.documentId
@@ -1531,7 +1567,11 @@ export default function TestResultForm() {
 
                     // Kiểm tra response.success (wrapper) và response.data?.Success (EMR API response)
                     if (!deleteResponse.success) {
-                        throw new Error(getErrorMessage(deleteResponse, `Không thể hủy chữ ký số cho document ${documentId}`))
+                        const deleteError =
+                            deleteResponse.status === 403
+                                ? (deleteResponse.error || GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE)
+                                : getErrorMessage(deleteResponse, `Không thể hủy chữ ký số cho document ${documentId}`)
+                        throw new Error(deleteError)
                     }
 
                     // Kiểm tra Success field trong response.data (EMR API response structure)
