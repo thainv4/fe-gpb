@@ -24,7 +24,6 @@ import {
     LogOut,
     Menu,
     X,
-    User,
     Building2,
     ChevronDown,
     MapPin,
@@ -70,6 +69,13 @@ type NavItem = NavLeaf | NavGroupItem
 
 function isNavGroupItem(item: NavItem): item is NavGroupItem {
     return 'children' in item && item.children !== undefined
+}
+
+function getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean)
+    if (parts.length === 0) return '?'
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
 const PIVKA_RESULTS_NAV: NavLeaf = {
@@ -579,63 +585,82 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
                     {/* User Menu */}
                     <div className="flex items-center space-x-4">
-                        {/* Current Room Display */}
-                        {currentRoomName && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-blue-200 rounded-md">
-                                <MapPin className="h-4 w-4 text-green-600" />
+                        {currentRoomId ? (
+                            <button
+                                type="button"
+                                onClick={() => setRoomDialogOpen(true)}
+                                title="Chọn phòng làm việc"
+                                aria-label="Chọn phòng làm việc"
+                                className="flex items-center gap-2 rounded-md border border-blue-200 bg-green-50 px-3 py-1.5 text-left transition-colors hover:bg-green-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                            >
+                                <MapPin className="h-4 w-4 shrink-0 text-green-600" />
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-semibold ">
-                                        {currentRoomName}
+                                    <span className="text-sm font-semibold">
+                                        {currentRoomName || currentRoomCode || 'Phòng làm việc'}
                                     </span>
                                     {currentDepartmentName && (
-                                        <span className="text-xs ">
+                                        <span className="text-xs text-muted-foreground">
                                             {currentDepartmentName}
                                         </span>
                                     )}
                                 </div>
-                            </div>
+                            </button>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setRoomDialogOpen(true)}
+                                title="Chọn phòng làm việc"
+                            >
+                                Chọn phòng làm việc
+                            </Button>
                         )}
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setRoomDialogOpen(true)}
-                            title={'Chọn phòng làm việc'}
-                        >
-                            Chọn phòng làm việc
-                        </Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                                    <User className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56" align="end" forceMount>
-                                <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">
-                                            {user?.username}
-                                        </p>
-                                        <p className="text-xs leading-none text-muted-foreground">
-                                            {user?.email}
-                                        </p>
-                                        <p className="text-xs leading-none text-muted-foreground">
-                                            Vai trò: {user?.role || 'N/A'}
-                                        </p>
-                                    </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => router.push('/change-password')}>
-                                    <Shield className="mr-2 h-4 w-4" />
-                                    <span>Đổi mật khẩu</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleSignOut}>
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    <span>Đăng xuất</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        {user && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        className="flex h-9 items-center gap-2 rounded-lg px-2 hover:bg-gray-100"
+                                    >
+                                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">
+                                            {getInitials(user.fullName || user.username)}
+                                        </span>
+                                        <span className="hidden max-w-[140px] truncate text-sm font-medium text-gray-700 sm:inline md:max-w-[200px]">
+                                            {user.fullName || user.username}
+                                        </span>
+                                        <ChevronDown className="hidden h-3.5 w-3.5 shrink-0 text-gray-500 sm:block" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56" align="end" forceMount>
+                                    <DropdownMenuLabel className="font-normal">
+                                        <div className="flex flex-col space-y-1">
+                                            <p className="text-sm font-medium leading-none">
+                                                {user.fullName || user.username}
+                                            </p>
+                                            <p className="text-xs leading-none text-muted-foreground">
+                                                @{user.username}
+                                            </p>
+                                            <p className="text-xs leading-none text-muted-foreground">
+                                                {user.email}
+                                            </p>
+                                            <p className="text-xs leading-none text-muted-foreground">
+                                                Vai trò: {user.role || 'N/A'}
+                                            </p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => router.push('/change-password')}>
+                                        <Shield className="mr-2 h-4 w-4" />
+                                        <span>Đổi mật khẩu</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={handleSignOut}>
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>Đăng xuất</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
 
                         {/* Mobile Menu Button */}
                         <Button
