@@ -76,6 +76,7 @@ type PreviewRow = {
     createdAt?: string
     actionTimestamp?: string
     roomName?: string
+    sampleTypeName?: string | null
     serviceRequest?: {
         hisServiceReqCode?: string
         serviceReqCode?: string
@@ -811,6 +812,7 @@ export default function ReportStatisticsForm() {
                                             <TableHead>Mã Y lệnh</TableHead>
                                             <TableHead>Mã bệnh nhân</TableHead>
                                             <TableHead>Tên bệnh nhân</TableHead>
+                                            <TableHead>Vị trí bệnh phẩm</TableHead>
                                             <TableHead>Phân loại BP</TableHead>
                                             <TableHead>Trạng thái</TableHead>
                                             <TableHead>Phòng</TableHead>
@@ -837,6 +839,7 @@ export default function ReportStatisticsForm() {
                                                         {sr?.patientCode || '—'}
                                                     </TableCell>
                                                     <TableCell>{sr?.patientName || '—'}</TableCell>
+                                                    <TableCell>{item.sampleTypeName || '—'}</TableCell>
                                                     <TableCell>{item.serviceRequest?.flag || '—'}</TableCell>
                                                     <TableCell>
                                                         {stateName ? (

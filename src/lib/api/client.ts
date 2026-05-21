@@ -3469,6 +3469,8 @@ class ApiClient {
             createdAt?: string;
             numOfBlock?: string | number;
             roomName?: string;
+            /** Vị trí bệnh phẩm / loại mẫu */
+            sampleTypeName?: string | null;
             /** Phòng hiện tại của workflow row (theo by-room-and-state) */
             currentRoomId?: string;
             serviceRequest?: {
