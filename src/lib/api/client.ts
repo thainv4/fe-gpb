@@ -3456,6 +3456,9 @@ class ApiClient {
         code?: string; // HIS Service Request Code, Reception Code hoặc patientCode (PATIENT_CODE)
         flag?: string;
         patientName?: string;
+        sampleTypeId?: string;
+        resultConclude?: string;
+        icdName?: string;
         // Deprecated: sử dụng code thay thế
         hisServiceReqCode?: string;
         receptionCode?: string;
@@ -3525,6 +3528,9 @@ class ApiClient {
         }
         if (params.flag) queryParams.append('flag', params.flag);
         if (params.patientName) queryParams.append('patientName', params.patientName);
+        if (params.sampleTypeId) queryParams.append('sampleTypeId', params.sampleTypeId);
+        if (params.resultConclude) queryParams.append('resultConclude', params.resultConclude);
+        if (params.icdName) queryParams.append('icdName', params.icdName);
 
         return this.request(
             `/workflow-history/by-room-and-state?${queryParams.toString()}`
@@ -3554,6 +3560,9 @@ class ApiClient {
         code?: string;
         patientName?: string;
         flag?: string;
+        sampleTypeId?: string;
+        resultConclude?: string;
+        icdName?: string;
     }): Promise<{ blob: Blob; fileName: string; total: number }> {
         const queryParams = new URLSearchParams();
         queryParams.append('roomId', params.roomId);
@@ -3569,6 +3578,9 @@ class ApiClient {
         if (params.code) queryParams.append('code', params.code);
         if (params.patientName) queryParams.append('patientName', params.patientName);
         if (params.flag) queryParams.append('flag', params.flag);
+        if (params.sampleTypeId) queryParams.append('sampleTypeId', params.sampleTypeId);
+        if (params.resultConclude) queryParams.append('resultConclude', params.resultConclude);
+        if (params.icdName) queryParams.append('icdName', params.icdName);
 
         this.refreshTokenFromStorage();
         const isValid = await this.ensureValidToken();
