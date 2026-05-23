@@ -3310,6 +3310,8 @@ class ApiClient {
             resultComment?: string;
             resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
             resultName?: string;
+            /** Phương pháp thực hiện (Gen2 — theo dòng dịch vụ) */
+            testingMethodGenId?: string | null;
         }
     ): Promise<ApiResponse> {
         return this.request(
@@ -3391,6 +3393,24 @@ class ApiClient {
     async getSignedDocumentByHisCode(hisServiceReqCode: string): Promise<Blob> {
         this.refreshTokenFromStorage();
         const url = `${this.baseURL}/store-signed-documents/by-his-code/${encodeURIComponent(hisServiceReqCode)}/document`;
+        const headers: Record<string, string> = {};
+        if (this.token) {
+            headers.Authorization = `Bearer ${this.token}`;
+        }
+        const response = await fetch(url, { method: 'GET', headers });
+        if (!response.ok) {
+            throw new Error(response.status === 404 ? 'Không tìm thấy văn bản đã ký' : `Lỗi tải văn bản: ${response.status}`);
+        }
+        return response.blob();
+    }
+
+    /**
+     * Stream PDF văn bản đã ký theo documentId (Gen2 — ký theo dòng).
+     * GET /api/v1/store-signed-documents/by-document-id/:documentId/document
+     */
+    async getSignedDocumentByDocumentId(documentId: string | number): Promise<Blob> {
+        this.refreshTokenFromStorage();
+        const url = `${this.baseURL}/store-signed-documents/by-document-id/${encodeURIComponent(String(documentId))}/document`;
         const headers: Record<string, string> = {};
         if (this.token) {
             headers.Authorization = `Bearer ${this.token}`;

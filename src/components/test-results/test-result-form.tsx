@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
 import { ServiceRequestsSidebar } from "@/components/service-requests-sidebar/service-requests-sidebar";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
+import { apiClient, type StoredService } from "@/lib/api/client";
 import PatientInfoCard from "@/components/patient-info/patient-info-card";
 import { formatHisInstructionTime } from "@/lib/utils";
 import { useCurrentRoomStore } from "@/lib/stores/current-room";
@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/dialog";
 import { ResultForm, RESULT_FORM_TYPE_GPB } from "@/components/test-results/form-export-pdf";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getHisTokenCode } from "@/lib/his-token-code-storage";
 import { downloadPdfFromContainer, pdfBase64FromContainer, downloadPdfFromContainerWithPuppeteer, pdfBase64FromContainerWithPuppeteer, mergePdfsBase64 } from '@/lib/utils/pdf-export';
@@ -89,19 +88,48 @@ function formatWorkflowActionDateTime(iso?: string | null): string {
     }
 }
 
+function serviceHasResult(service: Pick<StoredService, 'resultText' | 'resultDescription' | 'resultConclude'>): boolean {
+    return !!(
+        service.resultText?.trim() ||
+        service.resultDescription?.trim() ||
+        service.resultConclude?.trim()
+    );
+}
+
+function serviceHasDocument(service: Pick<StoredService, 'documentId'>): boolean {
+    return service.documentId != null && String(service.documentId).trim() !== '';
+}
+
+/** Gen2: mọi dòng phiếu đã có kết quả và documentId trước khi COMPLETE. */
+function allServicesReadyForComplete(services: StoredService[]): boolean {
+    return services.length > 0 && services.every((s) => serviceHasResult(s) && serviceHasDocument(s));
+}
+
 /** Bảng danh sách dịch vụ (memo + callback ổn định để giảm re-render). */
 const ServicesTable = React.memo(function ServicesTable({
     services,
+    selectedServiceId,
     onServiceClick,
 }: {
-    services: Array<{ id: string; serviceCode: string; serviceName: string; price: number; receptionCode?: string | null; resultConclude?: string | null; documentId?: string | number | null }>;
+    services: StoredService[];
+    selectedServiceId: string | null;
     onServiceClick: (serviceId: string) => void;
 }) {
     return (
         <div className="overflow-x-auto">
+            <RadioGroup
+                value={selectedServiceId ?? ''}
+                onValueChange={(value) => {
+                    if (value) onServiceClick(value);
+                }}
+                className="contents"
+            >
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
+                        <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                            Chọn
+                        </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã dịch vụ</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên dịch vụ</th>
@@ -113,15 +141,24 @@ const ServicesTable = React.memo(function ServicesTable({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                     {services.map((service, index) => {
-                        const firstService = services[0];
-                        const hasResult = firstService?.resultConclude ? true : false;
-                        const hasSignature = firstService?.documentId ? true : false;
+                        const hasResult = serviceHasResult(service);
+                        const hasSignature = serviceHasDocument(service);
+                        const isFocused = selectedServiceId === service.id;
                         return (
                             <tr
                                 key={service.id}
-                                className="hover:bg-gray-50 cursor-pointer"
+                                className={`hover:bg-gray-50 cursor-pointer ${isFocused ? 'bg-blue-50 ring-1 ring-inset ring-blue-200' : ''}`}
                                 onClick={() => onServiceClick(service.id)}
                             >
+                                <td
+                                    className="px-3 py-3 text-center"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <RadioGroupItem
+                                        value={service.id}
+                                        aria-label={`Chọn ${service.serviceName}`}
+                                    />
+                                </td>
                                 <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{service.serviceCode}</td>
                                 <td className="px-4 py-3 text-sm text-gray-900">{service.serviceName}</td>
@@ -152,6 +189,7 @@ const ServicesTable = React.memo(function ServicesTable({
                     })}
                 </tbody>
             </table>
+            </RadioGroup>
         </div>
     );
 });
@@ -196,6 +234,10 @@ export default function TestResultForm() {
     const [samplingMethodGenSearch, setSamplingMethodGenSearch] = useState<string>('')
     const [appliedSamplingMethodGenSearch, setAppliedSamplingMethodGenSearch] = useState<string>('')
     const [samplingMethodGenSelectOpen, setSamplingMethodGenSelectOpen] = useState(false)
+
+    /** Gen2: dòng focus + tick chọn (lưu/ký Gen); GPB luôn chọn cả phiếu. */
+    const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
+    const testingMethodGenByServiceRef = useRef<Map<string, string>>(new Map())
 
     /** Kíp thực hiện xét nghiệm: vai trò, họ tên, khoa (UI; reset khi đổi phiếu). */
     const [testingExecutionTeamRows, setTestingExecutionTeamRows] = useState<TestingExecutionTeamRow[]>(() =>
@@ -468,6 +510,24 @@ export default function TestResultForm() {
     }, [myRoomsData])
     const isGenForm = resultFormType === 2
 
+    const selectedService = useMemo(
+        () => (selectedServiceId ? services.find((s) => s.id === selectedServiceId) ?? null : null),
+        [services, selectedServiceId],
+    )
+
+    // Giữ selectedServiceId hợp lệ khi refetch / đổi phiếu
+    useEffect(() => {
+        if (!selectedServiceId) return
+        if (services.some((s) => s.id === selectedServiceId)) return
+        setSelectedServiceId(null)
+    }, [services, selectedServiceId])
+
+    // Cache phương pháp Gen theo dòng đang focus
+    useEffect(() => {
+        if (!isGenForm || !selectedServiceId || !selectedSamplingMethod?.trim()) return
+        testingMethodGenByServiceRef.current.set(selectedServiceId, selectedSamplingMethod.trim())
+    }, [isGenForm, selectedServiceId, selectedSamplingMethod])
+
     const currentUsername =
         profileData?.data?.username ?? authUser?.username ?? undefined
 
@@ -601,6 +661,8 @@ export default function TestResultForm() {
             setSelectedSamplingMethod('')
             setTestingMethodGenFromResult(null)
             setNumOfBlock('')
+            setSelectedServiceId(null)
+            testingMethodGenByServiceRef.current = new Map()
         }
     }, [resultFormType, defaultResultDescription, defaultResultConcludeGen1, defaultResultConclude, defaultResultNoteGen1, defaultResultNote, defaultResultRecomment, defaultMacroscopicComment, syncResultDescription])
 
@@ -874,6 +936,7 @@ export default function TestResultForm() {
             })
             return
         }
+        setSelectedServiceId(serviceId)
         try {
             const resultResponse = await apiClient.getServiceResult(serviceId)
             if (resultResponse.success && resultResponse.data) {
@@ -913,8 +976,9 @@ export default function TestResultForm() {
         }
     }, [storedServiceReqId, toast, resultFormType, defaultMicroscopicDescription, defaultMacroscopicComment, defaultResultConcludeGen1, defaultResultConclude, defaultResultNoteGen1, defaultResultNote, defaultResultRecomment])
 
-    // Auto-fetch the "Kết quả xét nghiệm" inputs when the page has loaded services.
+    // GPB: auto-load dịch vụ đầu tiên. Gen: không auto-load — user chọn dòng.
     useEffect(() => {
+        if (isGenForm) return
         if (!storedServiceReqId) return
         if (!services || services.length === 0) return
         const firstServiceId = services[0]?.id
@@ -923,7 +987,7 @@ export default function TestResultForm() {
 
         lastAutoLoadedServiceIdRef.current = firstServiceId
         void handleServiceClick(firstServiceId)
-    }, [storedServiceReqId, services, handleServiceClick])
+    }, [storedServiceReqId, services, handleServiceClick, isGenForm])
 
     // Reset guard when switching to a different storedServiceReqId.
     useEffect(() => {
@@ -934,19 +998,62 @@ export default function TestResultForm() {
         setTestingExecutionTeamRows(createDefaultTestingExecutionTeamRows())
     }, [storedServiceReqId])
 
-    // Handler xem văn bản đã ký (stream PDF theo hisServiceReqCode)
-    const handleViewSignedDocument = async () => {
-        const hisCode = storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode
-        if (!hisCode) {
+    /** Mở dialog preview theo dòng focus; không fallback sang dịch vụ khác đã có kết quả. */
+    const handleOpenResultPreview = useCallback(() => {
+        if (!storedServiceReqId || services.length === 0) return
+
+        let targetId: string | null = null
+        if (selectedServiceId && services.some((s) => s.id === selectedServiceId)) {
+            targetId = selectedServiceId
+        } else if (!isGenForm) {
+            targetId = services[0]?.id ?? null
+        }
+
+        if (!targetId) {
             toast({
                 variant: 'destructive',
                 title: 'Lỗi',
-                description: 'Không có mã yêu cầu dịch vụ HIS'
+                description: 'Vui lòng chọn một dịch vụ trong bảng để xem kết quả',
             })
             return
         }
+
+        setPreviewServiceId(targetId)
+        setPreviewDialogOpen(true)
+    }, [storedServiceReqId, services, selectedServiceId, isGenForm, toast])
+
+    // Gen: PDF theo documentId dòng focus. GPB: theo HIS (bản mới nhất trên phiếu).
+    const handleViewSignedDocument = async () => {
         try {
-            const blob = await apiClient.getSignedDocumentByHisCode(hisCode)
+            let blob: Blob
+            if (isGenForm) {
+                const focus =
+                    (selectedServiceId ? services.find((s) => s.id === selectedServiceId) : null) ??
+                    services.find((s) => s.documentId)
+                const docId = focus?.documentId
+                if (!docId) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Lỗi',
+                        description: selectedServiceId
+                            ? 'Dịch vụ đang chọn chưa có văn bản đã ký'
+                            : 'Chọn dịch vụ đã ký để xem văn bản',
+                    })
+                    return
+                }
+                blob = await apiClient.getSignedDocumentByDocumentId(docId)
+            } else {
+                const hisCode = storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode
+                if (!hisCode) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Lỗi',
+                        description: 'Không có mã yêu cầu dịch vụ HIS',
+                    })
+                    return
+                }
+                blob = await apiClient.getSignedDocumentByHisCode(hisCode)
+            }
             const url = URL.createObjectURL(blob)
             window.open(url, '_blank')
             setTimeout(() => URL.revokeObjectURL(url), 60000)
@@ -954,7 +1061,7 @@ export default function TestResultForm() {
             toast({
                 variant: 'destructive',
                 title: 'Lỗi',
-                description: e?.message || 'Không tải được văn bản đã ký'
+                description: e?.message || 'Không tải được văn bản đã ký',
             })
         }
     }
@@ -1222,6 +1329,24 @@ export default function TestResultForm() {
             return
         }
 
+        if (!selectedService) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng chọn một dịch vụ để ký số",
+            })
+            return
+        }
+
+        if (isGenForm && !serviceHasResult(selectedService)) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Dịch vụ đã chọn phải có kết quả (lưu trước khi ký)",
+            })
+            return
+        }
+
         setIsSigning(true)
         try {
             const tokenCode = getHisTokenCode()
@@ -1363,11 +1488,13 @@ export default function TestResultForm() {
                     }
                 }
 
-                // Nếu có documentId, cập nhật cho tất cả dịch vụ
-                if (documentId && services.length > 0) {
+                const servicesToPatch = isGenForm
+                    ? (selectedService ? [selectedService] : [])
+                    : services
+
+                if (documentId && servicesToPatch.length > 0) {
                     try {
-                        // Cập nhật documentId cho tất cả dịch vụ
-                        const updatePromises = services.map(async (service) => {
+                        const updatePromises = servicesToPatch.map(async (service) => {
                             const updateResponse = await apiClient.patchServiceRequestDocumentId(service.id, documentId);
                             if (!updateResponse.success) {
                                 throw new Error(getErrorMessage(updateResponse, `Không thể cập nhật document ID cho service ${service.id}`));
@@ -1390,21 +1517,23 @@ export default function TestResultForm() {
                             toast({
                                 variant: "destructive",
                                 title: "Cảnh báo",
-                                description: `Đã ký số nhưng không thể cập nhật document ID cho ${updateFailed}/${services.length} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
+                                description: `Đã ký số nhưng không thể cập nhật document ID cho ${updateFailed}/${servicesToPatch.length} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
                             });
                         }
 
                         // Refresh danh sách services để hiển thị trạng thái "Đã ký"
                         await refetchStoredServiceRequest();
 
-                        // Sau khi cập nhật documentId thành công, gọi API update HIS-PACS result cho tất cả dịch vụ
                         try {
-                            // Refresh lại danh sách dịch vụ để có dữ liệu mới nhất
                             const refreshedData = await refetchStoredServiceRequest();
                             const refreshedServices = refreshedData.data?.data?.services || services;
+                            const hisPacsTargets = isGenForm
+                                ? (selectedService
+                                    ? refreshedServices.filter((s: StoredService) => s.id === selectedService.id)
+                                    : [])
+                                : refreshedServices
 
-                            // Gọi API updateHisPacsResult cho tất cả dịch vụ
-                            const hisPacsPromises = refreshedServices.map((service: any) =>
+                            const hisPacsPromises = hisPacsTargets.map((service: StoredService) =>
                                 updateHisPacsResultForService(service, tokenCode!)
                             );
 
@@ -1416,11 +1545,11 @@ export default function TestResultForm() {
                             const hisPacsFailed = hisPacsResults.length - hisPacsSuccessful;
 
                             if (hisPacsFailed > 0) {
-                                console.warn(`⚠️ Không thể cập nhật HIS-PACS cho ${hisPacsFailed}/${refreshedServices.length} dịch vụ`);
+                                console.warn(`⚠️ Không thể cập nhật HIS-PACS cho ${hisPacsFailed}/${hisPacsTargets.length} dịch vụ`);
                                 toast({
                                     variant: 'default',
                                     title: 'Cảnh báo',
-                                    description: `Đã ký số nhưng không thể cập nhật kết quả HIS-PACS cho ${hisPacsFailed}/${refreshedServices.length} dịch vụ.`
+                                    description: `Đã ký số nhưng không thể cập nhật kết quả HIS-PACS cho ${hisPacsFailed}/${hisPacsTargets.length} dịch vụ.`
                                 });
                             }
                         } catch (hisPacsError: any) {
@@ -1441,39 +1570,49 @@ export default function TestResultForm() {
                     }
                 }
 
-                // Sau khi ký số thành công, gọi API chuyển trạng thái workflow
                 if (storedServiceRequest?.id) {
-                    try {
-                        const workflowResponse = await apiClient.transitionWorkflow({
-                            storedServiceReqId: storedServiceRequest.id,
-                            toStateId: '426df256-bc00-28d1-e065-9e6b783dd008',
-                            actionType: 'COMPLETE',
-                            currentUserId: currentUserId,
-                            currentDepartmentId: workflowDepartmentId ?? storeCurrentDepartmentId,
-                            currentRoomId: roomIdFromWorkflow ?? storeCurrentRoomId,
-                        })
+                    const refreshedForComplete = await refetchStoredServiceRequest()
+                    const latestServices =
+                        refreshedForComplete.data?.data?.services ?? services
+                    const mayComplete =
+                        !isGenForm || allServicesReadyForComplete(latestServices)
 
-                        if (workflowResponse.success) {
-                            // Refresh sidebar sau khi transition thành công
-                            setRefreshTrigger(prev => prev + 1)
-                        } else {
+                    if (mayComplete) {
+                        try {
+                            const workflowResponse = await apiClient.transitionWorkflow({
+                                storedServiceReqId: storedServiceRequest.id,
+                                toStateId: '426df256-bc00-28d1-e065-9e6b783dd008',
+                                actionType: 'COMPLETE',
+                                currentUserId: currentUserId,
+                                currentDepartmentId: workflowDepartmentId ?? storeCurrentDepartmentId,
+                                currentRoomId: roomIdFromWorkflow ?? storeCurrentRoomId,
+                            })
+
+                            if (workflowResponse.success) {
+                                setRefreshTrigger((prev) => prev + 1)
+                            } else {
+                                toast({
+                                    variant: 'destructive',
+                                    title: 'Cảnh báo',
+                                    description: getErrorMessage(
+                                        workflowResponse,
+                                        'Đã ký số nhưng không thể cập nhật trạng thái quy trình.',
+                                    ),
+                                })
+                            }
+                        } catch (err: any) {
+                            console.error('Error transitioning workflow:', err)
                             toast({
                                 variant: 'destructive',
                                 title: 'Cảnh báo',
-                                description: getErrorMessage(workflowResponse, 'Đã ký số nhưng không thể cập nhật trạng thái quy trình.')
+                                description:
+                                    err?.message ||
+                                    getErrorMessage(err, 'Đã ký số nhưng không thể cập nhật trạng thái quy trình.'),
                             })
                         }
-                    } catch (err: any) {
-                        console.error('Error transitioning workflow:', err)
-                        toast({
-                            variant: 'destructive',
-                            title: 'Cảnh báo',
-                            description: err?.message || getErrorMessage(err, 'Đã ký số nhưng không thể cập nhật trạng thái quy trình.')
-                        })
                     }
                 }
 
-                // Hiển thị message từ API nếu có
                 const successMessage = response.message || "Đã ký số tài liệu thành công"
                 toast({
                     title: "Thành công",
@@ -1526,16 +1665,22 @@ export default function TestResultForm() {
             return
         }
 
-        // Lấy tất cả dịch vụ đã ký số
-        const servicesWithDocumentId = services.filter(
-            (service: any) => service.documentId
-        )
+        const servicesWithDocumentId = isGenForm
+            ? (() => {
+                  const focus = selectedServiceId
+                      ? services.find((s) => s.id === selectedServiceId)
+                      : undefined
+                  return focus?.documentId ? [focus] : []
+              })()
+            : services.filter((service) => service.documentId)
 
         if (servicesWithDocumentId.length === 0) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
-                description: "Không có dịch vụ nào đã được ký số"
+                description: isGenForm
+                    ? "Dịch vụ đang chọn chưa có chữ ký số"
+                    : "Không có dịch vụ nào đã được ký số",
             })
             return
         }
@@ -1651,7 +1796,9 @@ export default function TestResultForm() {
 
                 toast({
                     title: "Thành công",
-                    description: `Đã hủy chữ ký số cho ${servicesWithDocumentId.length} dịch vụ`,
+                    description: isGenForm
+                        ? "Đã hủy chữ ký số cho dịch vụ đang chọn"
+                        : `Đã hủy chữ ký số cho ${servicesWithDocumentId.length} dịch vụ`,
                     variant: "default"
                 })
             } else {
@@ -1734,10 +1881,20 @@ export default function TestResultForm() {
             return
         }
 
+        if (!selectedService) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Vui lòng chọn một dịch vụ để lưu kết quả",
+            })
+            return
+        }
+
+        const servicesToSave = [selectedService]
+
         setIsSaving(true)
         try {
-            // form-gpb: gửi đúng giá trị input, không tự chèn thêm (ví dụ: không thêm default cho mô tả vi thể)
-            const savePromises = services.map(async (service) => {
+            const savePromises = servicesToSave.map(async (service) => {
                 const serviceId = service.id
 
                 const payload: any = {
@@ -1760,6 +1917,12 @@ export default function TestResultForm() {
                         payload.resultRecomment = resultRecomment
                     }
                     payload.resultName = resultName
+                    const methodId =
+                        testingMethodGenByServiceRef.current.get(serviceId) ??
+                        (selectedSamplingMethod?.trim() || undefined)
+                    if (methodId) {
+                        payload.testingMethodGenId = methodId
+                    }
                 }
 
                 const response = await apiClient.saveServiceResult(serviceId, payload)
@@ -1791,16 +1954,14 @@ export default function TestResultForm() {
                 toast({
                     variant: "destructive",
                     title: "Lỗi",
-                    description: `Không thể lưu kết quả cho ${saveFailed}/${services.length} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
+                    description: `Không thể lưu kết quả cho ${saveFailed}/${servicesToSave.length} dịch vụ: ${errorMessages[0] || 'Lỗi không xác định'}`
                 })
 
-                // Nếu tất cả đều lỗi, dừng lại
-                if (saveFailed === services.length) {
+                if (saveFailed === servicesToSave.length) {
                     return
                 }
             }
 
-            // Sau khi có ít nhất một service lưu kết quả thành công: xóa workflow (nếu toState.sortOrder=5) rồi mới transition để tạo workflow mới
             if (saveSuccessful > 0) {
                 // Gọi xóa workflow trước khi transition để có thể tạo lại workflow mới (chỉ xóa khi toState.sortOrder === 5)
                 if (storedServiceRequest?.id) {
@@ -1822,33 +1983,45 @@ export default function TestResultForm() {
                     }
                 }
 
-                try {
-                    const workflowResponse = await apiClient.transitionWorkflow({
-                        storedServiceReqId: storedServiceRequest.id,
-                        toStateId: '426df256-bbfe-28d1-e065-9e6b783dd008',
-                        actionType: 'COMPLETE',
-                        currentUserId: currentUserId,
-                        currentDepartmentId: workflowDepartmentId ?? storeCurrentDepartmentId,
-                        currentRoomId: roomIdFromWorkflow ?? storeCurrentRoomId,
-                    })
+                const refreshedAfterSave = await refetchStoredServiceRequest()
+                const latestAfterSave =
+                    refreshedAfterSave.data?.data?.services ?? services
+                const mayComplete =
+                    !isGenForm || allServicesReadyForComplete(latestAfterSave)
 
-                    if (workflowResponse.success) {
-                        // Refresh sidebar sau khi transition thành công
-                        setRefreshTrigger(prev => prev + 1)
-                    } else {
+                if (mayComplete) {
+                    try {
+                        const workflowResponse = await apiClient.transitionWorkflow({
+                            storedServiceReqId: storedServiceRequest.id,
+                            toStateId: '426df256-bbfe-28d1-e065-9e6b783dd008',
+                            actionType: 'COMPLETE',
+                            currentUserId: currentUserId,
+                            currentDepartmentId: workflowDepartmentId ?? storeCurrentDepartmentId,
+                            currentRoomId: roomIdFromWorkflow ?? storeCurrentRoomId,
+                        })
+
+                        if (workflowResponse.success) {
+                            setRefreshTrigger((prev) => prev + 1)
+                        } else {
+                            toast({
+                                variant: 'destructive',
+                                title: 'Cảnh báo',
+                                description: getErrorMessage(
+                                    workflowResponse,
+                                    'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.',
+                                ),
+                            })
+                        }
+                    } catch (err: any) {
+                        console.error('Error transitioning workflow:', err)
                         toast({
                             variant: 'destructive',
                             title: 'Cảnh báo',
-                            description: getErrorMessage(workflowResponse, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.')
+                            description:
+                                err?.message ||
+                                getErrorMessage(err, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.'),
                         })
                     }
-                } catch (err: any) {
-                    console.error('Error transitioning workflow:', err)
-                    toast({
-                        variant: 'destructive',
-                        title: 'Cảnh báo',
-                        description: err?.message || getErrorMessage(err, 'Đã lưu kết quả nhưng không thể cập nhật trạng thái quy trình.')
-                    })
                 }
             }
 
@@ -1881,40 +2054,12 @@ export default function TestResultForm() {
                 }
             }
 
-            // Gọi API cập nhật testingMethodGenId (Phương pháp thực hiện xét nghiệm) khi resultFormType === 2
-            if (saveSuccessful > 0 && storedServiceRequest?.id && resultFormType === 2) {
-                try {
-                    const testingMethodPayload = selectedSamplingMethod?.trim()
-                        ? { testingMethodGenId: selectedSamplingMethod.trim() }
-                        : {}
-                    const testingMethodGenResponse = await apiClient.updateStoredServiceRequest(
-                        storedServiceRequest.id,
-                        testingMethodPayload
-                    )
-                    if (!testingMethodGenResponse.success && Object.keys(testingMethodPayload).length > 0) {
-                        toast({
-                            title: 'Cảnh báo',
-                            description: testingMethodGenResponse.message || 'Đã lưu kết quả nhưng không thể cập nhật phương pháp thực hiện xét nghiệm',
-                            variant: 'default',
-                        })
-                    }
-                } catch (error: unknown) {
-                    const errorMessage = error instanceof Error ? error.message : 'Lỗi không xác định'
-                    toast({
-                        title: 'Cảnh báo',
-                        description: `Đã lưu kết quả nhưng không thể cập nhật phương pháp thực hiện xét nghiệm: ${errorMessage}`,
-                        variant: 'default',
-                    })
-                }
-            }
-
-            // Hiển thị thông báo thành công
             if (saveSuccessful > 0) {
                 toast({
                     title: "Thành công",
                     description: saveFailed > 0
-                        ? `Đã lưu kết quả cho ${saveSuccessful}/${services.length} dịch vụ`
-                        : `Đã lưu kết quả cho ${services.length} dịch vụ`,
+                        ? `Đã lưu kết quả cho ${saveSuccessful}/${servicesToSave.length} dịch vụ`
+                        : `Đã lưu kết quả cho ${servicesToSave.length} dịch vụ`,
                     variant: "default"
                 })
 
@@ -2118,22 +2263,30 @@ export default function TestResultForm() {
                                                 <div className="flex gap-2">
                                                     <Button
                                                         onClick={handleViewSignedDocument}
-                                                        disabled={!storedServiceReqId || !(storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode)}
+                                                        disabled={
+                                                            !storedServiceReqId ||
+                                                            (isGenForm
+                                                                ? !services.some((s) => s.documentId)
+                                                                : !(storedServiceRequest?.hisServiceReqCode || storedServiceRequest?.serviceReqCode))
+                                                        }
                                                         variant="outline"
+                                                        title={
+                                                            isGenForm
+                                                                ? 'Xem PDF theo documentId dòng đang chọn (hoặc dòng đã ký đầu tiên)'
+                                                                : 'Xem bản ký mới nhất theo mã phiếu HIS'
+                                                        }
                                                     >
                                                         Xem văn bản đã ký
                                                     </Button>
                                                     <Button
-                                                        onClick={() => {
-                                                            // Mở preview với dịch vụ đầu tiên có kết quả, hoặc dịch vụ đầu tiên
-                                                            const firstServiceWithResult = services.find(s => s.resultConclude) || services[0]
-                                                            if (firstServiceWithResult) {
-                                                                setPreviewServiceId(firstServiceWithResult.id)
-                                                                setPreviewDialogOpen(true)
-                                                            }
-                                                        }}
+                                                        onClick={handleOpenResultPreview}
                                                         disabled={services.length === 0 || !storedServiceReqId}
                                                         variant="outline"
+                                                        title={
+                                                            isGenForm
+                                                                ? 'Xem trước PDF theo dịch vụ đang chọn (click dòng trong bảng)'
+                                                                : 'Xem trước PDF theo dịch vụ đang chọn; nếu chưa chọn dòng thì dùng dịch vụ đầu tiên'
+                                                        }
                                                     >
                                                         Xem kết quả
                                                     </Button>
@@ -2153,7 +2306,11 @@ export default function TestResultForm() {
                                                     </Button>
                                                 </div>
                                             </div>
-                                            <ServicesTable services={services} onServiceClick={handleServiceClick} />
+                                            <ServicesTable
+                                                services={services}
+                                                selectedServiceId={selectedServiceId}
+                                                onServiceClick={handleServiceClick}
+                                            />
                                         </div>
                                     )}
 
@@ -2616,13 +2773,24 @@ export default function TestResultForm() {
 
                     <div className="overflow-y-auto p-6 bg-gray-100" style={{ maxHeight: 'calc(95vh - 80px)' }}>
                         {storedServiceRequestData?.data && previewServiceData?.data && (
-                            <div ref={previewRef} className="mx-auto">
-                                <ResultForm
-                                    formType={resultFormType}
-                                    data={storedServiceRequestData.data}
-                                    specificService={previewServiceData.data}
-                                />
-                            </div>
+                            <>
+                                {!serviceHasResult(previewServiceData.data) && (
+                                    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                        Dịch vụ{' '}
+                                        <span className="font-medium">
+                                            {previewServiceData.data.serviceCode} — {previewServiceData.data.serviceName}
+                                        </span>{' '}
+                                        chưa có kết quả. Phiếu xem trước bên dưới có thể trống hoặc chỉ hiển thị thông tin hành chính.
+                                    </div>
+                                )}
+                                <div ref={previewRef} className="mx-auto">
+                                    <ResultForm
+                                        formType={resultFormType}
+                                        data={storedServiceRequestData.data}
+                                        specificService={previewServiceData.data}
+                                    />
+                                </div>
+                            </>
                         )}
 
                         {!previewServiceData?.data && previewDialogOpen && (
@@ -2653,7 +2821,9 @@ export default function TestResultForm() {
                     <DialogHeader>
                         <DialogTitle>Xác nhận ký số</DialogTitle>
                         <DialogDescription>
-                            Bạn có chắc chắn muốn ký số cho tài liệu này? Hành động này không thể hoàn tác.
+                            {isGenForm
+                                ? 'Bạn có chắc chắn muốn ký số cho dịch vụ đang chọn? Mỗi lần ký tạo một văn bản riêng cho dịch vụ đó.'
+                                : 'Bạn có chắc chắn muốn ký số chung một văn bản cho tất cả dịch vụ trên phiếu? Hành động này không thể hoàn tác.'}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -2692,7 +2862,9 @@ export default function TestResultForm() {
                     <DialogHeader>
                         <DialogTitle>Xác nhận hủy chữ ký số</DialogTitle>
                         <DialogDescription>
-                            Bạn có chắc chắn muốn hủy chữ ký số cho tất cả {services.length} dịch vụ? Hành động này không thể hoàn tác.
+                            {isGenForm
+                                ? 'Bạn có chắc chắn muốn hủy chữ ký số cho dịch vụ đang chọn (focus)? Các dịch vụ khác trên phiếu không bị ảnh hưởng.'
+                                : `Bạn có chắc chắn muốn hủy chữ ký số cho tất cả dịch vụ trên phiếu (${services.length} dịch vụ)? Hành động này không thể hoàn tác.`}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
