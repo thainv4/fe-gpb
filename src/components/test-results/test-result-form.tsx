@@ -109,27 +109,24 @@ function allServicesReadyForComplete(services: StoredService[]): boolean {
 const ServicesTable = React.memo(function ServicesTable({
     services,
     selectedServiceId,
+    showSelection,
     onServiceClick,
 }: {
     services: StoredService[];
     selectedServiceId: string | null;
+    showSelection: boolean;
     onServiceClick: (serviceId: string) => void;
 }) {
-    return (
-        <div className="overflow-x-auto">
-            <RadioGroup
-                value={selectedServiceId ?? ''}
-                onValueChange={(value) => {
-                    if (value) onServiceClick(value);
-                }}
-                className="contents"
-            >
+    function renderTable(withRadio: boolean) {
+        return (
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
-                        <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
-                            Chọn
-                        </th>
+                        {withRadio && (
+                            <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                Chọn
+                            </th>
+                        )}
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã dịch vụ</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên dịch vụ</th>
@@ -150,15 +147,17 @@ const ServicesTable = React.memo(function ServicesTable({
                                 className={`hover:bg-gray-50 cursor-pointer ${isFocused ? 'bg-blue-50 ring-1 ring-inset ring-blue-200' : ''}`}
                                 onClick={() => onServiceClick(service.id)}
                             >
-                                <td
-                                    className="px-3 py-3 text-center"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <RadioGroupItem
-                                        value={service.id}
-                                        aria-label={`Chọn ${service.serviceName}`}
-                                    />
-                                </td>
+                                {withRadio && (
+                                    <td
+                                        className="px-3 py-3 text-center"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <RadioGroupItem
+                                            value={service.id}
+                                            aria-label={`Chọn ${service.serviceName}`}
+                                        />
+                                    </td>
+                                )}
                                 <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{service.serviceCode}</td>
                                 <td className="px-4 py-3 text-sm text-gray-900">{service.serviceName}</td>
@@ -189,7 +188,24 @@ const ServicesTable = React.memo(function ServicesTable({
                     })}
                 </tbody>
             </table>
-            </RadioGroup>
+        );
+    }
+
+    return (
+        <div className="overflow-x-auto">
+            {showSelection ? (
+                <RadioGroup
+                    value={selectedServiceId ?? ''}
+                    onValueChange={(value) => {
+                        if (value) onServiceClick(value);
+                    }}
+                    className="contents"
+                >
+                    {renderTable(true)}
+                </RadioGroup>
+            ) : (
+                renderTable(false)
+            )}
         </div>
     );
 });
@@ -235,7 +251,7 @@ export default function TestResultForm() {
     const [appliedSamplingMethodGenSearch, setAppliedSamplingMethodGenSearch] = useState<string>('')
     const [samplingMethodGenSelectOpen, setSamplingMethodGenSelectOpen] = useState(false)
 
-    /** Gen2: dòng focus + tick chọn (lưu/ký Gen); GPB luôn chọn cả phiếu. */
+    /** Gen: dòng focus (radio). GPB: focus khi click dòng / auto-load. */
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
     const testingMethodGenByServiceRef = useRef<Map<string, string>>(new Map())
 
@@ -1329,7 +1345,7 @@ export default function TestResultForm() {
             return
         }
 
-        if (!selectedService) {
+        if (isGenForm && !selectedService) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -1338,7 +1354,7 @@ export default function TestResultForm() {
             return
         }
 
-        if (isGenForm && !serviceHasResult(selectedService)) {
+        if (isGenForm && selectedService && !serviceHasResult(selectedService)) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -1881,16 +1897,20 @@ export default function TestResultForm() {
             return
         }
 
-        if (!selectedService) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Vui lòng chọn một dịch vụ để lưu kết quả",
-            })
-            return
+        let servicesToSave: StoredService[]
+        if (isGenForm) {
+            if (!selectedService) {
+                toast({
+                    variant: "destructive",
+                    title: "Lỗi",
+                    description: "Vui lòng chọn một dịch vụ để lưu kết quả",
+                })
+                return
+            }
+            servicesToSave = [selectedService]
+        } else {
+            servicesToSave = services
         }
-
-        const servicesToSave = [selectedService]
 
         setIsSaving(true)
         try {
@@ -2309,6 +2329,7 @@ export default function TestResultForm() {
                                             <ServicesTable
                                                 services={services}
                                                 selectedServiceId={selectedServiceId}
+                                                showSelection={isGenForm}
                                                 onServiceClick={handleServiceClick}
                                             />
                                         </div>
