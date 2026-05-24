@@ -100,6 +100,43 @@ function serviceHasDocument(service: Pick<StoredService, 'documentId'>): boolean
     return service.documentId != null && String(service.documentId).trim() !== '';
 }
 
+/** GPB: phiếu đã ký nếu bất kỳ dòng có documentId. */
+function isGpbSlipSigned(services: StoredService[]): boolean {
+    return services.some(serviceHasDocument);
+}
+
+/** Dịch vụ đang ký = dòng preview (ưu tiên) hoặc dòng focus. */
+function getSignTargetService(
+    services: StoredService[],
+    previewServiceId: string | null,
+    selectedServiceId: string | null,
+): StoredService | null {
+    const id = previewServiceId ?? selectedServiceId;
+    if (!id) return null;
+    return services.find((s) => s.id === id) ?? null;
+}
+
+function getDigitalSignBlockMessage(
+    isGenForm: boolean,
+    services: StoredService[],
+    signTarget: StoredService | null,
+): string | null {
+    if (isGenForm) {
+        if (!signTarget) {
+            return 'Vui lòng chọn một dịch vụ để ký số';
+        }
+        if (serviceHasDocument(signTarget)) {
+            const label = [signTarget.serviceCode, signTarget.serviceName].filter(Boolean).join(' — ');
+            return `Dịch vụ${label ? ` ${label}` : ''} đã được ký số. Vui lòng hủy chữ ký số cho dịch vụ này trước khi ký lại.`;
+        }
+        return null;
+    }
+    if (isGpbSlipSigned(services)) {
+        return 'Phiếu đã được ký số. Vui lòng hủy chữ ký số trên phiếu trước khi ký lại.';
+    }
+    return null;
+}
+
 /** Gen2: mọi dòng phiếu đã có kết quả và documentId trước khi COMPLETE. */
 function allServicesReadyForComplete(services: StoredService[]): boolean {
     return services.length > 0 && services.every((s) => serviceHasResult(s) && serviceHasDocument(s));
@@ -530,6 +567,18 @@ export default function TestResultForm() {
         () => (selectedServiceId ? services.find((s) => s.id === selectedServiceId) ?? null : null),
         [services, selectedServiceId],
     )
+
+    const signTargetService = useMemo(
+        () => getSignTargetService(services, previewServiceId, selectedServiceId),
+        [services, previewServiceId, selectedServiceId],
+    )
+
+    const digitalSignBlockMessage = useMemo(
+        () => getDigitalSignBlockMessage(isGenForm, services, signTargetService),
+        [isGenForm, services, signTargetService],
+    )
+
+    const canDigitalSign = digitalSignBlockMessage === null
 
     // Giữ selectedServiceId hợp lệ khi refetch / đổi phiếu
     useEffect(() => {
@@ -1299,6 +1348,18 @@ export default function TestResultForm() {
             return
         }
 
+        const signTarget = getSignTargetService(services, previewServiceId, selectedServiceId)
+        const signBlockMessage = getDigitalSignBlockMessage(isGenForm, services, signTarget)
+        if (signBlockMessage) {
+            toast({
+                variant: 'destructive',
+                title: 'Không thể ký số',
+                description: signBlockMessage,
+            })
+            setConfirmSignDialogOpen(false)
+            return
+        }
+
         // Sử dụng parameter nếu có, nếu không thì dùng state
         const signerIdToUse = signerIdParam || signerInfo.signerId
 
@@ -1345,7 +1406,7 @@ export default function TestResultForm() {
             return
         }
 
-        if (isGenForm && !selectedService) {
+        if (isGenForm && !signTarget) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -1354,7 +1415,7 @@ export default function TestResultForm() {
             return
         }
 
-        if (isGenForm && selectedService && !serviceHasResult(selectedService)) {
+        if (isGenForm && signTarget && !serviceHasResult(signTarget)) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -1505,7 +1566,7 @@ export default function TestResultForm() {
                 }
 
                 const servicesToPatch = isGenForm
-                    ? (selectedService ? [selectedService] : [])
+                    ? (signTarget ? [signTarget] : [])
                     : services
 
                 if (documentId && servicesToPatch.length > 0) {
@@ -1544,8 +1605,8 @@ export default function TestResultForm() {
                             const refreshedData = await refetchStoredServiceRequest();
                             const refreshedServices = refreshedData.data?.data?.services || services;
                             const hisPacsTargets = isGenForm
-                                ? (selectedService
-                                    ? refreshedServices.filter((s: StoredService) => s.id === selectedService.id)
+                                ? (signTarget
+                                    ? refreshedServices.filter((s: StoredService) => s.id === signTarget.id)
                                     : [])
                                 : refreshedServices
 
@@ -2764,12 +2825,13 @@ export default function TestResultForm() {
                                         !storedServiceRequestData?.data ||
                                         !previewServiceData?.data ||
                                         isSigning ||
-                                        isGenSignButtonDisabled
+                                        isGenSignButtonDisabled ||
+                                        !canDigitalSign
                                     }
                                     title={
                                         isGenSignButtonDisabled
                                             ? GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE
-                                            : undefined
+                                            : digitalSignBlockMessage ?? undefined
                                     }
                                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
                                 >
@@ -2843,8 +2905,8 @@ export default function TestResultForm() {
                         <DialogTitle>Xác nhận ký số</DialogTitle>
                         <DialogDescription>
                             {isGenForm
-                                ? 'Bạn có chắc chắn muốn ký số cho dịch vụ đang chọn? Mỗi lần ký tạo một văn bản riêng cho dịch vụ đó.'
-                                : 'Bạn có chắc chắn muốn ký số chung một văn bản cho tất cả dịch vụ trên phiếu? Hành động này không thể hoàn tác.'}
+                                ? 'Bạn có chắc chắn muốn ký số cho dịch vụ đang chọn? Mỗi dịch vụ chỉ ký một lần; muốn ký lại phải hủy chữ ký số trước.'
+                                : 'Bạn có chắc chắn muốn ký số chung một văn bản cho tất cả dịch vụ trên phiếu? Phiếu chỉ ký một lần; muốn ký lại phải hủy chữ ký số trước.'}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -2856,11 +2918,11 @@ export default function TestResultForm() {
                                 setConfirmSignDialogOpen(false)
                                 handleSignDocument()
                             }}
-                            disabled={isSigning || isGenSignButtonDisabled}
+                            disabled={isSigning || isGenSignButtonDisabled || !canDigitalSign}
                             title={
                                 isGenSignButtonDisabled
                                     ? GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE
-                                    : undefined
+                                    : digitalSignBlockMessage ?? undefined
                             }
                             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                         >

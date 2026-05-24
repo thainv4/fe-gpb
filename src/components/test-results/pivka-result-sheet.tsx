@@ -135,6 +135,9 @@ export function PivkaResultSheet({
     [workflowActionsData]
   );
 
+  const isServiceSigned =
+    selectedService.documentId != null && String(selectedService.documentId).trim() !== '';
+
   const receptionCode = selectedService.receptionCode?.trim() ?? '';
   const referringDoctor =
     stored.requestUsername && stored.requestLoginname
@@ -283,6 +286,16 @@ export function PivkaResultSheet({
 
     const pivkaPayload = validateAndBuildPayload();
     if (!pivkaPayload) return;
+
+    if (isServiceSigned) {
+      toast({
+        title: 'Không thể ký số',
+        description:
+          'Dịch vụ đã được ký số. Vui lòng hủy chữ ký số trước khi ký lại.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     const tokenCode = getHisTokenCode();
     if (!tokenCode) {
@@ -606,7 +619,12 @@ export function PivkaResultSheet({
             type="button"
             variant="outline"
             onClick={() => setConfirmSignDialogOpen(true)}
-            disabled={isSigning || isCanceling || !serverTimeReady}
+            disabled={isSigning || isCanceling || !serverTimeReady || isServiceSigned}
+            title={
+              isServiceSigned
+                ? 'Dịch vụ đã được ký số. Hủy chữ ký số trước khi ký lại.'
+                : undefined
+            }
           >
             {isSigning ? 'Đang ký số...' : 'Ký số'}
           </Button>
@@ -639,7 +657,7 @@ export function PivkaResultSheet({
           <DialogHeader>
             <DialogTitle>Xác nhận ký số</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn ký số cho phiếu này? Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn ký số cho phiếu này? Mỗi dịch vụ chỉ ký một lần; muốn ký lại phải hủy chữ ký số trước.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -655,7 +673,12 @@ export function PivkaResultSheet({
                 setConfirmSignDialogOpen(false);
                 handleSignDocument();
               }}
-              disabled={isSigning || isCanceling || !serverTimeReady}
+              disabled={isSigning || isCanceling || !serverTimeReady || isServiceSigned}
+              title={
+                isServiceSigned
+                  ? 'Dịch vụ đã được ký số. Hủy chữ ký số trước khi ký lại.'
+                  : undefined
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isSigning ? (
