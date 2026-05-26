@@ -137,7 +137,12 @@ function getDigitalSignBlockMessage(
     return null;
 }
 
-/** Gen2: mọi dòng phiếu đã có kết quả và documentId trước khi COMPLETE. */
+/** Gen: mọi dòng phiếu đã có kết quả (không yêu cầu documentId) — dùng khi Lưu kết quả. */
+function allServicesHaveResult(services: StoredService[]): boolean {
+    return services.length > 0 && services.every((s) => serviceHasResult(s));
+}
+
+/** Gen: mọi dòng phiếu đã có kết quả và documentId — dùng khi ký số. */
 function allServicesReadyForComplete(services: StoredService[]): boolean {
     return services.length > 0 && services.every((s) => serviceHasResult(s) && serviceHasDocument(s));
 }
@@ -2068,7 +2073,7 @@ export default function TestResultForm() {
                 const latestAfterSave =
                     refreshedAfterSave.data?.data?.services ?? services
                 const mayComplete =
-                    !isGenForm || allServicesReadyForComplete(latestAfterSave)
+                    !isGenForm || allServicesHaveResult(latestAfterSave)
 
                 if (mayComplete) {
                     try {
