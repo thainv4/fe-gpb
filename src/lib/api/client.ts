@@ -1562,6 +1562,14 @@ class ApiClient {
         }
     }
 
+    /** Throw when API returns success: false so mutations/queries trigger onError. */
+    private assertApiSuccess<T>(res: ApiResponse<T>, defaultMessage: string): ApiResponse<T> {
+        if (!res.success) {
+            throw new Error(res.error?.trim() || defaultMessage);
+        }
+        return res;
+    }
+
     // Authentication methods
     async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
         const response = await this.request<LoginResponse>("/auth/login", {
@@ -3873,19 +3881,13 @@ class ApiClient {
         limit?: number;
         offset?: number;
         receptionCode?: string;
-        serviceCode?: string;
     }): Promise<ApiResponse<DeviceOutboundListData>> {
         const searchParams = new URLSearchParams();
         if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
         if (params?.offset !== undefined) searchParams.set("offset", String(params.offset));
         if (params?.receptionCode?.trim()) searchParams.set("receptionCode", params.receptionCode.trim());
-        if (params?.serviceCode?.trim()) searchParams.set("serviceCode", params.serviceCode.trim());
         const q = searchParams.toString();
         return this.request<DeviceOutboundListData>(`/device-outbound${q ? `?${q}` : ""}`);
-    }
-
-    async getDeviceOutboundById(id: string): Promise<ApiResponse<DeviceOutboundItem>> {
-        return this.request<DeviceOutboundItem>(`/device-outbound/${id}`);
     }
 
     async getDeviceOutboundServices(receptionCode: string): Promise<ApiResponse<DeviceOutboundServiceOption[]>> {
@@ -3895,24 +3897,35 @@ class ApiClient {
     }
 
     async createDeviceOutbound(body: CreateDeviceOutboundBody): Promise<ApiResponse<DeviceOutboundItem>> {
-        return this.request<DeviceOutboundItem>("/device-outbound", {
+        const res = await this.request<DeviceOutboundItem>("/device-outbound", {
             method: "POST",
             body: JSON.stringify(body),
         });
+        return this.assertApiSuccess(res, "Không thể gửi order");
     }
 
     async createDeviceOutboundBatch(body: DeviceOutboundBatchBody): Promise<ApiResponse<DeviceOutboundItem[]>> {
-        return this.request<DeviceOutboundItem[]>("/device-outbound/batch", {
+        const res = await this.request<DeviceOutboundItem[]>("/device-outbound/batch", {
             method: "POST",
             body: JSON.stringify(body),
         });
+        return this.assertApiSuccess(res, "Không thể gửi order");
     }
 
-    async updateDeviceOutbound(id: string, body: UpdateDeviceOutboundBody): Promise<ApiResponse<DeviceOutboundItem>> {
-        return this.request<DeviceOutboundItem>(`/device-outbound/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(body),
-        });
+    async getDeviceStainingMethods(params?: {
+        limit?: number;
+        offset?: number;
+        search?: string;
+    }): Promise<ApiResponse<DeviceStainingMethodsListData>> {
+        const searchParams = new URLSearchParams();
+        if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
+        if (params?.offset !== undefined) searchParams.set("offset", String(params.offset));
+        if (params?.search?.trim()) searchParams.set("search", params.search.trim());
+        const q = searchParams.toString();
+        const res = await this.request<DeviceStainingMethodsListData>(
+            `/device-staining-methods${q ? `?${q}` : ""}`,
+        );
+        return this.assertApiSuccess(res, "Không thể tải danh sách phương pháp");
     }
 
     async getPivkaIiResultByStoredSrServiceId(
@@ -3933,10 +3946,6 @@ class ApiClient {
             method: "POST",
             body: JSON.stringify(body),
         });
-    }
-
-    async deleteDeviceOutbound(id: string): Promise<ApiResponse<{ message: string }>> {
-        return this.request<{ message: string }>(`/device-outbound/${id}`, { method: "DELETE" });
     }
 
     /** GET /dashboard/workflow-state-distribution */
@@ -3991,16 +4000,34 @@ export interface PivkaIiResultResponse {
     version: number;
 }
 
-// Device Outbound types (theo device-outbound-api-for-frontend.md)
+// Device Outbound / HL7 out queue (màn Kết nối máy)
 export interface DeviceOutboundItem {
     id: string;
-    receptionCode: string;
-    serviceCode: string;
-    blockId: string;
-    slideId: string;
-    method: string;
+    lisCaseId: string;
+    slideId?: string | null;
+    blockId?: string | null;
+    testVantageCode?: string | null;
+    testCode?: string | null;
+    status: number;
+    createdTime: string;
+    sentTime?: string | null;
+    errorMessage?: string | null;
+    retryCount: number;
+}
+
+export interface DeviceStainingMethodItem {
+    id: string;
+    methodName: string;
+    protocolNo: string;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface DeviceStainingMethodsListData {
+    deviceStainingMethods: DeviceStainingMethodItem[];
+    total: number;
+    limit: number;
+    offset: number;
 }
 
 export interface DeviceOutboundListData {
@@ -4028,14 +4055,6 @@ export interface CreateDeviceOutboundBody {
     blockNumber: number;
     slideNumber: number;
     method: string;
-}
-
-export interface UpdateDeviceOutboundBody {
-    receptionCode?: string;
-    serviceCode?: string;
-    blockNumber?: number;
-    slideNumber?: number;
-    method?: string;
 }
 
 // Batch create payloads (theo device-outbound-batch-api-for-frontend.md)
