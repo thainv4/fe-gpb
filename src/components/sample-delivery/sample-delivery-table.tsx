@@ -350,91 +350,28 @@ export default function SampleDeliveryTable() {
             barcodeGenGpb: string;
             resultConcludeGenGpb: string;
             sampleTypeNameGenGpb: string;
+            receiverRoomName?: string;
         }) => {
-            // Bước 1: Gọi API tổng hợp để cập nhật flag và staining method cùng lúc (nếu có) - PHẢI thành công
-            if (params.storedServiceReqId && (params.selectedStainingMethod || params.selectedFlag)) {
-                const updateData: {
-                    stainingMethodId?: string;
-                    flag?: string;
-                } = {};
-
-                if (params.selectedStainingMethod) {
-                    updateData.stainingMethodId = params.selectedStainingMethod;
-                }
-                if (params.selectedFlag) {
-                    updateData.flag = params.selectedFlag;
-                }
-
-                const response = await apiClient.updateStoredServiceRequest(
-                    params.storedServiceReqId,
-                    updateData
-                )
-                if (!response.success) {
-                    throw new Error(response.message || response.error || 'Không thể cập nhật thông tin bàn giao mẫu')
-                }
-            }
-
-            // Bước 2: Gọi API cập nhật resultNote cho tất cả services (nếu có handoverNote) - PHẢI thành công
-            if (params.storedServiceReqId && handoverNote) {
-                // Lấy danh sách services từ storedServiceRequestData
-                const services = storedServiceRequestData?.data?.services || []
-
-                if (services.length > 0) {
-                    // Gọi API cho tất cả services
-                    const resultNotePromises = services.map((service: any) =>
-                        apiClient.saveServiceResult(service.id, {
-                            resultNotes: handoverNote,
-                            resultStatus: 'NORMAL'
-                        })
-                    )
-
-                    const resultNoteResults = await Promise.allSettled(resultNotePromises)
-
-                    // Kiểm tra tất cả phải thành công
-                    const failedResults = resultNoteResults.filter(r =>
-                        r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
-                    )
-
-                    if (failedResults.length > 0) {
-                        const errorMessages = failedResults.map(r => {
-                            if (r.status === 'rejected') {
-                                return r.reason?.message || 'Lỗi không xác định'
-                            }
-                            return r.value.message || r.value.error || 'Lỗi không xác định'
-                        }).join(', ')
-                        throw new Error(`Không thể cập nhật ghi chú cho ${failedResults.length}/${services.length} dịch vụ: ${errorMessages}`)
-                    }
-                }
-            }
-
-            // Bước 4: Gọi API transitionWorkflow CUỐI CÙNG sau khi các API khác đã chạy
-            const response = await apiClient.transitionWorkflow({
-                storedServiceReqId: params.storedServiceReqId,
-                toStateId: params.toStateId,
-                actionType: 'COMPLETE',
-                currentUserId: params.currentUserId,
-                currentDepartmentId: params.currentDepartmentId,
-                currentRoomId: params.currentRoomId,
-                notes: handoverNote || undefined,
-            })
-            // Nếu API trả về success: false, throw error để trigger onError
+            const response = await apiClient.confirmSampleHandover(
+                params.storedServiceReqId,
+                {
+                    toStateId: params.toStateId,
+                    actionType: 'COMPLETE',
+                    currentUserId: params.currentUserId,
+                    currentDepartmentId: params.currentDepartmentId,
+                    currentRoomId: params.currentRoomId,
+                    handoverNote: handoverNote || undefined,
+                    flag: params.selectedFlag || undefined,
+                    stainingMethodId: params.selectedStainingMethod || undefined,
+                    barcodeGenGpb: params.barcodeGenGpb || undefined,
+                    resultConcludeGenGpb: params.resultConcludeGenGpb || undefined,
+                    sampleTypeNameGenGpb: params.sampleTypeNameGenGpb || undefined,
+                    receiverRoomName: params.receiverRoomName || undefined,
+                },
+            )
             if (!response.success) {
                 throw new Error(response.error || response.message || 'Không thể bàn giao mẫu')
             }
-
-            // Bước 5: PATCH gpb-fields (barcodeGenGpb, resultConcludeGenGpb, sampleTypeNameGenGpb)
-            const gpbResponse = await apiClient.updateStoredServiceRequestGpbFields(
-                params.storedServiceReqId,
-                {
-                    barcodeGenGpb: params.barcodeGenGpb,
-                    resultConcludeGenGpb: params.resultConcludeGenGpb,
-                    sampleTypeNameGenGpb: params.sampleTypeNameGenGpb,
-                }
-            )
-            if (!gpbResponse.success) {
-                throw new Error(gpbResponse.message || gpbResponse.error || 'Không thể cập nhật gpb-fields')
-            }
-
             return response
         },
         onSuccess: async (_data, variables) => {
@@ -574,6 +511,8 @@ export default function SampleDeliveryTable() {
             barcodeGenGpb: barcodeGenGpb ?? '',
             resultConcludeGenGpb: gpbResultConclude ?? '',
             sampleTypeNameGenGpb: gpbSampleTypeName ?? '',
+            receiverRoomName:
+                availableRooms.find((room) => room.roomId === receiverRoomId)?.roomName ?? '',
         })
     }
 

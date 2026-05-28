@@ -37,6 +37,7 @@ interface ServiceRequestsSidebarProps {
     readonly serviceReqCode?: string
     readonly defaultStateId?: string
     readonly refreshTrigger?: number
+    readonly mode?: 'default' | 'audit'
 }
 
 interface FilterParams {
@@ -58,7 +59,14 @@ interface FilterParams {
     receptionCode?: string
 }
 
-export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, defaultStateId, refreshTrigger}: ServiceRequestsSidebarProps) {
+export function ServiceRequestsSidebar({
+    onSelect,
+    selectedCode,
+    serviceReqCode,
+    defaultStateId,
+    refreshTrigger,
+    mode = 'default',
+}: ServiceRequestsSidebarProps) {
     const {currentRoomId} = useCurrentRoomStore()
     const { toast } = useToast()
     const queryClient = useQueryClient()
@@ -123,8 +131,8 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
         order: 'DESC',
         orderBy: 'actionTimestamp',
         code: serviceReqCode || undefined,
-        fromDate: getTodayDate(),
-        toDate: getTodayEndDate()
+        fromDate: mode === 'audit' ? undefined : getTodayDate(),
+        toDate: mode === 'audit' ? undefined : getTodayEndDate()
     })
 
     // Query workflow states
@@ -518,6 +526,21 @@ export function ServiceRequestsSidebar({onSelect, selectedCode, serviceReqCode, 
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold">Danh sách bệnh nhân</h3>
                     <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => refetch()}
+                            disabled={isLoading}
+                            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                            title="Tải lại danh sách"
+                        >
+                            {isLoading ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                'Reload'
+                            )}
+                        </Button>
                         {serviceRequests.length > 0 && (
                             <Button
                                 type="button"

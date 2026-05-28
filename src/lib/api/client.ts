@@ -3934,6 +3934,29 @@ class ApiClient {
         return this.request<ServiceRequestAuditLogItem>(`/service-request-audit-logs/${id}`);
     }
 
+    async confirmSampleHandover(
+        storedServiceReqId: string,
+        payload: {
+            toStateId: string;
+            actionType: 'COMPLETE';
+            currentUserId?: string;
+            currentDepartmentId?: string;
+            currentRoomId?: string;
+            handoverNote?: string;
+            flag?: string;
+            stainingMethodId?: string;
+            barcodeGenGpb?: string;
+            resultConcludeGenGpb?: string;
+            sampleTypeNameGenGpb?: string;
+            receiverRoomName?: string;
+        },
+    ): Promise<ApiResponse<{ workflowHistoryId: string }>> {
+        return this.request(`/service-requests/stored/${storedServiceReqId}/confirm-handover`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
     async getLatestResultSaveAudit(storedServiceId: string): Promise<ApiResponse<LatestResultSaveAudit | null>> {
         const params = new URLSearchParams();
         params.set('storedServiceId', storedServiceId);
