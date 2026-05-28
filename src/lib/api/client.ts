@@ -1082,6 +1082,40 @@ export interface GetUserRoomsFilters {
  * Một bản ghi hành động trên quy trình (workflow) gắn với phiếu lưu trữ.
  * Frontend map `stateOrder` theo quy ước nghiệp vụ (xem tài liệu `docs/workflow-history-action-info-api.md`).
  */
+export interface ServiceRequestAuditLogItem {
+    id: string;
+    occurredAt: string;
+    eventCategory: string;
+    eventCode: string;
+    eventTitle: string;
+    summary?: string | null;
+    notes?: string | null;
+    payload?: Record<string, unknown> | null;
+    scope: string;
+    storedServiceReqId: string;
+    storedServiceId?: string | null;
+    actionUserId: string;
+    actionUsername?: string | null;
+    actionUserFullName?: string | null;
+    actionRoomId?: string | null;
+    actionRoomName?: string | null;
+    serviceReqCode?: string | null;
+    hisServiceReqCode?: string | null;
+    receptionCode?: string | null;
+    patientCode?: string | null;
+    patientName?: string | null;
+    serviceName?: string | null;
+    correlationId?: string | null;
+}
+
+export interface LatestResultSaveAudit {
+    storedServiceId: string;
+    occurredAt: string;
+    actionUserId: string;
+    actionUsername?: string | null;
+    actionUserFullName?: string | null;
+}
+
 export interface WorkflowActionInfo {
     /** Tên đăng nhập người thực hiện hành động */
     actionUsername: string;
@@ -3871,6 +3905,80 @@ class ApiClient {
         storedServiceReqId: string
     ): Promise<ApiResponse<WorkflowActionInfo[]>> {
         return this.request<WorkflowActionInfo[]>(`/workflow-history/action-info/${storedServiceReqId}`);
+    }
+
+    async getServiceRequestAuditLogs(params?: {
+        fromDate?: string;
+        toDate?: string;
+        code?: string;
+        patientName?: string;
+        roomId?: string;
+        eventCategory?: string[];
+        limit?: number;
+        offset?: number;
+    }): Promise<ApiResponse<{ items: ServiceRequestAuditLogItem[]; pagination: { total: number; limit: number; offset: number; hasNext: boolean; hasPrev: boolean } }>> {
+        const searchParams = new URLSearchParams();
+        if (params?.fromDate) searchParams.set('fromDate', params.fromDate);
+        if (params?.toDate) searchParams.set('toDate', params.toDate);
+        if (params?.code?.trim()) searchParams.set('code', params.code.trim());
+        if (params?.patientName?.trim()) searchParams.set('patientName', params.patientName.trim());
+        if (params?.roomId?.trim()) searchParams.set('roomId', params.roomId.trim());
+        if (params?.limit !== undefined) searchParams.set('limit', String(params.limit));
+        if (params?.offset !== undefined) searchParams.set('offset', String(params.offset));
+        params?.eventCategory?.forEach((c) => searchParams.append('eventCategory', c));
+        const q = searchParams.toString();
+        return this.request(`/service-request-audit-logs${q ? `?${q}` : ''}`);
+    }
+
+    async getServiceRequestAuditLogById(id: string): Promise<ApiResponse<ServiceRequestAuditLogItem>> {
+        return this.request<ServiceRequestAuditLogItem>(`/service-request-audit-logs/${id}`);
+    }
+
+    async getLatestResultSaveAudit(storedServiceId: string): Promise<ApiResponse<LatestResultSaveAudit | null>> {
+        const params = new URLSearchParams();
+        params.set('storedServiceId', storedServiceId);
+        return this.request<LatestResultSaveAudit | null>(
+            `/service-request-audit-logs/latest-result-save?${params.toString()}`,
+        );
+    }
+
+    async downloadServiceRequestAuditLogsExport(params: {
+        fromDate?: string;
+        toDate?: string;
+        code?: string;
+        patientName?: string;
+        roomId?: string;
+        eventCategory?: string[];
+    }): Promise<{ blob: Blob; fileName: string; total: number }> {
+        const searchParams = new URLSearchParams();
+        if (params.fromDate) searchParams.set('fromDate', params.fromDate);
+        if (params.toDate) searchParams.set('toDate', params.toDate);
+        if (params.code?.trim()) searchParams.set('code', params.code.trim());
+        if (params.patientName?.trim()) searchParams.set('patientName', params.patientName.trim());
+        if (params.roomId?.trim()) searchParams.set('roomId', params.roomId.trim());
+        params.eventCategory?.forEach((c) => searchParams.append('eventCategory', c));
+
+        this.refreshTokenFromStorage();
+        const isValid = await this.ensureValidToken();
+        if (!isValid && this.token) {
+            throw new Error('Session expired. Please login again.');
+        }
+
+        const url = `${this.baseURL}/service-request-audit-logs/export?${searchParams.toString()}`;
+        const headers: Record<string, string> = {};
+        if (this.token) headers.Authorization = `Bearer ${this.token}`;
+
+        const response = await fetch(url, { method: 'GET', headers });
+        if (!response.ok) {
+            throw new Error('Không thể xuất file nhật ký');
+        }
+        const blob = await response.blob();
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="([^"]+)"/);
+        const fileName = match?.[1] || 'audit-log.xlsx';
+        const totalHeader = response.headers.get('X-Total-Count');
+        const total = totalHeader ? Number(totalHeader) : 0;
+        return { blob, fileName, total };
     }
 
     // -------------------------------------------------------------------------

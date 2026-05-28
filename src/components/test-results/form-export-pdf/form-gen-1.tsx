@@ -90,7 +90,15 @@ export function FormGen1({
   const age = calculateAge(patientDob);
   const sampleTypeName = specificService?.sampleTypeName ?? "";
   const receptionCode = specificService?.receptionCode ?? "";
-  const resultName = data.services?.[0]?.serviceName ?? "";
+  const resultName = useMemo(() => {
+    if (specificService?.serviceName) return specificService.serviceName;
+    const serviceId = specificService?.id;
+    if (serviceId) {
+      const fromList = data.services?.find((s) => s.id === serviceId);
+      if (fromList?.serviceName) return fromList.serviceName;
+    }
+    return data.services?.[0]?.serviceName ?? "";
+  }, [specificService, data.services]);
   const barcodeGenGpb =
     specificService?.barcodeGenGpb ??
     data?.barcodeGenGpb ??
@@ -127,10 +135,18 @@ export function FormGen1({
     () => workflowActionsData?.data?.find((action) => action.stateOrder === 2),
     [workflowActionsData]
   );
-  const performerInfo = useMemo(
-    () => workflowActionsData?.data?.find((action) => action.stateOrder === 5),
-    [workflowActionsData]
-  );
+  const { data: latestResultSaveAudit } = useQuery({
+    queryKey: ["latest-result-save-audit", specificService?.id],
+    queryFn: () => apiClient.getLatestResultSaveAudit(specificService!.id),
+    enabled: !!specificService?.id,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const performerDisplayName = useMemo(() => {
+    const row = latestResultSaveAudit?.data;
+    if (!row) return "—";
+    return row.actionUserFullName?.trim() || row.actionUsername?.trim() || "—";
+  }, [latestResultSaveAudit?.data]);
 
   const resultConcludePlainText = useMemo(() => {
     const raw = resultConcludeData?.data?.resultConclude;
@@ -464,7 +480,7 @@ export function FormGen1({
             </div>
             <div className="ml-4 text-sm">
               <span className="font-semibold">Người thực hiện:</span>
-              <span className="ml-1">{performerInfo?.actionUserFullName ?? "—"}</span>
+              <span className="ml-1">{performerDisplayName}</span>
             </div>
           </div>
 

@@ -92,6 +92,13 @@ const REPORTS_NAV: NavLeaf = {
     description: 'Tạo báo cáo linh hoạt và xuất Excel',
 }
 
+const AUDIT_LOG_NAV: NavLeaf = {
+    name: 'Nhật ký phiếu',
+    href: '/service-request-audit-logs',
+    icon: NewspaperIcon,
+    description: 'Lịch sử tác động phiếu và dịch vụ',
+}
+
 function injectPivkaNavItem(items: NavItem[], show: boolean): NavItem[] {
     if (!show) return items
     return items.map((item) => {
@@ -273,6 +280,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             ]
         },
         REPORTS_NAV,
+        AUDIT_LOG_NAV,
         {
             name: 'Người dùng',
             icon: UserCheck,
@@ -321,7 +329,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: Stethoscope,
                     description: 'Tiếp nhận bệnh phẩm',
                 },
-                REPORTS_NAV
+                REPORTS_NAV,
+                AUDIT_LOG_NAV,
             ] satisfies NavItem[]
         }
         
@@ -365,7 +374,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: Cable,
                     description: 'Xuất dữ liệu ra thiết bị',
                 },
-                REPORTS_NAV
+                REPORTS_NAV,
+                AUDIT_LOG_NAV,
             ] satisfies NavItem[]
         }
         

@@ -2875,7 +2875,12 @@ export default function TestResultForm() {
                                     <ResultForm
                                         formType={resultFormType}
                                         data={storedServiceRequestData.data}
-                                        specificService={previewServiceData.data}
+                                        specificService={
+                                            previewServiceData.data ??
+                                            (previewServiceId
+                                                ? services.find((s) => s.id === previewServiceId)
+                                                : undefined)
+                                        }
                                     />
                                 </div>
                             </>

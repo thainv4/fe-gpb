@@ -3,15 +3,16 @@
 import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
-import { ResultForm, RESULT_FORM_TYPE_GPB } from '@/components/test-results/form-export-pdf';
-import { useRef } from 'react';
+import { ResultForm, RESULT_FORM_TYPE_GPB, RESULT_FORM_TYPE_GEN1 } from '@/components/test-results/form-export-pdf';
+import { useMemo, useRef } from 'react';
+import type { StoredService } from '@/lib/api/client';
 import { useReactToPrint } from 'react-to-print';
 
 export default function PreviewPage() {
     const params = useParams();
     const searchParams = useSearchParams();
     const storedServiceReqId = params.serviceReqCode as string;
-    const serviceId = searchParams.get('serviceId');
+    const serviceIdParam = searchParams.get('serviceId');
     const formTypeParam = searchParams.get('formType');
     const formType = formTypeParam ? Number(formTypeParam) : RESULT_FORM_TYPE_GPB;
     const componentRef = useRef<HTMLDivElement>(null);
@@ -23,14 +24,34 @@ export default function PreviewPage() {
         enabled: !!storedServiceReqId,
     });
 
-    // Fetch specific service if serviceId is provided
+    const serviceIdFromList = useMemo(() => {
+        const services = storedServiceRequestData?.data?.services;
+        if (!services?.length) return null;
+        if (serviceIdParam && services.some((s) => s.id === serviceIdParam)) {
+            return serviceIdParam;
+        }
+        if (formType === RESULT_FORM_TYPE_GEN1 && services.length === 1) {
+            return services[0].id;
+        }
+        return serviceIdParam;
+    }, [storedServiceRequestData?.data?.services, serviceIdParam, formType]);
+
+    const serviceFromList = useMemo((): StoredService | undefined => {
+        const services = storedServiceRequestData?.data?.services;
+        if (!services?.length || !serviceIdFromList) return undefined;
+        return services.find((s) => s.id === serviceIdFromList);
+    }, [storedServiceRequestData?.data?.services, serviceIdFromList]);
+
     const { data: serviceData, isLoading: isLoadingService } = useQuery({
-        queryKey: ['stored-service-detail', serviceId],
-        queryFn: () => apiClient.getStoredServiceById(serviceId!),
-        enabled: !!serviceId,
+        queryKey: ['stored-service-detail', serviceIdFromList],
+        queryFn: () => apiClient.getStoredServiceById(serviceIdFromList!),
+        enabled: !!serviceIdFromList,
     });
 
-    const isLoading = isLoadingRequest || isLoadingService;
+    const specificService = serviceData?.data ?? serviceFromList;
+
+    const isLoading =
+        isLoadingRequest || (!!serviceIdFromList && isLoadingService && !serviceFromList);
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
@@ -149,7 +170,7 @@ export default function PreviewPage() {
                     <ResultForm
                         formType={formType}
                         data={storedServiceRequestData.data}
-                        specificService={serviceData?.data}
+                        specificService={specificService}
                     />
                 </div>
             </div>

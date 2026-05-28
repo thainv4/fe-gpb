@@ -24,6 +24,7 @@ const adminOnlyRoutes = [
 const userAllowedRoutes = [
     '/dashboard',
     '/reports',
+    '/service-request-audit-logs',
     '/test-indications',
     '/sample-delivery',
     '/test-results',
