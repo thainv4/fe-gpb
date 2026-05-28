@@ -8,7 +8,7 @@ import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
 import {Label} from '@/components/ui/label'
-import {ChevronLeft, ChevronRight, Loader2, Trash2} from 'lucide-react'
+import {ChevronLeft, ChevronRight, Loader2, RefreshCw, Trash2} from 'lucide-react'
 import {cn} from '@/lib/utils'
 import {getWorkflowStateBadgeClasses} from '@/lib/workflow-state-colors'
 import {useToast} from '@/hooks/use-toast'
@@ -536,9 +536,9 @@ export function ServiceRequestsSidebar({
                             title="Tải lại danh sách"
                         >
                             {isLoading ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                                'Reload'
+                                <RefreshCw className="h-4 w-4" />
                             )}
                         </Button>
                         {serviceRequests.length > 0 && (

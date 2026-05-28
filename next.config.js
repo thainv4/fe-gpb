@@ -6,6 +6,7 @@ const nextConfig = {
     env: {
         NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
         NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+     // NEXT_PUBLIC_BACKEND_API_URL: 'http://192.168.200.56:8000/api/v1',
         NEXT_PUBLIC_BACKEND_API_URL: 'http://localhost:8000/api/v1',
     },
 }
