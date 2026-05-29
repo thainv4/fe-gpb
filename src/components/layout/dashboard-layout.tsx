@@ -39,7 +39,8 @@ import {
     Shield,
     Cable,
     Barcode,
-    Archive
+    Archive,
+    Ban
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTabsStore } from '@/lib/stores/tabs'
@@ -85,6 +86,13 @@ const PIVKA_RESULTS_NAV: NavLeaf = {
     description: 'Phiếu kết quả AFP, AFP-L3, PIVKA-II',
 }
 
+const SAMPLE_REJECTION_NAV: NavLeaf = {
+    name: 'Từ chối bệnh phẩm',
+    href: '/sample-rejections',
+    icon: Ban,
+    description: 'Bảng từ chối bệnh phẩm',
+}
+
 const REPORTS_NAV: NavLeaf = {
     name: 'Báo cáo & Thống kê',
     href: '/reports',
@@ -109,6 +117,20 @@ function injectPivkaNavItem(items: NavItem[], show: boolean): NavItem[] {
             idx >= 0
                 ? [...item.children.slice(0, idx + 1), PIVKA_RESULTS_NAV, ...item.children.slice(idx + 1)]
                 : [...item.children, PIVKA_RESULTS_NAV]
+        return { ...item, children: nextChildren }
+    })
+}
+
+function injectSampleRejectionNavItem(items: NavItem[], show: boolean): NavItem[] {
+    if (!show) return items
+    return items.map((item) => {
+        if (item.name !== 'Xét nghiệm' || !isNavGroupItem(item)) return item
+        if (item.children.some((c) => c.href === '/sample-rejections')) return item
+        const idx = item.children.findIndex((c) => c.href === '/sample-delivery')
+        const nextChildren: NavLeaf[] =
+            idx >= 0
+                ? [...item.children.slice(0, idx + 1), SAMPLE_REJECTION_NAV, ...item.children.slice(idx + 1)]
+                : [...item.children, SAMPLE_REJECTION_NAV]
         return { ...item, children: nextChildren }
     })
 }
@@ -367,7 +389,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: NewspaperIcon,
                     description: 'Nhập và quản lý kết quả xét nghiệm',
                 },
-                ...(departmentType === 2 ? [PIVKA_RESULTS_NAV] : []),
+                ...(departmentType === 2 ? [SAMPLE_REJECTION_NAV, PIVKA_RESULTS_NAV] : []),
                 {
                     name: 'Kết nối máy',
                     href: '/device-outbound',
@@ -380,7 +402,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }
         
         // Admin thấy tất cả
-        return injectPivkaNavItem(navigation, departmentType === 2)
+        const showGenNav = departmentType === 2
+        return injectSampleRejectionNavItem(injectPivkaNavItem(navigation, showGenNav), showGenNav)
     }, [user, departmentType])
 
     // Build a map path -> label for tab naming

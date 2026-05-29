@@ -616,6 +616,48 @@ export interface StainingMethodFilters {
     search?: string;
 }
 
+export interface SampleRejection {
+    id: string;
+    patientName: string;
+    dateOfBirth: string;
+    gender: 'MALE' | 'FEMALE' | 'OTHER';
+    diagnosis: string;
+    testIndication: string;
+    orderingDoctor: string;
+    patientAddress: string;
+    sampleCode: string;
+    samplingSite: string;
+    samplingMethod: string;
+    rejectionTime: string;
+    rejectionReason: string;
+    createdAt: string;
+    updatedAt: string;
+    createdBy?: string | null;
+    updatedBy?: string | null;
+    version: number;
+}
+
+export interface SampleRejectionRequest {
+    patientName: string;
+    dateOfBirth: string;
+    gender: 'MALE' | 'FEMALE' | 'OTHER';
+    diagnosis: string;
+    testIndication: string;
+    orderingDoctor: string;
+    patientAddress: string;
+    sampleCode: string;
+    samplingSite: string;
+    samplingMethod: string;
+    rejectionTime: string;
+    rejectionReason: string;
+}
+
+export interface SampleRejectionFilters {
+    limit?: number;
+    offset?: number;
+    search?: string;
+}
+
 /** Phương pháp thực hiện xét nghiệm (testing-methods-gen module) */
 export interface TestingMethodGen {
     id: string;
@@ -2987,6 +3029,60 @@ class ApiClient {
 
     async deleteStainingMethod(id: string): Promise<ApiResponse> {
         return this.request(`/staining-methods/${id}`, {
+            method: 'DELETE',
+        });
+    }
+
+    // Sample Rejection methods
+    async getSampleRejections(filters?: SampleRejectionFilters): Promise<
+        ApiResponse<{
+            sampleRejections: SampleRejection[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>
+    > {
+        const params = new URLSearchParams();
+        params.append('limit', '10');
+        params.append('offset', '0');
+
+        if (filters) {
+            if (filters.limit !== undefined) params.set('limit', filters.limit.toString());
+            if (filters.offset !== undefined) params.set('offset', filters.offset.toString());
+            if (filters.search) params.set('search', filters.search);
+        }
+
+        return this.request<{
+            sampleRejections: SampleRejection[];
+            total: number;
+            limit: number;
+            offset: number;
+        }>(`/sample-rejections?${params.toString()}`);
+    }
+
+    async getSampleRejection(id: string): Promise<ApiResponse<SampleRejection>> {
+        return this.request<SampleRejection>(`/sample-rejections/${id}`);
+    }
+
+    async createSampleRejection(data: SampleRejectionRequest): Promise<ApiResponse<{ id: string }>> {
+        return this.request<{ id: string }>('/sample-rejections', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async updateSampleRejection(
+        id: string,
+        data: SampleRejectionRequest,
+    ): Promise<ApiResponse> {
+        return this.request(`/sample-rejections/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteSampleRejection(id: string): Promise<ApiResponse> {
+        return this.request(`/sample-rejections/${id}`, {
             method: 'DELETE',
         });
     }
