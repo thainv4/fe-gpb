@@ -131,8 +131,8 @@ export function ServiceRequestsSidebar({
         order: 'DESC',
         orderBy: 'actionTimestamp',
         code: serviceReqCode || undefined,
-        fromDate: mode === 'audit' ? undefined : getTodayDate(),
-        toDate: mode === 'audit' ? undefined : getTodayEndDate()
+        fromDate: getTodayDate(),
+        toDate: getTodayEndDate(),
     })
 
     // Query workflow states

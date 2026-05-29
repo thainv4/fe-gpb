@@ -88,7 +88,7 @@ export default function AuditLogTable({
     return (
         <div className="space-y-4 p-4 md:p-6">
             <div>
-                <h1 className="text-2xl font-semibold">Nhật ký phiếu</h1>
+                <h1 className="text-2xl font-semibold">Lịch sử tác động</h1>
             
                 {appliedCode && headerRow && (
                     <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">

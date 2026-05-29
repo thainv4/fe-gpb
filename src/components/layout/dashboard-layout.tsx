@@ -93,7 +93,7 @@ const REPORTS_NAV: NavLeaf = {
 }
 
 const AUDIT_LOG_NAV: NavLeaf = {
-    name: 'Nhật ký phiếu',
+    name: 'Lịch sử tác động',
     href: '/service-request-audit-logs',
     icon: NewspaperIcon,
     description: 'Lịch sử tác động phiếu và dịch vụ',
