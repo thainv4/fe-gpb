@@ -1504,6 +1504,7 @@ export default function TestResultForm() {
                 DocumentTypeId: 22,
                 DocumentGroupId: resultFormType === 2 ? 121 : 101,
                 HisCode: `SERVICE_REQ_CODE:${storedServiceRequestData.data.serviceReqCode}`,
+                ...(isGenForm && signTarget ? { StoredSrServiceId: signTarget.id } : {}),
                 FileType: 0,
                 OriginalVersion: {
                     Base64Data: pdfBase64

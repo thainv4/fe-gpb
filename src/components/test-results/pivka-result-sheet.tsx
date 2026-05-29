@@ -342,6 +342,7 @@ export function PivkaResultSheet({
         DocumentTypeId: 22,
         DocumentGroupId: 121,
         HisCode: `SERVICE_REQ_CODE:${stored.serviceReqCode}`,
+        StoredSrServiceId: selectedService.id,
         FileType: 0,
         OriginalVersion: {
           Base64Data: pdfResult.base64,

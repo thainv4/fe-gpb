@@ -1171,6 +1171,8 @@ export interface EmrSignRequest {
     DocumentTypeId?: number;
     DocumentGroupId?: number;
     HisCode?: string;
+    /** Gen/PIVKA: id dòng đang ký — BE chỉ kiểm tra documentId dòng này. GPB: không gửi (kiểm tra cả phiếu qua HisCode). */
+    StoredSrServiceId?: string;
     FileType?: number;
     OriginalVersion: EmrSignOriginalVersion;
     Signs: EmrSignSigner[];
