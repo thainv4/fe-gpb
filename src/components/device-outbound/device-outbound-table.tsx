@@ -32,10 +32,21 @@ import {
 } from '@/lib/api/client'
 import { Plus, Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatDate } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
 
 const PAGE_SIZE = 20
+
+function formatDateTimeVi(iso?: string | null): string {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    })
+}
 
 function formatQueueStatus(status: number): string {
     if (status === 0) return 'Chờ gửi'
@@ -471,8 +482,8 @@ export default function DeviceOutboundTable() {
                                 <TableHead>Block ID</TableHead>
                                 <TableHead>Phương pháp</TableHead>
                                 <TableHead>Trạng thái</TableHead>
-                                <TableHead>Ngày tạo</TableHead>
-                                <TableHead>Đã gửi</TableHead>
+                                <TableHead>Ngày giờ tạo</TableHead>
+                                <TableHead>Ngày giờ gửi</TableHead>
                                 <TableHead>Lỗi</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -491,8 +502,8 @@ export default function DeviceOutboundTable() {
                                         <TableCell className="font-mono text-xs">{item.blockId ?? '—'}</TableCell>
                                         <TableCell>{item.testVantageCode ?? '—'}</TableCell>
                                         <TableCell>{formatQueueStatus(item.status)}</TableCell>
-                                        <TableCell>{item.createdTime ? formatDate(item.createdTime) : '—'}</TableCell>
-                                        <TableCell>{item.sentTime ? formatDate(item.sentTime) : '—'}</TableCell>
+                                        <TableCell>{formatDateTimeVi(item.createdTime)}</TableCell>
+                                        <TableCell>{formatDateTimeVi(item.sentTime)}</TableCell>
                                         <TableCell className="max-w-[200px] text-xs text-muted-foreground" title={item.errorMessage ?? undefined}>
                                             {truncateError(item.errorMessage)}
                                         </TableCell>
