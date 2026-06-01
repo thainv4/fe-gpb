@@ -40,7 +40,8 @@ import {
     Cable,
     Barcode,
     Archive,
-    Ban
+    Ban,
+    MoreHorizontal
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTabsStore } from '@/lib/stores/tabs'
@@ -107,6 +108,30 @@ const AUDIT_LOG_NAV: NavLeaf = {
     description: 'Lịch sử tác động phiếu và dịch vụ',
 }
 
+const DEVICE_OUTBOUND_NAV: NavLeaf = {
+    name: 'Kết nối máy',
+    href: '/device-outbound',
+    icon: Cable,
+    description: 'Xuất dữ liệu ra thiết bị',
+}
+
+function buildOtherNavGroup(options: {
+    includeSampleRejection?: boolean
+    includeDeviceOutbound?: boolean
+}): NavGroupItem {
+    const { includeSampleRejection = false, includeDeviceOutbound = true } = options
+    const children: NavLeaf[] = []
+    if (includeSampleRejection) children.push(SAMPLE_REJECTION_NAV)
+    if (includeDeviceOutbound) children.push(DEVICE_OUTBOUND_NAV)
+    children.push(REPORTS_NAV, AUDIT_LOG_NAV)
+    return {
+        name: 'Khác',
+        icon: MoreHorizontal,
+        description: 'Báo cáo, lịch sử và tiện ích khác',
+        children,
+    }
+}
+
 function injectPivkaNavItem(items: NavItem[], show: boolean): NavItem[] {
     if (!show) return items
     return items.map((item) => {
@@ -117,20 +142,6 @@ function injectPivkaNavItem(items: NavItem[], show: boolean): NavItem[] {
             idx >= 0
                 ? [...item.children.slice(0, idx + 1), PIVKA_RESULTS_NAV, ...item.children.slice(idx + 1)]
                 : [...item.children, PIVKA_RESULTS_NAV]
-        return { ...item, children: nextChildren }
-    })
-}
-
-function injectSampleRejectionNavItem(items: NavItem[], show: boolean): NavItem[] {
-    if (!show) return items
-    return items.map((item) => {
-        if (item.name !== 'Xét nghiệm' || !isNavGroupItem(item)) return item
-        if (item.children.some((c) => c.href === '/sample-rejections')) return item
-        const idx = item.children.findIndex((c) => c.href === '/sample-delivery')
-        const nextChildren: NavLeaf[] =
-            idx >= 0
-                ? [...item.children.slice(0, idx + 1), SAMPLE_REJECTION_NAV, ...item.children.slice(idx + 1)]
-                : [...item.children, SAMPLE_REJECTION_NAV]
         return { ...item, children: nextChildren }
     })
 }
@@ -208,12 +219,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: NewspaperIcon,
                     description: 'Nhập và quản lý kết quả xét nghiệm'
                 },
-                {
-                    name: 'Kết nối máy',
-                    href: '/device-outbound',
-                    icon: Cable,
-                    description: 'Xuất dữ liệu ra thiết bị'
-                }
             ]
         },
         {
@@ -301,8 +306,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 }
             ]
         },
-        REPORTS_NAV,
-        AUDIT_LOG_NAV,
         {
             name: 'Người dùng',
             icon: UserCheck,
@@ -336,7 +339,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         
         const userRole = user.role?.toLowerCase()
 
-        // Khi phòng có departmentType === 3: chỉ hiển thị Dashboard, Chỉ định xét nghiệm (change-password ở menu user)
+        // Khi resultFormType === 3: Dashboard, Tiếp nhận + Khác (báo cáo, lịch sử — không kết nối máy)
         if (departmentType === 3) {
             return [
                 {
@@ -351,8 +354,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: Stethoscope,
                     description: 'Tiếp nhận bệnh phẩm',
                 },
-                REPORTS_NAV,
-                AUDIT_LOG_NAV,
+                buildOtherNavGroup({ includeSampleRejection: false, includeDeviceOutbound: false }),
             ] satisfies NavItem[]
         }
         
@@ -389,21 +391,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     icon: NewspaperIcon,
                     description: 'Nhập và quản lý kết quả xét nghiệm',
                 },
-                ...(departmentType === 2 ? [SAMPLE_REJECTION_NAV, PIVKA_RESULTS_NAV] : []),
-                {
-                    name: 'Kết nối máy',
-                    href: '/device-outbound',
-                    icon: Cable,
-                    description: 'Xuất dữ liệu ra thiết bị',
-                },
-                REPORTS_NAV,
-                AUDIT_LOG_NAV,
+                ...(departmentType === 2 ? [PIVKA_RESULTS_NAV] : []),
+                buildOtherNavGroup({ includeSampleRejection: departmentType === 2 }),
             ] satisfies NavItem[]
         }
         
         // Admin thấy tất cả
         const showGenNav = departmentType === 2
-        return injectSampleRejectionNavItem(injectPivkaNavItem(navigation, showGenNav), showGenNav)
+        return [...injectPivkaNavItem(navigation, showGenNav), buildOtherNavGroup({ includeSampleRejection: showGenNav })]
     }, [user, departmentType])
 
     // Build a map path -> label for tab naming
@@ -570,21 +565,38 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                                                 <ChevronDown className="h-3 w-3" />
                                             </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="start" className="w-[850px] p-4">
-                                            <div className="grid grid-cols-3 gap-2">
+                                        <DropdownMenuContent
+                                            align="start"
+                                            className={cn(
+                                                item.name === 'Khác' ? 'w-72 p-2' : 'w-[850px] p-4'
+                                            )}
+                                        >
+                                            <div
+                                                className={cn(
+                                                    item.name === 'Khác'
+                                                        ? 'flex flex-col gap-0.5'
+                                                        : 'grid grid-cols-3 gap-2'
+                                                )}
+                                            >
                                                 {item.children.map((child: NavLeaf) => {
                                                     const ChildIcon = child.icon
+                                                    const isCompactOther = item.name === 'Khác'
                                                     return (
                                                         <DropdownMenuItem
                                                             key={child.name}
                                                             onClick={() => router.push(child.href)}
-                                                            className="flex flex-col items-start p-3 cursor-pointer rounded-lg hover:bg-gray-50"
+                                                            className={cn(
+                                                                'cursor-pointer rounded-lg hover:bg-gray-50',
+                                                                isCompactOther
+                                                                    ? 'flex items-center gap-2 p-2'
+                                                                    : 'flex flex-col items-start p-3'
+                                                            )}
                                                         >
                                                             <div className="flex items-center w-full">
-                                                                <ChildIcon className="mr-2 h-4 w-4 text-medical-600" />
+                                                                <ChildIcon className="mr-2 h-4 w-4 shrink-0 text-medical-600" />
                                                                 <span className="font-medium text-sm">{child.name}</span>
                                                             </div>
-                                                            {child.description && (
+                                                            {!isCompactOther && child.description && (
                                                                 <span className="text-xs text-muted-foreground mt-1 ml-6">
                                                                     {child.description}
                                                                 </span>
