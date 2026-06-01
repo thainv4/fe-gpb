@@ -415,7 +415,7 @@ export default function TestResultForm() {
     const [microscopicDescription, setMicroscopicDescription] = useState<string>(defaultMicroscopicDescription)
 
     // Helper function to sync resultDescription with macroscopic and microscopic states
-    const syncResultDescription = (description: string) => {
+    const syncResultDescription = useCallback((description: string) => {
         // Chỉ gán resultDescription vào Mô tả vi thể, không gán vào Nhận xét đại thể
         // Nếu description có chứa "MÔ TẢ VI THỂ", extract phần đó
         // Dùng [\s\S] thay vì . với flag s để tương thích ES5
@@ -436,7 +436,7 @@ export default function TestResultForm() {
 
         // Giữ Nhận xét đại thể ở giá trị mặc định (rỗng)
         setMacroscopicComment(defaultMacroscopicComment)
-    }
+    }, [defaultMacroscopicComment])
 
     // Helper function to get combined resultDescription
     const getResultDescription = () => {
@@ -1737,9 +1737,9 @@ export default function TestResultForm() {
                     response.status === 403
                         ? (response.error || GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE)
                         : emrParam?.Messages?.join(', ') ||
-                          emrParam?.BugCodes?.join(', ') ||
-                          emrParam?.MessageCodes?.join(', ') ||
-                          getErrorMessage(response, "Có lỗi xảy ra khi ký số");
+                        emrParam?.BugCodes?.join(', ') ||
+                        emrParam?.MessageCodes?.join(', ') ||
+                        getErrorMessage(response, "Có lỗi xảy ra khi ký số");
 
                 console.error('❌ API createAndSignHsm failed:', {
                     success: response.success,
@@ -1777,11 +1777,11 @@ export default function TestResultForm() {
 
         const servicesWithDocumentId = isGenForm
             ? (() => {
-                  const focus = selectedServiceId
-                      ? services.find((s) => s.id === selectedServiceId)
-                      : undefined
-                  return focus?.documentId ? [focus] : []
-              })()
+                const focus = selectedServiceId
+                    ? services.find((s) => s.id === selectedServiceId)
+                    : undefined
+                return focus?.documentId ? [focus] : []
+            })()
             : services.filter((service) => service.documentId)
 
         if (servicesWithDocumentId.length === 0) {
@@ -1938,7 +1938,7 @@ export default function TestResultForm() {
     }
 
     // Handler lưu kết quả
-    const handleSaveResults = async () => {
+    const handleSaveResults = useCallback(async () => {
         if (services.length === 0) {
             toast({
                 variant: "destructive",
@@ -2163,11 +2163,9 @@ export default function TestResultForm() {
 
             setResultDescription(defaultResultDescription)
             syncResultDescription(defaultResultDescription)
-            // Sử dụng default khác nhau dựa trên resultFormType
-            setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
             setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
             setResultRecomment(defaultResultRecomment)
-            setResultName('')
+            // Giữ resultName và resultConclude sau lưu (reset khi đổi phiếu qua handleSelect)
         } catch (error: any) {
             console.error('Error saving results:', error)
             toast({
@@ -2178,7 +2176,35 @@ export default function TestResultForm() {
         } finally {
             setIsSaving(false)
         }
-    }
+    }, [
+        services,
+        toast,
+        storedServiceRequest,
+        isGenForm,
+        selectedService,
+        resultConclude,
+        microscopicDescription,
+        macroscopicComment,
+        resultNote,
+        resultName,
+        gen1NoteOrRecomment,
+        resultRecomment,
+        selectedSamplingMethod,
+        queryClient,
+        refetchStoredServiceRequest,
+        currentUserId,
+        workflowDepartmentId,
+        storeCurrentDepartmentId,
+        roomIdFromWorkflow,
+        storeCurrentRoomId,
+        numOfBlock,
+        resultFormType,
+        defaultResultDescription,
+        syncResultDescription,
+        defaultResultNoteGen1,
+        defaultResultNote,
+        defaultResultRecomment,
+    ])
 
     const getValidationWarnings = useCallback(
         () =>
