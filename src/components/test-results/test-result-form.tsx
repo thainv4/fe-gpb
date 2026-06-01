@@ -147,6 +147,55 @@ function allServicesReadyForComplete(services: StoredService[]): boolean {
     return services.length > 0 && services.every((s) => serviceHasResult(s) && serviceHasDocument(s));
 }
 
+function stripHtmlPlain(html: string): string {
+    if (!html) return '';
+    return html
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/** GPB: kết luận chỉ còn tiêu đề mẫu in đậm (chưa nhập nội dung thật). */
+function isGpbResultConcludeUnset(
+    html: string,
+    defaultMoBenh: string,
+    defaultTeBao: string,
+): boolean {
+    if (!html?.trim()) return true;
+    if (html === defaultMoBenh || html === defaultTeBao) return true;
+    const text = stripHtmlPlain(html);
+    if (!text) return true;
+    return /^(CHẨN ĐOÁN MÔ BỆNH HỌC|CHẨN ĐOÁN TẾ BÀO HỌC):?\s*$/i.test(text);
+}
+
+function isResultConcludeUnset(
+    html: string,
+    isGenForm: boolean,
+    defaultMoBenh: string,
+    defaultTeBao: string,
+): boolean {
+    if (isGenForm) return !stripHtmlPlain(html);
+    return isGpbResultConcludeUnset(html, defaultMoBenh, defaultTeBao);
+}
+
+function collectResultFormValidationWarnings(
+    isGenForm: boolean,
+    resultName: string,
+    resultConclude: string,
+    defaultMoBenh: string,
+    defaultTeBao: string,
+): string[] {
+    const warnings: string[] = [];
+    if (!isGenForm && !resultName.trim()) {
+        warnings.push('Chưa nhập Tên phiếu kết quả');
+    }
+    if (isResultConcludeUnset(resultConclude, isGenForm, defaultMoBenh, defaultTeBao)) {
+        warnings.push('Chưa nhập Kết luận');
+    }
+    return warnings;
+}
+
 /** Bảng danh sách dịch vụ (memo + callback ổn định để giảm re-render). */
 const ServicesTable = React.memo(function ServicesTable({
     services,
@@ -278,6 +327,9 @@ export default function TestResultForm() {
     // Confirmation dialogs state
     const [confirmSignDialogOpen, setConfirmSignDialogOpen] = useState(false)
     const [confirmCancelSignDialogOpen, setConfirmCancelSignDialogOpen] = useState(false)
+    const [validationWarningOpen, setValidationWarningOpen] = useState(false)
+    const [validationWarnings, setValidationWarnings] = useState<string[]>([])
+    const [pendingValidationAction, setPendingValidationAction] = useState<'save' | 'sign' | null>(null)
 
     // PDF attachment states (for resultFormType = 2)
     const [attachedPdfFile, setAttachedPdfFile] = useState<File | null>(null)
@@ -1386,22 +1438,6 @@ export default function TestResultForm() {
             return
         }
 
-        // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả
-        // Nếu resultFormType = 2, chỉ check resultConclude
-        // Kiểm tra trạng thái: không cho ký số nếu chưa có kết quả (không bắt buộc ô Kết luận)
-        const hasResult =
-            previewServiceData?.data?.resultText ||
-            previewServiceData?.data?.resultDescription ||
-            resultDescription.trim()
-        if (!hasResult) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Không thể ký số khi chưa có kết quả xét nghiệm"
-            })
-            return
-        }
-
         if (!previewRef.current) {
             toast({
                 variant: "destructive",
@@ -1416,15 +1452,6 @@ export default function TestResultForm() {
                 variant: "destructive",
                 title: "Lỗi",
                 description: "Vui lòng chọn một dịch vụ để ký số",
-            })
-            return
-        }
-
-        if (isGenForm && signTarget && !serviceHasResult(signTarget)) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Dịch vụ đã chọn phải có kết quả (lưu trước khi ký)",
             })
             return
         }
@@ -1921,40 +1948,6 @@ export default function TestResultForm() {
             return
         }
 
-        if (resultFormType !== 2 && !resultName.trim()) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Vui lòng nhập Tên phiếu kết quả"
-            })
-            resultNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            resultNameRef.current?.focus()
-            return
-        }
-
-        // Chỉ validate macroscopicComment và microscopicDescription khi resultFormType !== 2
-        if (resultFormType !== 2) {
-            const combinedDescription = combineResultDescription(macroscopicComment, microscopicDescription)
-            if (!combinedDescription.trim() || (!macroscopicComment.trim() && !microscopicDescription.trim())) {
-                toast({
-                    variant: "destructive",
-                    title: "Lỗi",
-                    description: "Vui lòng nhập nhận xét đại thể hoặc mô tả vi thể"
-                })
-                return
-            }
-        }
-
-        // Luôn validate resultConclude
-        if (!resultConclude.trim()) {
-            toast({
-                variant: "destructive",
-                title: "Lỗi",
-                description: "Vui lòng nhập kết luận"
-            })
-            return
-        }
-
         if (!storedServiceRequest?.id) {
             toast({
                 variant: "destructive",
@@ -2186,6 +2179,79 @@ export default function TestResultForm() {
             setIsSaving(false)
         }
     }
+
+    const getValidationWarnings = useCallback(
+        () =>
+            collectResultFormValidationWarnings(
+                isGenForm,
+                resultName,
+                resultConclude,
+                defaultResultConclude,
+                defaultResultConcludeCellBiology,
+            ),
+        [
+            isGenForm,
+            resultName,
+            resultConclude,
+            defaultResultConclude,
+            defaultResultConcludeCellBiology,
+        ],
+    )
+
+    const handleDismissValidationWarnings = useCallback(() => {
+        const shouldFocusResultName = validationWarnings.some((w) =>
+            w.includes('Tên phiếu kết quả'),
+        )
+        setValidationWarningOpen(false)
+        setPendingValidationAction(null)
+        setValidationWarnings([])
+        if (shouldFocusResultName) {
+            resultNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            resultNameRef.current?.focus()
+        }
+    }, [validationWarnings])
+
+    const handleConfirmDespiteValidationWarnings = useCallback(() => {
+        const action = pendingValidationAction
+        setValidationWarningOpen(false)
+        setPendingValidationAction(null)
+        setValidationWarnings([])
+        if (action === 'save') {
+            void handleSaveResults()
+        } else if (action === 'sign') {
+            setConfirmSignDialogOpen(true)
+        }
+    }, [pendingValidationAction, handleSaveResults])
+
+    const requestSaveResults = useCallback(() => {
+        if (services.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi',
+                description: 'Không có dịch vụ nào để lưu kết quả',
+            })
+            return
+        }
+        const warnings = getValidationWarnings()
+        if (warnings.length === 0) {
+            void handleSaveResults()
+            return
+        }
+        setValidationWarnings(warnings)
+        setPendingValidationAction('save')
+        setValidationWarningOpen(true)
+    }, [services.length, getValidationWarnings, toast, handleSaveResults])
+
+    const requestSign = useCallback(() => {
+        const warnings = getValidationWarnings()
+        if (warnings.length === 0) {
+            setConfirmSignDialogOpen(true)
+            return
+        }
+        setValidationWarnings(warnings)
+        setPendingValidationAction('sign')
+        setValidationWarningOpen(true)
+    }, [getValidationWarnings])
 
     return (
         <>
@@ -2787,7 +2853,7 @@ export default function TestResultForm() {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={handleSaveResults}
+                                            onClick={requestSaveResults}
                                             disabled={isSaving || services.length === 0}
                                             className="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                         >
@@ -2826,7 +2892,7 @@ export default function TestResultForm() {
                                 <Button
                                     variant="default"
                                     size="sm"
-                                    onClick={() => setConfirmSignDialogOpen(true)}
+                                    onClick={requestSign}
                                     disabled={
                                         !storedServiceRequestData?.data ||
                                         !previewServiceData?.data ||
@@ -2908,6 +2974,46 @@ export default function TestResultForm() {
                 onSelect={handleTemplateSelect}
                 onSelectFields={handleTemplateSelectFields}
             />
+
+            {/* Dialog cảnh báo thiếu thông tin (Lưu kết quả / Ký số — vẫn cho phép tiếp tục) */}
+            <Dialog
+                open={validationWarningOpen}
+                onOpenChange={(open) => {
+                    if (!open) handleDismissValidationWarnings()
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Cảnh báo</DialogTitle>
+                        <DialogDescription asChild>
+                            <div className="space-y-2 pt-1">
+                                <p>Bạn chưa nhập đủ thông tin sau:</p>
+                                <ul className="list-disc list-inside space-y-1 text-foreground">
+                                    {validationWarnings.map((warning) => (
+                                        <li key={warning}>{warning}</li>
+                                    ))}
+                                </ul>
+                                <p className="pt-1">
+                                    Bạn có muốn{' '}
+                                    {pendingValidationAction === 'sign' ? 'ký số' : 'lưu kết quả'} với
+                                    thông tin hiện tại không?
+                                </p>
+                            </div>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleDismissValidationWarnings}>
+                            Quay lại nhập
+                        </Button>
+                        <Button
+                            onClick={handleConfirmDespiteValidationWarnings}
+                            className="bg-amber-600 hover:bg-amber-700"
+                        >
+                            {pendingValidationAction === 'sign' ? 'Vẫn ký số' : 'Vẫn lưu kết quả'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Dialog xác nhận ký số */}
             <Dialog open={confirmSignDialogOpen} onOpenChange={setConfirmSignDialogOpen}>
