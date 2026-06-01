@@ -30,7 +30,8 @@ const userAllowedRoutes = [
     '/test-results',
     '/pivka-results',
     '/change-password',
-    '/sample-cabinets'
+    '/sample-cabinets',
+    '/sample-rejections'
 ]
 
 export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
