@@ -797,6 +797,8 @@ export function FormTemplate({
                   <div className="font-bold text-base mb-4">
                     BÁC SĨ ĐỌC KẾT QUẢ
                   </div>
+                  {/* Mốc đo vị trí chữ ký số (đo qua DOM, không hiển thị). */}
+                  <span data-sign-anchor aria-hidden="true" style={{ display: "inline-block", height: 0, width: 0 }} />
 
                   {signatureImageBase64 && (
                     <div className="flex justify-center mb-2">

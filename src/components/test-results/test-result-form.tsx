@@ -196,6 +196,62 @@ function collectResultFormValidationWarnings(
     return warnings;
 }
 
+const DEFAULT_POINT_SIGN = {
+    CoorXRectangle: 405,
+    CoorYRectangle: 65,
+    WidthRectangle: 150,
+    HeightRectangle: 100,
+    TextPosition: 0,
+    TypeDisplay: 2,
+    SizeFont: 14,
+    FormatRectangleText: "{SIGNTIME}",
+} as const;
+
+/** Kích thước trang A4 theo điểm PDF (1pt = 1/72 inch). */
+const A4_WIDTH_PT = 595.28;
+const A4_HEIGHT_PT = 841.89;
+/** Dịch xuống (điểm PDF) từ marker để khối chữ ký nằm bên dưới. Tinh chỉnh nếu lệch dọc. */
+const GPB_SIGN_OFFSET_Y = 20;
+/** Dịch ngang (điểm PDF) để canh giữa khối chữ ký quanh marker. Tăng = sang trái. Tách riêng do bề rộng cụm chữ ký 2 form khác nhau. */
+const GEN1_SIGN_OFFSET_X = 20;
+const GPB_SIGN_OFFSET_X = 1;
+
+/**
+ * Đo vị trí ký trực tiếp từ DOM (marker [data-sign-anchor]) thay vì đọc lại PDF.
+ * Dùng tỉ lệ trong trang nên không phụ thuộc zoom/scale, rồi quy đổi sang điểm PDF (gốc dưới-trái).
+ * Hỗ trợ cả form GPB (.pdf-page) lẫn form gen-1 (.a4-page).
+ */
+const SIGN_PAGE_SELECTOR = '.pdf-page, .a4-page';
+function getSignPointFromDom(
+    container: HTMLElement | null,
+): { page: number; x: number; y: number } | null {
+    if (!container) return null;
+    const anchorEl = container.querySelector<HTMLElement>('[data-sign-anchor]');
+    if (!anchorEl) {
+        console.log('[SIGN_DEBUG] DOM sign anchor not found');
+        return null;
+    }
+    const pageEls = Array.from(container.querySelectorAll<HTMLElement>(SIGN_PAGE_SELECTOR));
+    const pageEl = anchorEl.closest<HTMLElement>(SIGN_PAGE_SELECTOR);
+    if (!pageEl || pageEls.length === 0) {
+        console.log('[SIGN_DEBUG] DOM page element not found');
+        return null;
+    }
+    const pageRect = pageEl.getBoundingClientRect();
+    const anchorRect = anchorEl.getBoundingClientRect();
+    if (pageRect.width === 0 || pageRect.height === 0) return null;
+
+    const fracX = (anchorRect.left - pageRect.left) / pageRect.width;
+    const fracY = (anchorRect.top - pageRect.top) / pageRect.height;
+    const result = {
+        page: pageEls.indexOf(pageEl) + 1,
+        x: Math.round(fracX * A4_WIDTH_PT),
+        y: Math.round(A4_HEIGHT_PT - fracY * A4_HEIGHT_PT - GPB_SIGN_OFFSET_Y),
+    };
+    console.log('[SIGN_DEBUG] DOM sign anchor measured', { fracX, fracY, ...result });
+    return result;
+}
+
 /** Bảng danh sách dịch vụ (memo + callback ổn định để giảm re-render). */
 const ServicesTable = React.memo(function ServicesTable({
     services,
@@ -1512,20 +1568,31 @@ export default function TestResultForm() {
             const day = String(now.getDate()).padStart(2, '0')
             const dateStr = `${year}-${month}-${day}`
             const serviceReqCode = storedServiceRequestData.data.serviceReqCode
-
-            const signRequest = {
-                PointSign: {
-                    CoorXRectangle: 405,
-                    CoorYRectangle: 65,
+            const signAnchor = getSignPointFromDom(previewRef.current);
+            const signOffsetX = resultFormType === RESULT_FORM_TYPE_GPB ? GPB_SIGN_OFFSET_X : GEN1_SIGN_OFFSET_X;
+            const pointSign = signAnchor
+                ? {
+                    ...DEFAULT_POINT_SIGN,
+                    // Marker = tâm dòng; dịch trái signOffsetX để canh giữa khối chữ ký quanh marker.
+                    CoorXRectangle: Math.max(0, signAnchor.x - signOffsetX),
+                    CoorYRectangle: signAnchor.y,
+                    PageNumber: signAnchor.page,
+                    MaxPageNumber: pageCount,
+                }
+                : {
+                    ...DEFAULT_POINT_SIGN,
                     PageNumber: pageCount,
                     MaxPageNumber: pageCount,
-                    WidthRectangle: 150,
-                    HeightRectangle: 100,
-                    TextPosition: 0,
-                    TypeDisplay: 2,
-                    SizeFont: 14,
-                    FormatRectangleText: "{SIGNTIME}"
-                },
+                };
+            console.log('[SIGN_DEBUG] sign placement inputs', {
+                resultFormType,
+                signAnchor,
+                pointSign,
+                pageCount,
+            });
+
+            const signRequest = {
+                PointSign: pointSign,
                 DocumentName: `${dateStr}-${serviceReqCode}_Signed`,
                 TreatmentCode: storedServiceRequestData.data.treatmentCode,
                 DocumentTypeId: 22,

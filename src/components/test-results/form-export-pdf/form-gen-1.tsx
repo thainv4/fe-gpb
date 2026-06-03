@@ -521,6 +521,8 @@ export function FormGen1({
           <div className="font-bold">
             Người phê duyệt kết quả
           </div>
+          {/* Mốc đo vị trí chữ ký số (đo qua DOM, không hiển thị). */}
+          <span data-sign-anchor aria-hidden="true" style={{ display: "inline-block", height: 0, width: 0 }} />
           {signatureImageBase64 && (
             <div className="flex justify-center my-2">
               <img
