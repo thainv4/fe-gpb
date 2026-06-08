@@ -4141,6 +4141,14 @@ class ApiClient {
         return this.assertApiSuccess(res, "Không thể gửi order");
     }
 
+    async cancelDeviceOutboundBatch(ids: string[]): Promise<ApiResponse<DeviceOutboundItem[]>> {
+        const res = await this.request<DeviceOutboundItem[]>("/device-outbound/cancel-batch", {
+            method: "PATCH",
+            body: JSON.stringify({ ids }),
+        });
+        return this.assertApiSuccess(res, "Không thể hủy order");
+    }
+
     async getDeviceStainingMethods(params?: {
         limit?: number;
         offset?: number;

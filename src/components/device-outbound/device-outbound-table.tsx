@@ -51,7 +51,27 @@ function formatDateTimeVi(iso?: string | null): string {
 function formatQueueStatus(status: number): string {
     if (status === 0) return 'Chờ gửi'
     if (status === 1) return 'Đã gửi'
+    if (status === 3) return 'Đã hủy'
     return String(status)
+}
+
+function QueueStatusBadge({ status }: { status: number }) {
+    const label = formatQueueStatus(status)
+    if (status === 1) {
+        return (
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
+                {label}
+            </span>
+        )
+    }
+    if (status === 3) {
+        return (
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-100 text-red-800">
+                {label}
+            </span>
+        )
+    }
+    return <span>{label}</span>
 }
 
 function truncateError(msg?: string | null, max = 80): string {
@@ -76,6 +96,7 @@ export default function DeviceOutboundTable() {
     const [formMethod, setFormMethod] = useState('')
     const [batchItems, setBatchItems] = useState<DeviceOutboundBatchItem[]>([])
     const [selectedBatchIndexes, setSelectedBatchIndexes] = useState<number[]>([])
+    const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
 
     const listParams = {
         limit: PAGE_SIZE,
@@ -130,6 +151,21 @@ export default function DeviceOutboundTable() {
         },
         onError: (e: Error) => {
             toast({ title: 'Lỗi', description: e.message || 'Không thể gửi order.', variant: 'destructive' })
+        },
+    })
+
+    const cancelBatchMutation = useMutation({
+        mutationFn: (ids: string[]) => apiClient.cancelDeviceOutboundBatch(ids),
+        onSuccess: (_data, ids) => {
+            queryClient.invalidateQueries({ queryKey: ['device-outbound'] })
+            setSelectedItemIds([])
+            toast({
+                title: 'Thành công',
+                description: `Đã hủy ${ids.length} order.`,
+            })
+        },
+        onError: (e: Error) => {
+            toast({ title: 'Lỗi', description: e.message || 'Không thể hủy order.', variant: 'destructive' })
         },
     })
 
@@ -241,7 +277,16 @@ export default function DeviceOutboundTable() {
     function applyFilters() {
         setAppliedReceptionCode(receptionCodeFilter.trim())
         setCurrentPage(0)
+        setSelectedItemIds([])
     }
+
+    function handleCancelSelected() {
+        if (selectedItemIds.length === 0) return
+        cancelBatchMutation.mutate(selectedItemIds)
+    }
+
+    const allPageItemsSelected =
+        items.length > 0 && items.every((item) => selectedItemIds.includes(item.id))
 
     if (error) {
         return (
@@ -266,12 +311,23 @@ export default function DeviceOutboundTable() {
                         Gửi order vào hàng đợi HL7 (BML_HL7_OUT_QUEUE). Hệ thống ngoài sẽ xử lý gửi máy.
                     </CardDescription>
                 </div>
-                <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) resetForm(); }}>
-                    <DialogTrigger asChild>
-                        <Button onClick={openCreate} className="medical-gradient">
-                            <Plus className="mr-2 h-4 w-4" /> Tạo order
-                        </Button>
-                    </DialogTrigger>
+                <div className="flex gap-2">
+                    <Button
+                        variant="destructive"
+                        disabled={selectedItemIds.length === 0 || cancelBatchMutation.isPending}
+                        onClick={handleCancelSelected}
+                    >
+                        {cancelBatchMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Hủy
+                    </Button>
+                    <Dialog open={isFormOpen} onOpenChange={(open) => { setIsFormOpen(open); if (!open) resetForm(); }}>
+                        <DialogTrigger asChild>
+                            <Button onClick={openCreate} className="medical-gradient">
+                                <Plus className="mr-2 h-4 w-4" /> Tạo order
+                            </Button>
+                        </DialogTrigger>
                     <DialogContent className="sm:max-w-[640px] max-w-[95vw]">
                         <DialogHeader>
                             <DialogTitle>Tạo order</DialogTitle>
@@ -456,7 +512,8 @@ export default function DeviceOutboundTable() {
                             </Button>
                         </DialogFooter>
                     </DialogContent>
-                </Dialog>
+                    </Dialog>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="mb-4 flex flex-wrap gap-4">
@@ -477,6 +534,20 @@ export default function DeviceOutboundTable() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[40px]">
+                                    <Checkbox
+                                        aria-label="Chọn tất cả bản ghi trên trang"
+                                        checked={allPageItemsSelected}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                setSelectedItemIds(items.map((item) => item.id))
+                                            } else {
+                                                setSelectedItemIds([])
+                                            }
+                                        }}
+                                        disabled={isLoading || items.length === 0}
+                                    />
+                                </TableHead>
                                 <TableHead>Barcode</TableHead>
                                 <TableHead>Slide ID</TableHead>
                                 <TableHead>Block ID</TableHead>
@@ -490,18 +561,33 @@ export default function DeviceOutboundTable() {
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="h-24 text-center">
+                                    <TableCell colSpan={9} className="h-24 text-center">
                                         <Loader2 className="h-6 w-6 animate-spin mx-auto" /> Đang tải...
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 items.map((item) => (
                                     <TableRow key={item.id}>
+                                        <TableCell>
+                                            <Checkbox
+                                                aria-label={`Chọn ${item.slideId ?? item.id}`}
+                                                checked={selectedItemIds.includes(item.id)}
+                                                onCheckedChange={(checked) => {
+                                                    setSelectedItemIds((prev) =>
+                                                        checked
+                                                            ? [...prev, item.id]
+                                                            : prev.filter((id) => id !== item.id),
+                                                    )
+                                                }}
+                                            />
+                                        </TableCell>
                                         <TableCell className="font-medium">{item.lisCaseId}</TableCell>
                                         <TableCell className="font-mono text-xs">{item.slideId ?? '—'}</TableCell>
                                         <TableCell className="font-mono text-xs">{item.blockId ?? '—'}</TableCell>
                                         <TableCell>{item.testVantageCode ?? '—'}</TableCell>
-                                        <TableCell>{formatQueueStatus(item.status)}</TableCell>
+                                        <TableCell>
+                                            <QueueStatusBadge status={item.status} />
+                                        </TableCell>
                                         <TableCell>{formatDateTimeVi(item.createdTime)}</TableCell>
                                         <TableCell>{formatDateTimeVi(item.sentTime)}</TableCell>
                                         <TableCell className="max-w-[200px] text-xs text-muted-foreground" title={item.errorMessage ?? undefined}>
@@ -512,7 +598,7 @@ export default function DeviceOutboundTable() {
                             )}
                             {!isLoading && items.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="h-24 text-center">
+                                    <TableCell colSpan={9} className="h-24 text-center">
                                         Không có bản ghi nào. Tạo order hoặc thử đổi bộ lọc.
                                     </TableCell>
                                 </TableRow>
@@ -524,7 +610,10 @@ export default function DeviceOutboundTable() {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                        onClick={() => {
+                            setCurrentPage((p) => Math.max(0, p - 1))
+                            setSelectedItemIds([])
+                        }}
                         disabled={currentPage === 0}
                     >
                         <ChevronLeft className="h-4 w-4" /> Trước
@@ -535,7 +624,10 @@ export default function DeviceOutboundTable() {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+                        onClick={() => {
+                            setCurrentPage((p) => Math.min(totalPages - 1, p + 1))
+                            setSelectedItemIds([])
+                        }}
                         disabled={currentPage >= totalPages - 1 || totalPages === 0}
                     >
                         Sau <ChevronRight className="h-4 w-4" />
