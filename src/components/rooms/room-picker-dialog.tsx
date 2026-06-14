@@ -74,7 +74,7 @@ export function RoomPickerDialog({open: openProp, onOpenChange}: RoomPickerDialo
 
     return (
         <Dialog open={open} onOpenChange={(val) => (isControlled ? onOpenChange?.(val) : setInternalOpen(val))}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[720px]">
                 <DialogHeader>
                     <DialogTitle>Chọn phòng làm việc</DialogTitle>
                 </DialogHeader>
@@ -85,13 +85,13 @@ export function RoomPickerDialog({open: openProp, onOpenChange}: RoomPickerDialo
                     <div className="text-sm text-red-600">Tài khoản chưa được gán phòng.</div>
                 ) : (
                     <div className="space-y-3">
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
+                        <div className="rounded-md border max-h-[2/3] overflow-y-auto">
+                            <Table className="min-w-[640px]">
+                                <TableHeader className="sticky top-0 z-10 bg-background">
                                     <TableRow>
-                                        <TableHead>Mã phòng</TableHead>
-                                        <TableHead>Tên phòng</TableHead>
-                                        <TableHead>Khoa</TableHead>
+                                        <TableHead className="min-w-[140px]">Mã phòng</TableHead>
+                                        <TableHead className="min-w-[240px]">Tên phòng</TableHead>
+                                        <TableHead className="min-w-[220px]">Khoa</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -112,9 +112,9 @@ export function RoomPickerDialog({open: openProp, onOpenChange}: RoomPickerDialo
                                                     }
                                                 }}
                                             >
-                                                <TableCell className="font-medium">{r.roomCode}</TableCell>
-                                                <TableCell>{r.roomName}</TableCell>
-                                                <TableCell>{r.departmentName}</TableCell>
+                                                <TableCell className="min-w-[140px] font-medium">{r.roomCode}</TableCell>
+                                                <TableCell className="min-w-[240px]">{r.roomName}</TableCell>
+                                                <TableCell className="min-w-[220px]">{r.departmentName}</TableCell>
                                             </TableRow>
                                         )
                                     })}
