@@ -3,6 +3,7 @@ import {useState, useMemo, useEffect} from 'react'
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {apiClient} from '@/lib/api/client'
 import {useCurrentRoomStore} from '@/lib/stores/current-room'
+import {useBranchStore} from '@/lib/stores/branch'
 import { getHisTokenCode } from '@/lib/his-token-code-storage'
 import {Input} from '@/components/ui/input'
 import {Button} from '@/components/ui/button'
@@ -68,6 +69,7 @@ export function ServiceRequestsSidebar({
     mode = 'default',
 }: ServiceRequestsSidebarProps) {
     const {currentRoomId} = useCurrentRoomStore()
+    const selectedHisBranchId = useBranchStore((s) => s.selectedHisBranchId)
     const { toast } = useToast()
     const queryClient = useQueryClient()
     // selectedStateId: 'all' means show all states (no state filter)
@@ -187,7 +189,7 @@ export function ServiceRequestsSidebar({
 
     // Query service requests
     const {data, isLoading, refetch} = useQuery({
-        queryKey: ['workflow-history', selectedRoomId, selectedStateId, selectedFlag, filters, refreshTrigger],
+        queryKey: ['workflow-history', selectedRoomId, selectedStateId, selectedFlag, filters, refreshTrigger, selectedHisBranchId],
         queryFn: () => {
             // build params: include stateId only when a concrete state is selected
             // Loại bỏ hisServiceReqCode và receptionCode khỏi filters để tránh gửi các trường deprecated

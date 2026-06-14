@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "@/lib/stores/auth";
+import {
+  useBranchStore,
+  getLastHisBranchId,
+  persistLastHisBranchId,
+} from "@/lib/stores/branch";
+import type { HisBranch } from "@/lib/api/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,6 +29,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useHisIntegration } from "@/hooks/use-his";
 import { useHisStore } from "@/lib/stores/his";
@@ -89,6 +102,46 @@ export function AuthForm() {
   const { toast } = useToast();
   const { login } = useAuthStore();
   const { setToken: setHisStoreToken } = useHisStore();
+  const setBranch = useBranchStore((s) => s.setBranch);
+  const [branches, setBranches] = useState<HisBranch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(() => {
+    const last = getLastHisBranchId();
+    return last != null ? String(last) : "";
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { apiClient } = await import("@/lib/api/client");
+        const res = await apiClient.getHisBranches();
+        if (!mounted || !res.success || !res.data) return;
+        setBranches(res.data);
+      } catch {
+        // Bỏ qua lỗi tải danh sách cơ sở; người dùng vẫn có thể thử lại
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Đồng bộ dropdown sau khi danh sách cơ sở tải xong (Radix Select cần có SelectItem trước)
+  useEffect(() => {
+    if (branches.length === 0) return;
+    const last = getLastHisBranchId();
+    if (last != null && branches.some((b) => Number(b.id) === Number(last))) {
+      setSelectedBranchId(String(last));
+    }
+  }, [branches]);
+
+  function handleBranchChange(value: string) {
+    setSelectedBranchId(value);
+    const id = Number(value);
+    if (Number.isFinite(id)) {
+      persistLastHisBranchId(id);
+    }
+  }
   const {
     hisLoginWithCredentials,
     isLoggingInWithCredentials: isHisLoggingInWithCredentials,
@@ -114,6 +167,16 @@ export function AuthForm() {
   });
 
   async function onSubmit(data: LoginFormData) {
+    const branch = branches.find((b) => String(b.id) === selectedBranchId);
+    if (!branch) {
+      toast({
+        title: "Vui lòng chọn cơ sở",
+        description: "Bạn cần chọn cơ sở trước khi đăng nhập.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -141,6 +204,9 @@ export function AuthForm() {
           role: result.data.user.role,
           isActive: typeof result.data.user.isActive === 'boolean' ? (result.data.user.isActive ? 1 : 0) : result.data.user.isActive,
         });
+
+        // Lưu cơ sở đã chọn (set branch-store + ghi nhớ last-his-branch-id)
+        setBranch(branch);
 
         // Đồng bộ luôn HIS store để his-storage có dữ liệu ngay sau login GPB.
         const hisToken = buildHisTokenFromLoginResponse(result.data);
@@ -245,6 +311,26 @@ export function AuthForm() {
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-4"
                 >
+                  <FormItem>
+                    <FormLabel>Cơ sở</FormLabel>
+                    <Select
+                      key={`branch-select-${branches.length}-${selectedBranchId}`}
+                      value={selectedBranchId || undefined}
+                      onValueChange={handleBranchChange}
+                      disabled={isLoading || branches.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn cơ sở" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map((b) => (
+                          <SelectItem key={b.id} value={String(b.id)}>
+                            {b.branchName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
                   <FormField
                     control={form.control}
                     name="username"

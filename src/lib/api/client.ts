@@ -1060,8 +1060,20 @@ export interface ServiceRequestDetail {
     requestLoginname?: string | null;
     executeRoom?: RoomInfo;
     executeDepartment?: DepartmentInfo;
+    /** Cơ sở thực hiện (suy từ khoa thực hiện -> HIS_BRANCH) */
+    executeBranch?: {
+        id?: number | null;
+        code?: string | null;
+        name?: string | null;
+    };
     patient: PatientInfo;
     services: ServiceRequestService[];
+}
+
+export interface HisBranch {
+    id: number;
+    branchCode: string;
+    branchName: string;
 }
 
 export interface UserRoom {
@@ -1081,6 +1093,8 @@ export interface UserRoom {
     roomGroupName: string;
     branchId: string;
     branchName: string;
+    /** Cơ sở HIS (HIS_BRANCH.ID) của phòng */
+    hisBranchId?: number | null;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
@@ -1386,6 +1400,20 @@ class ApiClient {
         this.loadTokenFromStorage();
     }
 
+    /** Đọc cơ sở đang chọn (HIS_BRANCH.ID) từ branch-store đã persist. */
+    private getSelectedHisBranchId(): number | null {
+        if (typeof globalThis.window === "undefined") return null;
+        try {
+            const raw = localStorage.getItem("branch-storage");
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            const id = parsed?.state?.selectedHisBranchId;
+            return typeof id === "number" && Number.isFinite(id) ? id : null;
+        } catch {
+            return null;
+        }
+    }
+
     /**
      * Check if token is expired or about to expire
      * Returns true if token will expire in less than 5 minutes
@@ -1549,6 +1577,12 @@ class ApiClient {
 
         if (this.token) {
             headers.Authorization = `Bearer ${this.token}`;
+        }
+
+        // Gắn cơ sở đang đăng nhập (HIS_BRANCH.ID) cho mọi request để BE lọc/validate theo cơ sở
+        const hisBranchId = this.getSelectedHisBranchId();
+        if (hisBranchId !== null && headers["X-His-Branch-Id"] === undefined) {
+            headers["X-His-Branch-Id"] = String(hisBranchId);
         }
 
         try {
@@ -3290,6 +3324,11 @@ class ApiClient {
             method: "POST",
             body: JSON.stringify(body),
         });
+    }
+
+    /** Danh sách cơ sở từ HIS (cho dropdown chọn cơ sở khi đăng nhập). */
+    async getHisBranches(): Promise<ApiResponse<HisBranch[]>> {
+        return this.request<HisBranch[]>("/his-branches");
     }
 
     async getStoredServiceRequest(

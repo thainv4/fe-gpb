@@ -19,6 +19,7 @@ import {
 import { Loader2, Printer, Plus } from "lucide-react";
 import { useTabsStore } from "@/lib/stores/tabs";
 import { useCurrentRoomStore } from "@/lib/stores/current-room";
+import { useBranchStore, isNinhBinhBranch } from "@/lib/stores/branch";
 import { usePathname } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useTabPersistence } from "@/hooks/use-tab-persistence";
@@ -151,6 +152,16 @@ export default function TestIndicationsTable() {
 
     const serviceRequest = serviceRequestData?.data
     const patient = serviceRequest?.patient
+
+    // Cơ sở đang đăng nhập (HIS_BRANCH.ID) để validate y lệnh
+    const selectedHisBranchId = useBranchStore((s) => s.selectedHisBranchId)
+    const branchName = useBranchStore((s) => s.branchName)
+    const executeBranchId = serviceRequest?.executeBranch?.id ?? null
+    // Lệch cơ sở: y lệnh có cơ sở thực hiện khác cơ sở đang đăng nhập
+    const branchMismatch =
+        selectedHisBranchId != null &&
+        executeBranchId != null &&
+        Number(executeBranchId) !== Number(selectedHisBranchId)
 
     const normalizeText = (value: string) =>
         value
@@ -569,6 +580,16 @@ export default function TestIndicationsTable() {
     }
 
     async function handleSave() {
+        // Chặn lưu khi y lệnh thuộc cơ sở khác cơ sở đang đăng nhập
+        if (branchMismatch) {
+            toast({
+                title: "Sai cơ sở",
+                description: `❌ Y lệnh thuộc cơ sở ${serviceRequest?.executeBranch?.name ?? 'khác'}, không thể tiếp nhận ở cơ sở đang đăng nhập.`,
+                variant: "destructive",
+            })
+            return;
+        }
+
         // Validation
         if (!tabRoomId || !tabDepartmentId) {
             toast({
@@ -1009,6 +1030,11 @@ export default function TestIndicationsTable() {
                                 </SelectContent>
                             </Select>
                         )}
+                        {!isManualInput && selectedPrefix && isNinhBinhBranch(selectedHisBranchId) && (
+                            <p className="mt-1 text-xs text-blue-600">
+                                Tiền tố barcode cơ sở Ninh Bình: <strong>{selectedPrefix}2</strong>
+                            </p>
+                        )}
                     </div>
 
                     {storedServiceReqId && currentReceptionCode && (
@@ -1114,12 +1140,20 @@ export default function TestIndicationsTable() {
                 </div>
 
                 <div className={'flex flex-col items-center gap-3 mt-6'}>
+                    {branchMismatch && (
+                        <div className="w-full max-w-2xl rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            Y lệnh này thuộc cơ sở <strong>{serviceRequest?.executeBranch?.name ?? 'khác'}</strong>,
+                            không trùng với cơ sở bạn đang đăng nhập{branchName ? <> (<strong>{branchName}</strong>)</> : ''}.
+                            Không thể tiếp nhận y lệnh ở cơ sở khác.
+                        </div>
+                    )}
                     <div className="flex gap-3">
 
                         <Button
                             onClick={handleConfirmSave}
                             disabled={
                                 // Cần cả bệnh phẩm và (prefix hoặc barcode thủ công) (cho cả update và tạo mới)
+                                branchMismatch ||
                                 !hasHisTokenCode ||
                                 !selectedSampleType ||
                                 (!isManualInput && !selectedPrefix) ||

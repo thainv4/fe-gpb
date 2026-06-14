@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useHisStore } from '@/lib/stores/his'
+import { useBranchStore } from '@/lib/stores/branch'
 
 export interface User {
     id: string
@@ -68,6 +69,9 @@ export const useAuthStore = create<AuthState>()(
                     localStorage.removeItem('auth-user')
                     localStorage.removeItem('auth-storage')
                     localStorage.removeItem('current-room-storage')
+                    // Xóa cơ sở phiên hiện tại nhưng GIỮ key last-his-branch-id để lần sau tự chọn
+                    useBranchStore.getState().clearBranch()
+                    localStorage.removeItem('branch-storage')
                     useHisStore.getState().clearHisData()
                     sessionStorage.clear()
                 }

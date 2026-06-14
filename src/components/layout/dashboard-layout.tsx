@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils'
 import { useTabsStore } from '@/lib/stores/tabs'
 import { RoomPickerDialog } from '../rooms/room-picker-dialog'
 import { useCurrentRoomStore } from '@/lib/stores/current-room'
+import { useBranchStore } from '@/lib/stores/branch'
 
 interface DashboardLayoutProps {
     children: React.ReactNode
@@ -154,6 +155,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     const [roomDialogOpen, setRoomDialogOpen] = useState(false)
     const { currentRoomId, currentRoomCode, currentDepartmentCode, currentRoomName, currentDepartmentName, currentDepartmentId, clear: clearCurrentRoom } = useCurrentRoomStore()
+    const branchName = useBranchStore((s) => s.branchName)
 
     const { data: myRoomsData } = useQuery({
         queryKey: ['my-rooms'],
@@ -630,6 +632,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
                     {/* User Menu */}
                     <div className="flex items-center space-x-4">
+                        {branchName && (
+                            <div
+                                title="Cơ sở đang đăng nhập"
+                                className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5"
+                            >
+                                <Building2 className="h-4 w-4 shrink-0 text-blue-600" />
+                                <span className="text-sm font-semibold text-blue-800">
+                                    {branchName}
+                                </span>
+                            </div>
+                        )}
                         {currentRoomId ? (
                             <button
                                 type="button"
