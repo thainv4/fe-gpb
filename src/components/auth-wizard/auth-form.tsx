@@ -312,7 +312,7 @@ export function AuthForm() {
                   className="space-y-4"
                 >
                   <FormItem>
-                    <FormLabel>Cơ sở</FormLabel>
+                    <FormLabel>Chọn cơ sở</FormLabel>
                     <Select
                       key={`branch-select-${branches.length}-${selectedBranchId}`}
                       value={selectedBranchId || undefined}
