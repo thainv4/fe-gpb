@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
     Table,
@@ -29,6 +29,8 @@ import {
     DeviceOutboundBatchBody,
     DeviceOutboundBatchItem,
     CreateDeviceOutboundBody,
+    DeviceOutboundItem,
+    UpdateDeviceOutboundPatientBody,
 } from '@/lib/api/client'
 import { Plus, Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -52,6 +54,7 @@ function formatQueueStatus(status: number): string {
     if (status === 0) return 'Chờ gửi'
     if (status === 1) return 'Đã gửi'
     if (status === 3) return 'Đã hủy'
+    if (status === 4) return 'Đã cập nhật BN'
     return String(status)
 }
 
@@ -67,6 +70,13 @@ function QueueStatusBadge({ status }: { status: number }) {
     if (status === 3) {
         return (
             <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-100 text-red-800">
+                {label}
+            </span>
+        )
+    }
+    if (status === 4) {
+        return (
+            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
                 {label}
             </span>
         )
@@ -98,6 +108,14 @@ export default function DeviceOutboundTable() {
     const [selectedBatchIndexes, setSelectedBatchIndexes] = useState<number[]>([])
     const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
 
+    const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false)
+    const [editingItemId, setEditingItemId] = useState<string | null>(null)
+    const [editingItemContext, setEditingItemContext] = useState<Pick<DeviceOutboundItem, 'lisCaseId' | 'slideId'> | null>(null)
+    const [patientFamily, setPatientFamily] = useState('')
+    const [patientGiven, setPatientGiven] = useState('')
+    const [patientDob, setPatientDob] = useState('')
+    const [patientGender, setPatientGender] = useState<'M' | 'F' | ''>('')
+
     const listParams = {
         limit: PAGE_SIZE,
         offset: currentPage * PAGE_SIZE,
@@ -127,6 +145,25 @@ export default function DeviceOutboundTable() {
         enabled: isFormOpen,
     })
     const stainingMethods = stainingData?.data?.deviceStainingMethods ?? []
+
+    const {
+        data: patientDetailData,
+        isLoading: isPatientDetailLoading,
+        error: patientDetailError,
+    } = useQuery({
+        queryKey: ['device-outbound-detail', editingItemId],
+        queryFn: () => apiClient.getDeviceOutboundById(editingItemId!),
+        enabled: isPatientDialogOpen && !!editingItemId,
+    })
+
+    useEffect(() => {
+        if (!isPatientDialogOpen || !patientDetailData?.data) return
+        const detail = patientDetailData.data
+        setPatientFamily(detail.patientFamily ?? '')
+        setPatientGiven(detail.patientGiven ?? '')
+        setPatientDob(detail.patientDob ? detail.patientDob.slice(0, 10) : '')
+        setPatientGender(detail.patientGender === 'M' || detail.patientGender === 'F' ? detail.patientGender : '')
+    }, [isPatientDialogOpen, patientDetailData])
 
     const createBatchMutation = useMutation({
         mutationFn: (body: DeviceOutboundBatchBody) => apiClient.createDeviceOutboundBatch(body),
@@ -168,6 +205,71 @@ export default function DeviceOutboundTable() {
             toast({ title: 'Lỗi', description: e.message || 'Không thể hủy order.', variant: 'destructive' })
         },
     })
+
+    const updatePatientMutation = useMutation({
+        mutationFn: (body: UpdateDeviceOutboundPatientBody) =>
+            apiClient.updateDeviceOutboundPatient(editingItemId!, body),
+        onSuccess: (res) => {
+            const id = editingItemId
+            if (res?.data && id) {
+                queryClient.setQueryData(['device-outbound-detail', id], res)
+            }
+            if (id) {
+                queryClient.invalidateQueries({ queryKey: ['device-outbound-detail', id] })
+            }
+            queryClient.invalidateQueries({ queryKey: ['device-outbound'] })
+            toast({
+                title: 'Thành công',
+                description: 'Đã cập nhật thông tin bệnh nhân. Trạng thái chuyển sang Đã cập nhật BN.',
+            })
+            closePatientDialog()
+        },
+        onError: (e: Error) => {
+            toast({
+                title: 'Lỗi',
+                description: e.message || 'Không thể cập nhật thông tin bệnh nhân.',
+                variant: 'destructive',
+            })
+        },
+    })
+
+    function resetPatientForm() {
+        setPatientFamily('')
+        setPatientGiven('')
+        setPatientDob('')
+        setPatientGender('')
+    }
+
+    function closePatientDialog() {
+        setIsPatientDialogOpen(false)
+        setEditingItemId(null)
+        setEditingItemContext(null)
+        resetPatientForm()
+    }
+
+    function openPatientDialog(item: DeviceOutboundItem) {
+        resetPatientForm()
+        setEditingItemId(item.id)
+        setEditingItemContext({ lisCaseId: item.lisCaseId, slideId: item.slideId })
+        setIsPatientDialogOpen(true)
+    }
+
+    function handleSavePatient() {
+        if (!patientFamily.trim() || !patientGiven.trim() || !patientDob || !patientGender) {
+            toast({
+                title: 'Lỗi',
+                description: 'Vui lòng nhập đủ họ, tên, ngày sinh và giới tính.',
+                variant: 'destructive',
+            })
+            return
+        }
+        updatePatientMutation.mutate({
+            patientFamily: patientFamily.trim(),
+            patientGiven: patientGiven.trim(),
+            patientDob,
+            patientGender,
+        })
+    }
 
     function resetForm() {
         setFormReceptionCode('')
@@ -513,6 +615,85 @@ export default function DeviceOutboundTable() {
                         </DialogFooter>
                     </DialogContent>
                     </Dialog>
+                    <Dialog open={isPatientDialogOpen} onOpenChange={(open) => { if (!open) closePatientDialog() }}>
+                        <DialogContent className="sm:max-w-[480px]">
+                            <DialogHeader>
+                                <DialogTitle>Cập nhật thông tin bệnh nhân</DialogTitle>
+                                <DialogDescription>
+                                    Barcode: {editingItemContext?.lisCaseId ?? '—'}
+                                    {' — '}
+                                    Slide: {editingItemContext?.slideId ?? '—'}
+                                </DialogDescription>
+                            </DialogHeader>
+                            {isPatientDetailLoading ? (
+                                <div className="flex min-h-[200px] items-center justify-center">
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                </div>
+                            ) : patientDetailError ? (
+                                <p className="text-sm text-destructive py-4">
+                                    {(patientDetailError as Error).message || 'Không thể tải thông tin bệnh nhân.'}
+                                </p>
+                            ) : (
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-2">
+                                        <Label className="col-span-1">Họ *</Label>
+                                        <Input
+                                            className="col-span-3"
+                                            value={patientFamily}
+                                            onChange={(e) => setPatientFamily(e.target.value)}
+                                            placeholder="Họ"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-2">
+                                        <Label className="col-span-1">Tên *</Label>
+                                        <Input
+                                            className="col-span-3"
+                                            value={patientGiven}
+                                            onChange={(e) => setPatientGiven(e.target.value)}
+                                            placeholder="Tên"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-2">
+                                        <Label className="col-span-1">Ngày sinh *</Label>
+                                        <Input
+                                            type="date"
+                                            className="col-span-3"
+                                            value={patientDob}
+                                            onChange={(e) => setPatientDob(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-2">
+                                        <Label className="col-span-1">Giới tính *</Label>
+                                        <select
+                                            className="col-span-3 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                            value={patientGender}
+                                            onChange={(e) => setPatientGender(e.target.value as 'M' | 'F' | '')}
+                                        >
+                                            <option value="">Chọn giới tính</option>
+                                            <option value="M">Nam</option>
+                                            <option value="F">Nữ</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                            <DialogFooter>
+                                <Button variant="outline" onClick={closePatientDialog}>Hủy</Button>
+                                <Button
+                                    onClick={handleSavePatient}
+                                    disabled={
+                                        isPatientDetailLoading ||
+                                        !!patientDetailError ||
+                                        updatePatientMutation.isPending
+                                    }
+                                >
+                                    {updatePatientMutation.isPending && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    )}
+                                    Lưu
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </CardHeader>
             <CardContent>
@@ -556,12 +737,13 @@ export default function DeviceOutboundTable() {
                                 <TableHead>Ngày giờ tạo</TableHead>
                                 <TableHead>Ngày giờ gửi</TableHead>
                                 <TableHead>Lỗi</TableHead>
+                                <TableHead className="w-28">Thao tác</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center">
+                                    <TableCell colSpan={10} className="h-24 text-center">
                                         <Loader2 className="h-6 w-6 animate-spin mx-auto" /> Đang tải...
                                     </TableCell>
                                 </TableRow>
@@ -593,12 +775,22 @@ export default function DeviceOutboundTable() {
                                         <TableCell className="max-w-[200px] text-xs text-muted-foreground" title={item.errorMessage ?? undefined}>
                                             {truncateError(item.errorMessage)}
                                         </TableCell>
+                                        <TableCell>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={item.status === 3}
+                                                onClick={() => openPatientDialog(item)}
+                                            >
+                                                Cập nhật
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
                             {!isLoading && items.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center">
+                                    <TableCell colSpan={10} className="h-24 text-center">
                                         Không có bản ghi nào. Tạo order hoặc thử đổi bộ lọc.
                                     </TableCell>
                                 </TableRow>

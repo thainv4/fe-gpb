@@ -4188,6 +4188,22 @@ class ApiClient {
         return this.assertApiSuccess(res, "Không thể hủy order");
     }
 
+    async getDeviceOutboundById(id: string): Promise<ApiResponse<DeviceOutboundDetail>> {
+        const res = await this.request<DeviceOutboundDetail>(`/device-outbound/${id}`);
+        return this.assertApiSuccess(res, "Không thể tải chi tiết order");
+    }
+
+    async updateDeviceOutboundPatient(
+        id: string,
+        body: UpdateDeviceOutboundPatientBody,
+    ): Promise<ApiResponse<DeviceOutboundDetail>> {
+        const res = await this.request<DeviceOutboundDetail>(`/device-outbound/${id}/patient`, {
+            method: "PATCH",
+            body: JSON.stringify(body),
+        });
+        return this.assertApiSuccess(res, "Không thể cập nhật thông tin bệnh nhân");
+    }
+
     async getDeviceStainingMethods(params?: {
         limit?: number;
         offset?: number;
@@ -4289,6 +4305,20 @@ export interface DeviceOutboundItem {
     sentTime?: string | null;
     errorMessage?: string | null;
     retryCount: number;
+}
+
+export interface DeviceOutboundDetail extends DeviceOutboundItem {
+    patientFamily?: string | null;
+    patientGiven?: string | null;
+    patientDob?: string | null;
+    patientGender?: 'M' | 'F' | null;
+}
+
+export interface UpdateDeviceOutboundPatientBody {
+    patientFamily: string;
+    patientGiven: string;
+    patientDob: string;
+    patientGender: 'M' | 'F';
 }
 
 export interface DeviceStainingMethodItem {
