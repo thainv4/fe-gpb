@@ -12,6 +12,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/lib/stores/auth';
 import { getHisTokenCode } from '@/lib/his-token-code-storage';
 import { useCurrentRoomStore } from '@/lib/stores/current-room';
+import {
+  getGenFormHospitalAddress,
+  getResultFormHospitalName,
+  useBranchStore,
+} from '@/lib/stores/branch';
 import { pdfBase64FromContainerWithPuppeteer } from '@/lib/utils/pdf-export';
 import { useServerTime } from '@/hooks/use-server-time';
 import {
@@ -115,6 +120,15 @@ export function PivkaResultSheet({
   const { user } = useAuthStore();
   const { currentRoomId: storeCurrentRoomId, currentDepartmentId: storeCurrentDepartmentId } =
     useCurrentRoomStore();
+  const selectedHisBranchId = useBranchStore((s) => s.selectedHisBranchId);
+  const hospitalName = useMemo(
+    () => getResultFormHospitalName(selectedHisBranchId),
+    [selectedHisBranchId],
+  );
+  const hospitalAddress = useMemo(
+    () => getGenFormHospitalAddress(selectedHisBranchId),
+    [selectedHisBranchId],
+  );
   const [confirmSignDialogOpen, setConfirmSignDialogOpen] = useState(false);
   const [confirmCancelSignDialogOpen, setConfirmCancelSignDialogOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
@@ -782,7 +796,7 @@ export function PivkaResultSheet({
             </div>
             <div className="sm:col-span-2 text-center text-[13px] sm:text-sm leading-tight">
               <div className="font-bold">BỘ Y TẾ</div>
-              <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
+              <div className="font-bold">{hospitalName}</div>
               <div className="font-bold">TRUNG TÂM Y HỌC HẠT NHÂN VÀ UNG BƯỚU</div>
               <div className="font-bold">ĐƠN VỊ GEN TRỊ LIỆU</div>
             </div>
@@ -805,7 +819,7 @@ export function PivkaResultSheet({
               </div>
             </div>
             <div className="col-span-full text-center text-[13px] sm:text-sm -mt-1 relative top-[-28px]">
-              Tầng 16 nhà Q, 78 – Giải Phóng – Kim Liên – Hà Nội
+              {hospitalAddress}
             </div>
           </div>
 

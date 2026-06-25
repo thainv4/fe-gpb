@@ -14,6 +14,11 @@ import {
   SERVER_TIME_ERROR_LABEL,
   SERVER_TIME_LOADING_LABEL,
 } from "@/lib/server-time";
+import {
+  getGenFormHospitalAddress,
+  getResultFormHospitalName,
+  useBranchStore,
+} from "@/lib/stores/branch";
 
 export interface FormGen1Props {
   data: StoredServiceRequestResponse;
@@ -105,6 +110,15 @@ export function FormGen1({
     data?.services?.[0]?.barcodeGenGpb ??
     "";
   const flag = data?.flag ?? "";
+  const selectedHisBranchId = useBranchStore((s) => s.selectedHisBranchId);
+  const hospitalName = useMemo(
+    () => getResultFormHospitalName(selectedHisBranchId),
+    [selectedHisBranchId],
+  );
+  const hospitalAddress = useMemo(
+    () => getGenFormHospitalAddress(selectedHisBranchId),
+    [selectedHisBranchId],
+  );
 
   const { data: resultConcludeData } = useQuery({
     queryKey: ["stored-services-result-conclude", barcodeGenGpb],
@@ -306,7 +320,7 @@ export function FormGen1({
             <div className="col-span-2 flex justify-center">
               <div className="text-center text-sm leading-tight">
                 <div className="font-bold">BỘ Y TẾ</div>
-                <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
+                <div className="font-bold">{hospitalName}</div>
                 <div className="">TRUNG TÂM Y HỌC HẠT NHÂN VÀ UNG BƯỚU</div>
                 <div className="">ĐƠN VỊ GEN TRỊ LIỆU</div>
               </div>
@@ -334,7 +348,7 @@ export function FormGen1({
             {/* Địa chỉ */}
             <div className="col-span-4 flex justify-center text-sm relative top-[-20px]">
               <span className="whitespace-nowrap">
-                Tầng 16 nhà Q, 78 - Giải Phóng - Kim Liên - Hà Nội
+                {hospitalAddress}
               </span>
             </div>
           </div>

@@ -34,6 +34,25 @@ export function isNinhBinhBranch(hisBranchId: number | null | undefined): boolea
     return Number(hisBranchId) === NINH_BINH_HIS_BRANCH_ID
 }
 
+const RESULT_FORM_HOSPITAL_NAME_HANOI = 'BỆNH VIỆN BẠCH MAI CƠ SỞ HÀ NỘI'
+const RESULT_FORM_HOSPITAL_NAME_NINH_BINH = 'BỆNH VIỆN BẠCH MAI CƠ SỞ NINH BÌNH'
+const GEN_FORM_HOSPITAL_ADDRESS_HANOI = 'Tầng 16 nhà Q, 78 - Giải Phóng - Kim Liên - Hà Nội'
+const GEN_FORM_HOSPITAL_ADDRESS_NINH_BINH = 'Liêm Tuyền, Ninh Bình'
+
+/** Tên bệnh viện trên header form kết quả (theo cơ sở đăng nhập). */
+export function getResultFormHospitalName(hisBranchId: number | null | undefined): string {
+    return isNinhBinhBranch(hisBranchId)
+        ? RESULT_FORM_HOSPITAL_NAME_NINH_BINH
+        : RESULT_FORM_HOSPITAL_NAME_HANOI
+}
+
+/** Địa chỉ bệnh viện trên form kết quả GEN (theo cơ sở đăng nhập). */
+export function getGenFormHospitalAddress(hisBranchId: number | null | undefined): string {
+    return isNinhBinhBranch(hisBranchId)
+        ? GEN_FORM_HOSPITAL_ADDRESS_NINH_BINH
+        : GEN_FORM_HOSPITAL_ADDRESS_HANOI
+}
+
 /** Đọc cơ sở lần trước từ localStorage (dùng để pre-select dropdown login). */
 export function getLastHisBranchId(): number | null {
     if (typeof window === 'undefined') return null

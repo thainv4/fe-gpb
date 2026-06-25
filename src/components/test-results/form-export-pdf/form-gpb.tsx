@@ -10,6 +10,10 @@ import {
   SERVER_TIME_ERROR_LABEL,
   SERVER_TIME_LOADING_LABEL,
 } from "@/lib/server-time";
+import {
+  getResultFormHospitalName,
+  useBranchStore,
+} from "@/lib/stores/branch";
 
 // ==================== TYPES ====================
 interface FormTemplateProps {
@@ -111,6 +115,11 @@ const PageHeader = React.memo(({
   const age = useMemo(() => calculateAge(patientDob), [patientDob]);
   const sampleTypeName = specificService?.sampleTypeName || "";
   const extendedService = specificService as ExtendedStoredService;
+  const selectedHisBranchId = useBranchStore((s) => s.selectedHisBranchId);
+  const hospitalName = useMemo(
+    () => getResultFormHospitalName(selectedHisBranchId),
+    [selectedHisBranchId],
+  );
 
   return (
     <div className="print-header" style={{ breakInside: "avoid" }}>
@@ -124,7 +133,7 @@ const PageHeader = React.memo(({
             className="w-3/12"
           />
           <div className="text-sm text-gray-700 leading-tight space-y-1 text-center">
-            <div className="font-bold">BỆNH VIỆN BẠCH MAI</div>
+            <div className="font-bold">{hospitalName}</div>
             <div className="text-xs font-semibold">VIỆN XÉT NGHIỆM Y HỌC</div>
             <div className="text-xs font-semibold">TRUNG TÂM GIẢI PHẪU BỆNH</div>
             <div className="text-xs font-semibold">TẾ BÀO HỌC</div>
