@@ -50,7 +50,7 @@ export function printQrCode(qrCodeHtml: string, title: string = 'QR', patientNam
             <title>In mã QR - ${safeTitle}</title>
             <style>
                 @page {
-                    size: 96mm 44mm;
+                    size: 100mm 44mm;
                     margin: 0mm;
                     padding: 0;
                 }
