@@ -1,4 +1,4 @@
-/** Form Gen (form-gen-1) — khớp resultFormType từ my-rooms / department. */
+/** Form Gen (WYSIWYG sheet) — khớp resultFormType từ my-rooms / department. */
 export const RESULT_FORM_TYPE_GEN = 2;
 
 export const GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE =

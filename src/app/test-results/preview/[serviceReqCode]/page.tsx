@@ -4,6 +4,8 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ResultForm, RESULT_FORM_TYPE_GPB, RESULT_FORM_TYPE_GEN1 } from '@/components/test-results/form-export-pdf';
+import { GenResultSheet } from '@/components/test-results/gen-result-sheet';
+import { EMPTY_GEN_RESULT_VALUES } from '@/components/test-results/gen-result-types';
 import { useMemo, useRef } from 'react';
 import type { StoredService } from '@/lib/api/client';
 import { useReactToPrint } from 'react-to-print';
@@ -15,9 +17,9 @@ export default function PreviewPage() {
     const serviceIdParam = searchParams.get('serviceId');
     const formTypeParam = searchParams.get('formType');
     const formType = formTypeParam ? Number(formTypeParam) : RESULT_FORM_TYPE_GPB;
+    const isGenPreview = formType === RESULT_FORM_TYPE_GEN1;
     const componentRef = useRef<HTMLDivElement>(null);
 
-    // Fetch stored service request
     const { data: storedServiceRequestData, isLoading: isLoadingRequest } = useQuery({
         queryKey: ['stored-service-request-preview', storedServiceReqId],
         queryFn: () => apiClient.getStoredServiceRequest(storedServiceReqId),
@@ -30,11 +32,11 @@ export default function PreviewPage() {
         if (serviceIdParam && services.some((s) => s.id === serviceIdParam)) {
             return serviceIdParam;
         }
-        if (formType === RESULT_FORM_TYPE_GEN1 && services.length === 1) {
+        if (isGenPreview && services.length >= 1) {
             return services[0].id;
         }
         return serviceIdParam;
-    }, [storedServiceRequestData?.data?.services, serviceIdParam, formType]);
+    }, [storedServiceRequestData?.data?.services, serviceIdParam, isGenPreview]);
 
     const serviceFromList = useMemo((): StoredService | undefined => {
         const services = storedServiceRequestData?.data?.services;
@@ -102,37 +104,33 @@ export default function PreviewPage() {
 
             const element = componentRef.current;
 
-            // Render với scale cao để đảm bảo chất lượng tốt nhất
             const canvas = await html2canvas(element, {
-                scale: 3, // Scale x3 cho chất lượng cao
+                scale: 3,
                 useCORS: true,
                 allowTaint: true,
                 logging: false,
                 backgroundColor: '#ffffff',
                 windowWidth: element.scrollWidth,
                 windowHeight: element.scrollHeight,
-            } as any);
+            } as Parameters<typeof html2canvas>[1]);
 
-            // Sử dụng JPEG với quality cao để giảm kích thước file
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
                 format: 'a4',
-                compress: false // Không compress để giữ chất lượng
+                compress: false,
             });
 
-            const imgWidth = 210; // A4 width in mm
-            const pageHeight = 297; // A4 height in mm
+            const imgWidth = 210;
+            const pageHeight = 297;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             let heightLeft = imgHeight;
             let position = 0;
 
-            // Thêm trang đầu tiên
             pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pageHeight;
 
-            // Nếu nội dung dài hơn 1 trang, thêm các trang tiếp theo
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
@@ -142,7 +140,7 @@ export default function PreviewPage() {
 
             const fileName = `Phieu_XN_${storedServiceRequestData?.data?.patientCode}_${storedServiceRequestData?.data?.serviceReqCode}.pdf`;
             pdf.save(fileName);
-        } catch (error) {
+        } catch {
             alert('Có lỗi xảy ra khi tải PDF');
         }
     };
@@ -150,31 +148,42 @@ export default function PreviewPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
             <div className="max-w-4xl mx-auto px-4">
-                {/* Action Bar */}
                 <div className="mb-6 flex justify-end print:hidden bg-white rounded-lg shadow-md p-4">
                     <div className="flex gap-3">
+                        {!isGenPreview && (
+                            <button
+                                onClick={handleDownloadPdf}
+                                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-md"
+                            >
+                                Tải PDF
+                            </button>
+                        )}
                         <button
-                            onClick={handleDownloadPdf}
-                            className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-md"
+                            onClick={() => handlePrint()}
+                            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-md"
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Tải PDF
+                            In
                         </button>
                     </div>
                 </div>
 
-                {/* Preview Content */}
                 <div ref={componentRef}>
-                    <ResultForm
-                        formType={formType}
-                        data={storedServiceRequestData.data}
-                        specificService={specificService}
-                    />
+                    {isGenPreview && specificService ? (
+                        <GenResultSheet
+                            stored={storedServiceRequestData.data}
+                            service={specificService}
+                            values={EMPTY_GEN_RESULT_VALUES}
+                            onChange={() => {}}
+                            readOnly
+                        />
+                    ) : (
+                        <ResultForm
+                            data={storedServiceRequestData.data}
+                            specificService={specificService}
+                        />
+                    )}
                 </div>
             </div>
         </div>
     );
 }
-

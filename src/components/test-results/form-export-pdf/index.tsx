@@ -6,7 +6,7 @@ import { StoredServiceRequestResponse, StoredService } from "@/lib/api/client";
 
 /** resultFormType = 1 → form-gpb (Giải phẫu bệnh) */
 export const RESULT_FORM_TYPE_GPB = 1;
-/** resultFormType = 2 → form-gen-1 */
+/** resultFormType = 2 → Gen WYSIWYG sheet (không dùng ResultForm) */
 export const RESULT_FORM_TYPE_GEN1 = 2;
 
 export interface ResultFormProps {
@@ -16,7 +16,7 @@ export interface ResultFormProps {
 }
 
 export interface ResultFormComponentProps extends ResultFormProps {
-  /** 1 = form-gpb, 2 = form-gen-1. Mặc định 1. */
+  /** Chỉ hỗ trợ GPB (1). GEN (2) dùng GenResultSheet trên trang test-results. */
   formType?: number | string;
 }
 
@@ -25,33 +25,15 @@ const FormTemplate = dynamic(() => import("./form-gpb").then((m) => ({ default: 
   loading: () => <div className="min-h-[400px] flex items-center justify-center text-muted-foreground">Đang tải form...</div>,
 });
 
-const FormGen1 = dynamic(() => import("./form-gen-1").then((m) => ({ default: m.FormGen1 })), {
-  ssr: false,
-  loading: () => <div className="min-h-[400px] flex items-center justify-center text-muted-foreground">Đang tải form...</div>,
-});
-
 /**
- * Registry: chọn form kết quả theo formType (resultFormType của phòng).
- * formType 1 → FormTemplate (form-gpb), 2 → FormGen1 (form-gen-1).
+ * Registry: form kết quả GPB cho preview/in.
+ * GEN (resultFormType = 2) dùng GenResultSheet — không qua ResultForm.
  */
 export function ResultForm({
-  formType = RESULT_FORM_TYPE_GPB,
   data,
   specificService,
   signatureImageBase64,
 }: ResultFormComponentProps) {
-  const type = Number(formType) === RESULT_FORM_TYPE_GEN1 ? RESULT_FORM_TYPE_GEN1 : RESULT_FORM_TYPE_GPB;
-
-  if (type === RESULT_FORM_TYPE_GEN1) {
-    return (
-      <FormGen1
-        data={data}
-        specificService={specificService}
-        signatureImageBase64={signatureImageBase64}
-      />
-    );
-  }
-
   return (
     <FormTemplate
       data={data}
