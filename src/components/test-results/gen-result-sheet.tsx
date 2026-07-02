@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useReactToPrint } from 'react-to-print';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { apiClient, type StoredService, type StoredServiceRequestResponse } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -27,8 +27,6 @@ import {
   type GenGeneRowKey,
   type GenResultValues,
 } from '@/components/test-results/gen-result-types';
-
-const PHASE2_TOOLTIP = 'Sẽ kích hoạt ở giai đoạn 2';
 
 function emptyDisplay(value?: string) {
   return value?.trim() ?? '';
@@ -72,6 +70,12 @@ const COL_SPAN_CLASS: Record<number, string> = {
   12: 'col-span-12',
 };
 
+function resizeTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
 function FormRow({ children }: { children: React.ReactNode }) {
   return (
     <div className="gen-form-row grid grid-cols-12 gap-x-2 gap-y-1 items-baseline w-full">
@@ -112,6 +116,18 @@ export interface GenResultSheetProps {
   values: GenResultValues;
   onChange: (v: GenResultValues) => void;
   readOnly?: boolean;
+  /** Container DOM cho xuất PDF / đo vị trí chữ ký EMR ([data-sign-anchor]). */
+  pdfRef?: RefObject<HTMLDivElement | null>;
+  onSave?: () => void;
+  onSign?: () => void;
+  onViewSigned?: () => void;
+  onCancelSign?: () => void;
+  isSaving?: boolean;
+  isSigning?: boolean;
+  canSign?: boolean;
+  signDisabledTitle?: string;
+  canViewSigned?: boolean;
+  canCancelSign?: boolean;
 }
 
 export function GenResultSheet({
@@ -120,8 +136,20 @@ export function GenResultSheet({
   values,
   onChange,
   readOnly = false,
+  pdfRef,
+  onSave,
+  onSign,
+  onViewSigned,
+  onCancelSign,
+  isSaving = false,
+  isSigning = false,
+  canSign = true,
+  signDisabledTitle,
+  canViewSigned = false,
+  canCancelSign = false,
 }: GenResultSheetProps) {
-  const printRef = useRef<HTMLDivElement>(null);
+  const internalPrintRef = useRef<HTMLDivElement>(null);
+  const printRef = pdfRef ?? internalPrintRef;
   const [methodSelectOpen, setMethodSelectOpen] = useState(false);
 
   // Workflow action info — lấy người nhận mẫu, người thực hiện
@@ -194,6 +222,14 @@ export function GenResultSheet({
       : [];
   }, [allMethodsData]);
 
+  const readOnlyMethodLabel = useMemo(() => {
+    if (values.testingMethodGenId) {
+      const fromOptions = methodOptions.find((m) => m.id === values.testingMethodGenId);
+      if (fromOptions?.methodName) return fromOptions.methodName;
+    }
+    return service.testingMethodGen?.methodName ?? '';
+  }, [values.testingMethodGenId, methodOptions, service.testingMethodGen?.methodName]);
+
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: 'Phieu_KQXN_GEN',
@@ -217,31 +253,61 @@ export function GenResultSheet({
     onChange({ ...values, testingMethodGenId: id });
   }
 
-  function Phase2Button({
-    label,
-    variant = 'outline',
-  }: {
-    label: string;
-    variant?: 'outline' | 'destructive';
-  }) {
-    return (
-      <Button type="button" variant={variant} disabled title={PHASE2_TOOLTIP}>
-        {label}
-      </Button>
-    );
-  }
+  const hasActions = !readOnly && (onSave || onSign || onViewSigned || onCancelSign);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 justify-end print:hidden">
-        <Button type="button" variant="outline" onClick={() => handlePrint()}>
-          In phiếu
-        </Button>
-        <Phase2Button label="Lưu kết quả" />
-        <Phase2Button label="Ký số" />
-        <Phase2Button label="Xem văn bản đã ký" />
-        <Phase2Button label="Hủy chữ ký số" variant="destructive" />
-      </div>
+      {hasActions && (
+        <div className="flex flex-wrap gap-2 justify-end print:hidden">
+          <Button type="button" variant="outline" onClick={() => handlePrint()}>
+            In phiếu
+          </Button>
+          {onSave && (
+            <Button type="button" variant="outline" onClick={onSave} disabled={isSaving || isSigning}>
+              {isSaving ? 'Đang lưu...' : 'Lưu kết quả'}
+            </Button>
+          )}
+          {onSign && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onSign}
+              disabled={isSigning || isSaving || !canSign}
+              title={signDisabledTitle}
+            >
+              {isSigning ? 'Đang ký số...' : 'Ký số'}
+            </Button>
+          )}
+          {onViewSigned && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onViewSigned}
+              disabled={!canViewSigned || isSigning}
+            >
+              Xem văn bản đã ký
+            </Button>
+          )}
+          {onCancelSign && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={onCancelSign}
+              disabled={!canCancelSign || isSigning}
+            >
+              Hủy chữ ký số
+            </Button>
+          )}
+        </div>
+      )}
+
+      {!hasActions && !readOnly && (
+        <div className="flex flex-wrap gap-2 justify-end print:hidden">
+          <Button type="button" variant="outline" onClick={() => handlePrint()}>
+            In phiếu
+          </Button>
+        </div>
+      )}
 
       <div
         ref={printRef}
@@ -271,10 +337,20 @@ export function GenResultSheet({
                   box-shadow: none;
                 }
                 .gen-a4 table.gen-table { width: 100%; }
+                .gen-table textarea {
+                  overflow: visible !important;
+                  height: auto !important;
+                  white-space: pre-wrap;
+                  word-break: break-word;
+                }
                 .avoid-break { page-break-inside: avoid; break-inside: avoid; }
               }
               .avoid-break { page-break-inside: avoid; break-inside: avoid; }
               .gen-form-row { width: 100%; }
+              .gen-table textarea {
+                white-space: pre-wrap;
+                word-break: break-word;
+              }
             `,
           }}
         />
@@ -382,7 +458,7 @@ export function GenResultSheet({
                 <span className="font-semibold shrink-0 whitespace-nowrap">Kỹ thuật:</span>
                 {readOnly ? (
                   <span className="flex-1 min-w-0 pb-px min-h-[1.1em]">
-                    {service.testingMethodGen?.methodName ?? ''}
+                    {readOnlyMethodLabel}
                   </span>
                 ) : (
                   <div className="flex-1 min-w-0">
@@ -453,16 +529,24 @@ export function GenResultSheet({
                         className="border border-black p-0 bg-amber-50/40 print:p-1"
                       >
                         {readOnly ? (
-                          <span className="block px-1 py-1 min-h-[2rem]" />
+                          <span className="block px-1 py-1 min-h-[2rem] whitespace-pre-wrap break-words">
+                            {values.geneRow[cellKey] ?? ''}
+                          </span>
                         ) : (
-                          <Input
-                            type="text"
+                          <Textarea
+                            ref={resizeTextarea}
                             value={values.geneRow[cellKey] ?? ''}
-                            onChange={(e) => patchGeneRow(cellKey, e.target.value)}
+                            onChange={(e) => {
+                              patchGeneRow(cellKey, e.target.value);
+                              resizeTextarea(e.target);
+                            }}
+                            rows={1}
+                            wrap="soft"
                             className={cn(
-                              'h-9 rounded-none border-0 shadow-none text-[12px]',
+                              'min-h-9 rounded-none border-0 shadow-none text-[12px] resize-none overflow-hidden py-1 px-1',
                               'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0',
-                              'bg-transparent print:border-0 print:h-8',
+                              'bg-transparent print:border-0 print:min-h-0 print:h-auto',
+                              '[field-sizing:content]',
                             )}
                           />
                         )}

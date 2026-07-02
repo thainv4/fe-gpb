@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { ResultForm, RESULT_FORM_TYPE_GPB } from "@/components/test-results/form-export-pdf";
 import { GenResultSheet } from "@/components/test-results/gen-result-sheet";
-import { EMPTY_GEN_RESULT_VALUES } from "@/components/test-results/gen-result-types";
+import { EMPTY_GEN_RESULT_VALUES, buildGenResultValues, serializeGenResultMetadata } from "@/components/test-results/gen-result-types";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getHisTokenCode } from "@/lib/his-token-code-storage";
@@ -221,9 +221,9 @@ const GPB_SIGN_OFFSET_X = 1;
 /**
  * Đo vị trí ký trực tiếp từ DOM (marker [data-sign-anchor]) thay vì đọc lại PDF.
  * Dùng tỉ lệ trong trang nên không phụ thuộc zoom/scale, rồi quy đổi sang điểm PDF (gốc dưới-trái).
- * Hỗ trợ cả form GPB (.pdf-page) lẫn form gen-1 (.a4-page).
+ * Hỗ trợ form GPB (.pdf-page) và form GEN (.gen-a4).
  */
-const SIGN_PAGE_SELECTOR = '.pdf-page, .a4-page';
+const SIGN_PAGE_SELECTOR = '.pdf-page, .a4-page, .gen-a4';
 function getSignPointFromDom(
     container: HTMLElement | null,
 ): { page: number; x: number; y: number } | null {
@@ -370,6 +370,7 @@ export default function TestResultForm() {
     const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
     const [previewServiceId, setPreviewServiceId] = useState<string | null>(null)
     const previewRef = useRef<HTMLDivElement>(null)
+    const genPdfRef = useRef<HTMLDivElement>(null)
     const resultNameRef = useRef<HTMLTextAreaElement>(null)
 
     // Digital signature states
@@ -1123,6 +1124,37 @@ export default function TestResultForm() {
             return
         }
         setSelectedServiceId(serviceId)
+
+        const applyGenFormFromSource = (
+            source: {
+                testingMethodGen?: { id: string; methodName: string } | null;
+                resultMetadata?: string | null;
+            },
+        ) => {
+            const genValues = buildGenResultValues(source)
+            setGenResultValues(genValues)
+            if (genValues.testingMethodGenId) {
+                setSelectedSamplingMethod(genValues.testingMethodGenId)
+                setTestingMethodGenFromResult(
+                    source.testingMethodGen?.id
+                        ? source.testingMethodGen
+                        : { id: genValues.testingMethodGenId, methodName: '' },
+                )
+            } else {
+                setSelectedSamplingMethod('')
+                setTestingMethodGenFromResult(null)
+            }
+        }
+
+        const resetNonGenFields = () => {
+            setMicroscopicDescription(defaultMicroscopicDescription)
+            setMacroscopicComment(defaultMacroscopicComment)
+            setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
+            setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
+            setResultRecomment(defaultResultRecomment)
+            setResultName('')
+        }
+
         try {
             const resultResponse = await apiClient.getServiceResult(serviceId)
             if (resultResponse.success && resultResponse.data) {
@@ -1133,63 +1165,44 @@ export default function TestResultForm() {
                 setResultNote(data.resultNote ?? (resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote))
                 setResultRecomment(data.resultRecomment ?? defaultResultRecomment)
                 setResultName(data.resultName ?? '')
-                if (resultFormType === 2 && data.testingMethodGen?.id) {
-                    const methodGenId = data.testingMethodGen.id;
-                    setSelectedSamplingMethod(methodGenId)
-                    setTestingMethodGenFromResult({ id: methodGenId, methodName: data.testingMethodGen.methodName })
-                    setGenResultValues(prev => ({
-                        ...prev,
-                        testingMethodGenId: methodGenId
-                    }))
+                if (resultFormType === 2) {
+                    applyGenFormFromSource(data)
                 } else {
                     setSelectedSamplingMethod('')
                     setTestingMethodGenFromResult(null)
-                    setGenResultValues(prev => ({
-                        ...prev,
-                        testingMethodGenId: ''
-                    }))
+                    setGenResultValues(EMPTY_GEN_RESULT_VALUES)
                 }
             } else {
-                setMicroscopicDescription(defaultMicroscopicDescription)
-                setMacroscopicComment(defaultMacroscopicComment)
-                setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
-                setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
-                setResultRecomment(defaultResultRecomment)
-                setResultName('')
+                resetNonGenFields()
                 setSelectedSamplingMethod('')
                 setTestingMethodGenFromResult(null)
                 setGenResultValues(EMPTY_GEN_RESULT_VALUES)
             }
         } catch {
-            setMicroscopicDescription(defaultMicroscopicDescription)
-            setMacroscopicComment(defaultMacroscopicComment)
-            setResultConclude(resultFormType === 2 ? defaultResultConcludeGen1 : defaultResultConclude)
-            setResultNote(resultFormType === 2 ? defaultResultNoteGen1 : defaultResultNote)
-            setResultRecomment(defaultResultRecomment)
-            setResultName('')
-            setSelectedSamplingMethod('')
-            setTestingMethodGenFromResult(null)
-            setGenResultValues(EMPTY_GEN_RESULT_VALUES)
+            resetNonGenFields()
+            const svc = services.find((s) => s.id === serviceId)
+            if (resultFormType === 2 && svc) {
+                applyGenFormFromSource(svc)
+            } else {
+                setSelectedSamplingMethod('')
+                setTestingMethodGenFromResult(null)
+                setGenResultValues(EMPTY_GEN_RESULT_VALUES)
+            }
         }
-    }, [storedServiceReqId, toast, resultFormType, defaultMicroscopicDescription, defaultMacroscopicComment, defaultResultConcludeGen1, defaultResultConclude, defaultResultNoteGen1, defaultResultNote, defaultResultRecomment])
+    }, [storedServiceReqId, toast, resultFormType, services, defaultMicroscopicDescription, defaultMacroscopicComment, defaultResultConcludeGen1, defaultResultConclude, defaultResultNoteGen1, defaultResultNote, defaultResultRecomment])
 
-    // GPB: auto-load dịch vụ đầu tiên. Gen: một dịch vụ/phiếu — luôn dùng services[0].
+    // GPB / GEN: auto-load dịch vụ đầu tiên khi mở phiếu.
     useEffect(() => {
         if (!storedServiceReqId) return
         if (!services || services.length === 0) return
         const firstServiceId = services[0]?.id
         if (!firstServiceId) return
 
-        if (isGenForm) {
-            setSelectedServiceId(firstServiceId)
-            return
-        }
-
         if (lastAutoLoadedServiceIdRef.current === firstServiceId) return
 
         lastAutoLoadedServiceIdRef.current = firstServiceId
         void handleServiceClick(firstServiceId)
-    }, [storedServiceReqId, services, handleServiceClick, isGenForm])
+    }, [storedServiceReqId, services, handleServiceClick])
 
     // Reset guard when switching to a different storedServiceReqId.
     useEffect(() => {
@@ -1198,7 +1211,6 @@ export default function TestResultForm() {
 
     useEffect(() => {
         setTestingExecutionTeamRows(createDefaultTestingExecutionTeamRows())
-        setGenResultValues(EMPTY_GEN_RESULT_VALUES)
     }, [storedServiceReqId])
 
     /** Mở dialog preview theo dòng focus; không fallback sang dịch vụ khác đã có kết quả. */
@@ -1395,15 +1407,6 @@ export default function TestResultForm() {
 
     // Handler ký số - nhận signerId như parameter
     const handleDigitalSign = async (signerIdParam?: string) => {
-        if (isGenForm) {
-            toast({
-                variant: 'destructive',
-                title: 'Chưa khả dụng',
-                description: 'Ký số GEN sẽ được kích hoạt ở giai đoạn 2.',
-            })
-            setConfirmSignDialogOpen(false)
-            return
-        }
         if (notifyIfGenSignBlocked()) {
             setConfirmSignDialogOpen(false)
             return
@@ -1433,7 +1436,7 @@ export default function TestResultForm() {
             return
         }
 
-        if (!storedServiceRequestData?.data || !previewServiceData?.data) {
+        if (!storedServiceRequestData?.data) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -1442,7 +1445,17 @@ export default function TestResultForm() {
             return
         }
 
-        if (!previewRef.current) {
+        if (!isGenForm && !previewServiceData?.data) {
+            toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Không tìm thấy dữ liệu dịch vụ xem trước"
+            })
+            return
+        }
+
+        const pdfContainer = isGenForm ? genPdfRef.current : previewRef.current
+        if (!pdfContainer) {
             toast({
                 variant: "destructive",
                 title: "Lỗi",
@@ -1475,7 +1488,7 @@ export default function TestResultForm() {
             }
 
             // Convert PDF to base64 và lấy số trang - SỬ DỤNG BIẾN LOCAL
-            const pdfResult = await pdfBase64FromContainerWithPuppeteer(previewRef.current);
+            const pdfResult = await pdfBase64FromContainerWithPuppeteer(pdfContainer);
             if (!pdfResult || !pdfResult.base64) {
                 toast({
                     variant: "destructive",
@@ -1499,8 +1512,8 @@ export default function TestResultForm() {
             const day = String(now.getDate()).padStart(2, '0')
             const dateStr = `${year}-${month}-${day}`
             const serviceReqCode = storedServiceRequestData.data.serviceReqCode
-            const signAnchor = getSignPointFromDom(previewRef.current);
-            const signOffsetX = GPB_SIGN_OFFSET_X;
+            const signAnchor = getSignPointFromDom(pdfContainer);
+            const signOffsetX = isGenForm ? GEN1_SIGN_OFFSET_X : GPB_SIGN_OFFSET_X;
             const pointSign = signAnchor
                 ? {
                     ...DEFAULT_POINT_SIGN,
@@ -1529,6 +1542,7 @@ export default function TestResultForm() {
                 DocumentTypeId: 22,
                 DocumentGroupId: 101,
                 HisCode: `SERVICE_REQ_CODE:${storedServiceRequestData.data.serviceReqCode}`,
+                ...(isGenForm && signTarget ? { StoredSrServiceId: signTarget.id } : {}),
                 FileType: 0,
                 OriginalVersion: {
                     Base64Data: pdfBase64
@@ -1936,14 +1950,6 @@ export default function TestResultForm() {
 
     // Handler lưu kết quả
     const handleSaveResults = useCallback(async () => {
-        if (isGenForm) {
-            toast({
-                variant: 'destructive',
-                title: 'Chưa khả dụng',
-                description: 'Lưu kết quả GEN sẽ được kích hoạt ở giai đoạn 2.',
-            })
-            return
-        }
         if (services.length === 0) {
             toast({
                 variant: "destructive",
@@ -2002,12 +2008,11 @@ export default function TestResultForm() {
                         payload.resultRecomment = resultRecomment
                     }
                     payload.resultName = resultName
-                    const methodId =
-                        testingMethodGenByServiceRef.current.get(serviceId) ??
-                        (selectedSamplingMethod?.trim() || undefined)
+                    const methodId = genResultValues.testingMethodGenId?.trim()
                     if (methodId) {
                         payload.testingMethodGenId = methodId
                     }
+                    payload.resultMetadata = serializeGenResultMetadata(genResultValues.geneRow)
                 }
 
                 const response = await apiClient.saveServiceResult(serviceId, payload)
@@ -2193,7 +2198,7 @@ export default function TestResultForm() {
         resultName,
         gen1NoteOrRecomment,
         resultRecomment,
-        selectedSamplingMethod,
+        genResultValues,
         queryClient,
         refetchStoredServiceRequest,
         currentUserId,
@@ -2648,6 +2653,27 @@ export default function TestResultForm() {
                                                 service={services[0]}
                                                 values={genResultValues}
                                                 onChange={setGenResultValues}
+                                                pdfRef={genPdfRef}
+                                                onSave={requestSaveResults}
+                                                onSign={requestSign}
+                                                onViewSigned={handleViewSignedDocument}
+                                                onCancelSign={() => setConfirmCancelSignDialogOpen(true)}
+                                                isSaving={isSaving}
+                                                isSigning={isSigning}
+                                                canSign={canDigitalSign && !isGenSignButtonDisabled}
+                                                signDisabledTitle={
+                                                    isGenSignButtonDisabled
+                                                        ? GEN_DIGITAL_SIGN_FORBIDDEN_MESSAGE
+                                                        : digitalSignBlockMessage ?? undefined
+                                                }
+                                                canViewSigned={
+                                                    !!(
+                                                        selectedServiceId
+                                                            ? services.find((s) => s.id === selectedServiceId)?.documentId
+                                                            : services.some((s) => s.documentId)
+                                                    )
+                                                }
+                                                canCancelSign={services.some((s) => s.documentId)}
                                             />
                                         </>
                                     )}

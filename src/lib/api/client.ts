@@ -874,6 +874,8 @@ export interface ServiceResult {
     resultNote?: string | null;
     resultComment?: string | null;
     resultRecomment?: string | null;
+    /** JSON metadata — phiếu GEN lưu geneRow trong genResult (giai đoạn 1) */
+    resultMetadata?: string | null;
     /** Phương pháp thực hiện xét nghiệm (khi resultFormType = 2) */
     testingMethodGen?: { id: string; methodName: string } | null;
 }
@@ -3489,6 +3491,8 @@ class ApiClient {
             resultComment?: string;
             resultStatus?: 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
             resultName?: string;
+            /** JSON metadata — phiếu GEN: genResult.geneRow */
+            resultMetadata?: string | null;
             /** Phương pháp thực hiện (Gen2 — theo dòng dịch vụ) */
             testingMethodGenId?: string | null;
         }

@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ResultForm, RESULT_FORM_TYPE_GPB, RESULT_FORM_TYPE_GEN1 } from '@/components/test-results/form-export-pdf';
 import { GenResultSheet } from '@/components/test-results/gen-result-sheet';
-import { EMPTY_GEN_RESULT_VALUES } from '@/components/test-results/gen-result-types';
+import { buildGenResultValues, EMPTY_GEN_RESULT_VALUES } from '@/components/test-results/gen-result-types';
 import { useMemo, useRef } from 'react';
 import type { StoredService } from '@/lib/api/client';
 import { useReactToPrint } from 'react-to-print';
@@ -51,6 +51,11 @@ export default function PreviewPage() {
     });
 
     const specificService = serviceData?.data ?? serviceFromList;
+
+    const genPreviewValues = useMemo(
+        () => (specificService ? buildGenResultValues(specificService) : EMPTY_GEN_RESULT_VALUES),
+        [specificService],
+    );
 
     const isLoading =
         isLoadingRequest || (!!serviceIdFromList && isLoadingService && !serviceFromList);
@@ -172,7 +177,7 @@ export default function PreviewPage() {
                         <GenResultSheet
                             stored={storedServiceRequestData.data}
                             service={specificService}
-                            values={EMPTY_GEN_RESULT_VALUES}
+                            values={genPreviewValues}
                             onChange={() => {}}
                             readOnly
                         />

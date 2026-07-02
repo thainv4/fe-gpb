@@ -34,3 +34,41 @@ export const GEN_TABLE_COLUMNS: Array<{ key: GenGeneRowKey | 'stt'; label: strin
   { key: 'nucleotideChange', label: 'Thay đổi nucleotid/protein' },
   { key: 'variantClassification', label: 'Phân lớp biến thể' },
 ];
+
+/** Phiên bản schema JSON trong RESULT_METADATA (giai đoạn 1). */
+export const GEN_RESULT_METADATA_VERSION = 1;
+
+export function serializeGenResultMetadata(geneRow: GenGeneRow): string {
+  return JSON.stringify({
+    genResult: { version: GEN_RESULT_METADATA_VERSION, geneRow },
+  });
+}
+
+export function parseGenResultMetadata(raw?: string | null): GenGeneRow {
+  if (!raw?.trim()) return { ...EMPTY_GEN_GENE_ROW };
+  try {
+    const parsed = JSON.parse(raw) as {
+      genResult?: { geneRow?: Partial<GenGeneRow> };
+    };
+    return {
+      ...EMPTY_GEN_GENE_ROW,
+      ...(parsed?.genResult?.geneRow ?? {}),
+    };
+  } catch {
+    return { ...EMPTY_GEN_GENE_ROW };
+  }
+}
+
+export function buildGenResultValues(input: {
+  testingMethodGenId?: string | null;
+  resultMetadata?: string | null;
+  testingMethodGen?: { id: string } | null;
+}): GenResultValues {
+  return {
+    testingMethodGenId:
+      input.testingMethodGenId?.trim() ||
+      input.testingMethodGen?.id?.trim() ||
+      '',
+    geneRow: parseGenResultMetadata(input.resultMetadata),
+  };
+}
