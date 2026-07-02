@@ -29,7 +29,13 @@ import {
 } from "@/components/ui/dialog";
 import { ResultForm, RESULT_FORM_TYPE_GPB } from "@/components/test-results/form-export-pdf";
 import { GenResultSheet } from "@/components/test-results/gen-result-sheet";
-import { EMPTY_GEN_RESULT_VALUES, buildGenResultValues, serializeGenResultMetadata } from "@/components/test-results/gen-result-types";
+import {
+    EMPTY_GEN_RESULT_VALUES,
+    buildGenResultValues,
+    formatGenGeneRowConclude,
+    parseGenResultMetadata,
+    serializeGenResultMetadata,
+} from "@/components/test-results/gen-result-types";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getHisTokenCode } from "@/lib/his-token-code-storage";
@@ -1050,7 +1056,9 @@ export default function TestResultForm() {
             }
             const description = descriptionParts.join('\n\n');
 
-            const conclude = stripHtml(service?.resultConclude || '');
+            const conclude = isGenForm
+                ? formatGenGeneRowConclude(parseGenResultMetadata(service?.resultMetadata))
+                : stripHtml(service?.resultConclude || '');
             const note = stripHtml(service?.resultNote || '');
 
             // Lấy thông tin user hiện tại

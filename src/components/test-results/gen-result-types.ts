@@ -72,3 +72,24 @@ export function buildGenResultValues(input: {
     geneRow: parseGenResultMetadata(input.resultMetadata),
   };
 }
+
+/** Plain text cho HIS-PACS UpdateResult.Conclude từ các cột bảng gene. */
+export function formatGenGeneRowConclude(
+  geneRow: GenGeneRow,
+  options?: { rowIndex?: number; includeEmpty?: boolean },
+): string {
+  const { rowIndex = 1, includeEmpty = false } = options ?? {};
+  const lines: string[] = [];
+
+  for (const col of GEN_TABLE_COLUMNS) {
+    if (col.key === 'stt') {
+      lines.push(`${col.label}: ${rowIndex}`);
+      continue;
+    }
+    const value = (geneRow[col.key] ?? '').trim();
+    if (!value && !includeEmpty) continue;
+    lines.push(`${col.label}: ${value || '—'}`);
+  }
+
+  return lines.join('\n');
+}

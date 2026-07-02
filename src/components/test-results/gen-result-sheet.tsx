@@ -55,6 +55,22 @@ function calculateAge(dob: number): number {
   return currentYear - year;
 }
 
+/** Lấy phần text chữ thường từ resultConclude HTML (bỏ thẻ, bỏ tiêu đề CHẨN ĐOÁN MÔ BỆNH HỌC / CHẨN ĐOÁN TẾ BÀO HỌC). */
+function getResultConcludePlainText(html: string): string {
+  if (!html?.trim()) return '';
+  const headerMôBệnhHọc = /chẩn\s*đoán\s*mô\s*bệnh\s*học\s*:?\s*/i;
+  const headerTếBàoHọc = /chẩn\s*đoán\s*tế\s*bào\s*học\s*:?\s*/i;
+  if (typeof document !== 'undefined') {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    let text = (div.textContent ?? div.innerText ?? '').replace(/\s+/g, ' ').trim();
+    text = text.replace(headerMôBệnhHọc, '').replace(headerTếBàoHọc, '').trim();
+    return text;
+  }
+  const stripped = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return stripped.replace(headerMôBệnhHọc, '').replace(headerTếBàoHọc, '').trim();
+}
+
 const COL_SPAN_CLASS: Record<number, string> = {
   1: 'col-span-1',
   2: 'col-span-2',
@@ -197,6 +213,58 @@ export function GenResultSheet({
   );
   const phoneNumber = stored.patientMobile ?? stored.patientPhone ?? '';
   const receptionCode = service.receptionCode?.trim() ?? '';
+
+  const barcodeGenGpb = useMemo(
+    () =>
+      service.barcodeGenGpb?.trim() ||
+      stored.barcodeGenGpb?.trim() ||
+      '',
+    [service.barcodeGenGpb, stored.barcodeGenGpb],
+  );
+
+  const { data: resultConcludeData } = useQuery({
+    queryKey: ['stored-services-result-conclude', barcodeGenGpb],
+    queryFn: () => apiClient.getStoredServicesResultConclude(barcodeGenGpb),
+    enabled: !!barcodeGenGpb,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const resultConcludePlainText = useMemo(() => {
+    const raw = resultConcludeData?.data?.resultConclude;
+    return raw ? getResultConcludePlainText(raw) : '';
+  }, [resultConcludeData?.data?.resultConclude]);
+
+  const diagnosisDisplay = useMemo(() => {
+    const headerResultConclude =
+      service.resultConcludeGenGpb?.trim() ||
+      stored.resultConcludeGenGpb?.trim() ||
+      '';
+    return headerResultConclude || resultConcludePlainText;
+  }, [
+    service.resultConcludeGenGpb,
+    stored.resultConcludeGenGpb,
+    resultConcludePlainText,
+  ]);
+
+  const sampleTypeDisplay = useMemo(() => {
+    const headerSampleTypeName =
+      service.sampleTypeNameGenGpb?.trim() ||
+      stored.sampleTypeNameGenGpb?.trim() ||
+      '';
+    return (
+      headerSampleTypeName ||
+      resultConcludeData?.data?.sampleTypeName?.trim() ||
+      ''
+    );
+  }, [
+    service.sampleTypeNameGenGpb,
+    stored.sampleTypeNameGenGpb,
+    resultConcludeData?.data?.sampleTypeName,
+  ]);
+
+  const shouldShowGpbInfo = Boolean(
+    barcodeGenGpb || sampleTypeDisplay || diagnosisDisplay,
+  );
 
   // API thời gian server
   const { data: serverTimeIso } = useServerTime();
@@ -436,13 +504,17 @@ export function GenResultSheet({
               <FormCell label="Loại mẫu:" colStart={1} colSpan={6} value={service.sampleTypeName ?? undefined} />
               <FormCell label="Chất lượng mẫu:" colStart={8} colSpan={6} />
             </FormRow>
-            <FormRow>
-              <FormCell label="Vị trí lấy mẫu:" colStart={1} colSpan={5} value={service.sampleTypeNameGenGpb ?? undefined} />
-              <FormCell label="Mã Giải phẫu bệnh:" colStart={6} colSpan={9} value={service.barcodeGenGpb ?? undefined} />
-            </FormRow>
-            <FormRow>
-              <FormCell label="Chẩn đoán mô bệnh học:" colStart={1} colSpan={12} value={service.resultConcludeGenGpb ?? undefined} />
-            </FormRow>
+            {shouldShowGpbInfo && (
+              <>
+                <FormRow>
+                  <FormCell label="Vị trí lấy mẫu:" colStart={1} colSpan={5} value={sampleTypeDisplay || '-'} />
+                  <FormCell label="Mã Giải phẫu bệnh:" colStart={6} colSpan={9} value={barcodeGenGpb || '-'} />
+                </FormRow>
+                <FormRow>
+                  <FormCell label="Chẩn đoán mô bệnh học:" colStart={1} colSpan={12} value={diagnosisDisplay || '-'} />
+                </FormRow>
+              </>
+            )}
             <FormRow>
               <FormCell label="Người lấy mẫu (chỉ áp dụng với mẫu máu):" colStart={1} colSpan={6} />
               <FormCell label="Người nhận mẫu:" colStart={8} colSpan={6} value={sampleReceiverInfo?.actionUserFullName} />
